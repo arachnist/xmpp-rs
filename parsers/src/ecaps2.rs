@@ -94,7 +94,10 @@ fn compute_extensions(extensions: &[DataForm]) -> Result<Vec<u8>, Error> {
         ));
         bytes.push(0x1e);
         bytes.append(&mut compute_items(&extension.fields, 0x1d, |field| {
-            let mut bytes = compute_item(&field.var);
+            let mut bytes = vec![];
+            if let Some(var) = &field.var {
+                bytes.append(&mut compute_item(var));
+            }
             bytes.append(&mut compute_items(&field.values, 0x1e, |value| {
                 compute_item(value)
             }));

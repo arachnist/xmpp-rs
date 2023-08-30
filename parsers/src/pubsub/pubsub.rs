@@ -621,7 +621,7 @@ mod tests {
                     title: None,
                     instructions: None,
                     fields: vec![Field {
-                        var: String::from("pubsub#access_model"),
+                        var: Some(String::from("pubsub#access_model")),
                         type_: FieldType::ListSingle,
                         label: None,
                         required: false,

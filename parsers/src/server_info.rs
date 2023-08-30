@@ -44,17 +44,17 @@ impl TryFrom<DataForm> for ServerInfo {
             if field.type_ != FieldType::ListMulti {
                 return Err(Error::ParseError("Field is not of the required type."));
             }
-            if field.var == "abuse-addresses" {
+            if field.var.as_deref() == Some("abuse-addresses") {
                 server_info.abuse = field.values;
-            } else if field.var == "admin-addresses" {
+            } else if field.var.as_deref() == Some("admin-addresses") {
                 server_info.admin = field.values;
-            } else if field.var == "feedback-addresses" {
+            } else if field.var.as_deref() == Some("feedback-addresses") {
                 server_info.feedback = field.values;
-            } else if field.var == "sales-addresses" {
+            } else if field.var.as_deref() == Some("sales-addresses") {
                 server_info.sales = field.values;
-            } else if field.var == "security-addresses" {
+            } else if field.var.as_deref() == Some("security-addresses") {
                 server_info.security = field.values;
-            } else if field.var == "support-addresses" {
+            } else if field.var.as_deref() == Some("support-addresses") {
                 server_info.support = field.values;
             } else {
                 return Err(Error::ParseError("Unknown form field var."));
@@ -87,7 +87,7 @@ impl From<ServerInfo> for DataForm {
 /// Generate `Field` for addresses
 pub fn generate_address_field<S: Into<String>>(var: S, values: Vec<String>) -> Field {
     Field {
-        var: var.into(),
+        var: Some(var.into()),
         type_: FieldType::ListMulti,
         label: None,
         required: false,
@@ -122,7 +122,7 @@ mod tests {
             instructions: None,
             fields: vec![
                 Field {
-                    var: String::from("abuse-addresses"),
+                    var: Some(String::from("abuse-addresses")),
                     type_: FieldType::ListMulti,
                     label: None,
                     required: false,
@@ -131,7 +131,7 @@ mod tests {
                     media: vec![],
                 },
                 Field {
-                    var: String::from("admin-addresses"),
+                    var: Some(String::from("admin-addresses")),
                     type_: FieldType::ListMulti,
                     label: None,
                     required: false,
@@ -144,7 +144,7 @@ mod tests {
                     media: vec![],
                 },
                 Field {
-                    var: String::from("feedback-addresses"),
+                    var: Some(String::from("feedback-addresses")),
                     type_: FieldType::ListMulti,
                     label: None,
                     required: false,
@@ -153,7 +153,7 @@ mod tests {
                     media: vec![],
                 },
                 Field {
-                    var: String::from("sales-addresses"),
+                    var: Some(String::from("sales-addresses")),
                     type_: FieldType::ListMulti,
                     label: None,
                     required: false,
@@ -162,7 +162,7 @@ mod tests {
                     media: vec![],
                 },
                 Field {
-                    var: String::from("security-addresses"),
+                    var: Some(String::from("security-addresses")),
                     type_: FieldType::ListMulti,
                     label: None,
                     required: false,
@@ -174,7 +174,7 @@ mod tests {
                     media: vec![],
                 },
                 Field {
-                    var: String::from("support-addresses"),
+                    var: Some(String::from("support-addresses")),
                     type_: FieldType::ListMulti,
                     label: None,
                     required: false,

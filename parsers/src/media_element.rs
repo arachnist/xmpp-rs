@@ -232,7 +232,7 @@ mod tests {
             .unwrap();
         let form = DataForm::try_from(elem).unwrap();
         assert_eq!(form.fields.len(), 1);
-        assert_eq!(form.fields[0].var, "ocr");
+        assert_eq!(form.fields[0].var.as_deref(), Some("ocr"));
         assert_eq!(form.fields[0].media[0].width, Some(290));
         assert_eq!(form.fields[0].media[0].height, Some(80));
         assert_eq!(form.fields[0].media[0].uris[0].type_, "image/jpeg");

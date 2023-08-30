@@ -127,10 +127,12 @@ fn compute_extensions(extensions: &[DataForm]) -> Vec<u8> {
         }
         bytes.push(b'<');
         for field in extension.fields.clone() {
-            if field.var == "FORM_TYPE" {
+            if field.var.as_deref() == Some("FORM_TYPE") {
                 continue;
             }
-            bytes.append(&mut compute_item(&field.var));
+            if let Some(var) = &field.var {
+                bytes.append(&mut compute_item(var));
+            }
             bytes.append(&mut compute_items(&field.values, |value| {
                 compute_item(value)
             }));

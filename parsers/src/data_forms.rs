@@ -71,7 +71,7 @@ generate_attribute!(
 #[derive(Debug, Clone, PartialEq)]
 pub struct Field {
     /// The unique identifier for this field, in the form.
-    pub var: String,
+    pub var: Option<String>,
 
     /// The type of this field.
     pub type_: FieldType,
@@ -96,7 +96,7 @@ impl Field {
     /// Create a new Field, of the given var and type.
     pub fn new(var: &str, type_: FieldType) -> Field {
         Field {
-            var: String::from(var),
+            var: Some(String::from(var)),
             type_,
             label: None,
             required: false,
@@ -128,7 +128,7 @@ impl Field {
     /// criteria differ slightly among form types.
     pub fn is_form_type(&self, ty: &DataFormType) -> bool {
         // 1. A field must have the var FORM_TYPE
-        if self.var != "FORM_TYPE" {
+        if self.var.as_deref() != Some("FORM_TYPE") {
             return false;
         }
 
@@ -170,7 +170,7 @@ impl TryFrom<Element> for Field {
         check_self!(elem, "field", DATA_FORMS);
         check_no_unknown_attributes!(elem, "field", ["label", "type", "var"]);
         let mut field = Field {
-            var: get_attr!(elem, "var", Required),
+            var: get_attr!(elem, "var", Option),
             type_: get_attr!(elem, "type", Default),
             label: get_attr!(elem, "label", Option),
             required: false,
@@ -178,6 +178,11 @@ impl TryFrom<Element> for Field {
             values: vec![],
             media: vec![],
         };
+
+        if field.type_ != FieldType::Fixed && field.var.is_none() {
+            return Err(Error::ParseError("Required attribute 'var' missing."));
+        }
+
         for element in elem.children() {
             if element.is("value", ns::DATA_FORMS) {
                 check_no_children!(element, "value");
@@ -391,6 +396,43 @@ mod tests {
         assert_eq!(form.type_, DataFormType::Result_);
         assert!(form.form_type.is_none());
         assert!(form.fields.is_empty());
+    }
+
+    #[test]
+    fn test_missing_var() {
+        let elem: Element =
+            "<x xmlns='jabber:x:data' type='form'><field type='text-single' label='The name of your bot'/></x>"
+                .parse()
+                .unwrap();
+        let error = DataForm::try_from(elem).unwrap_err();
+        let message = match error {
+            Error::ParseError(string) => string,
+            _ => panic!(),
+        };
+        assert_eq!(message, "Required attribute 'var' missing.");
+    }
+
+    #[test]
+    fn test_fixed_field() {
+        let elem: Element =
+            "<x xmlns='jabber:x:data' type='form'><field type='fixed'><value>Section 1: Bot Info</value></field></x>"
+                .parse()
+                .unwrap();
+        let form = DataForm::try_from(elem).unwrap();
+        assert_eq!(form.type_, DataFormType::Form);
+        assert!(form.form_type.is_none());
+        assert_eq!(
+            form.fields,
+            vec![Field {
+                var: None,
+                type_: FieldType::Fixed,
+                label: None,
+                required: false,
+                options: vec![],
+                values: vec!["Section 1: Bot Info".to_string()],
+                media: vec![],
+            }]
+        );
     }
 
     #[test]
