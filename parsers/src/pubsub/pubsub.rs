@@ -625,6 +625,7 @@ mod tests {
                         type_: FieldType::ListSingle,
                         label: None,
                         required: false,
+                        desc: None,
                         options: vec![],
                         values: vec![String::from("whitelist")],
                         media: vec![],

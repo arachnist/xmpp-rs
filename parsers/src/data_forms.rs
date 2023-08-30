@@ -82,6 +82,9 @@ pub struct Field {
     /// The form will be rejected if this field isn’t present.
     pub required: bool,
 
+    /// The natural-language description of the field, intended for presentation in a user-agent
+    pub desc: Option<String>,
+
     /// A list of allowed values.
     pub options: Vec<Option_>,
 
@@ -100,6 +103,7 @@ impl Field {
             type_,
             label: None,
             required: false,
+            desc: None,
             options: Vec::new(),
             media: Vec::new(),
             values: Vec::new(),
@@ -174,6 +178,7 @@ impl TryFrom<Element> for Field {
             type_: get_attr!(elem, "type", Default),
             label: get_attr!(elem, "label", Option),
             required: false,
+            desc: None,
             options: vec![],
             values: vec![],
             media: vec![],
@@ -204,6 +209,10 @@ impl TryFrom<Element> for Field {
             } else if element.is("media", ns::MEDIA_ELEMENT) {
                 let media_element = MediaElement::try_from(element.clone())?;
                 field.media.push(media_element);
+            } else if element.is("desc", ns::DATA_FORMS) {
+                check_no_children!(element, "value");
+                check_no_attributes!(element, "value");
+                field.desc = Some(element.text());
             } else {
                 return Err(Error::ParseError(
                     "Field child isn’t a value, option or media element.",
@@ -374,7 +383,7 @@ mod tests {
     fn test_size() {
         assert_size!(Option_, 24);
         assert_size!(FieldType, 1);
-        assert_size!(Field, 64);
+        assert_size!(Field, 76);
         assert_size!(DataFormType, 1);
         assert_size!(DataForm, 52);
     }
@@ -384,7 +393,7 @@ mod tests {
     fn test_size() {
         assert_size!(Option_, 48);
         assert_size!(FieldType, 1);
-        assert_size!(Field, 128);
+        assert_size!(Field, 152);
         assert_size!(DataFormType, 1);
         assert_size!(DataForm, 104);
     }
@@ -428,8 +437,33 @@ mod tests {
                 type_: FieldType::Fixed,
                 label: None,
                 required: false,
+                desc: None,
                 options: vec![],
                 values: vec!["Section 1: Bot Info".to_string()],
+                media: vec![],
+            }]
+        );
+    }
+
+    #[test]
+    fn test_desc() {
+        let elem: Element =
+            "<x xmlns='jabber:x:data' type='form'><field type='jid-multi' label='People to invite' var='invitelist'><desc>Tell all your friends about your new bot!</desc></field></x>"
+                .parse()
+                .unwrap();
+        let form = DataForm::try_from(elem).unwrap();
+        assert_eq!(form.type_, DataFormType::Form);
+        assert!(form.form_type.is_none());
+        assert_eq!(
+            form.fields,
+            vec![Field {
+                var: Some("invitelist".to_string()),
+                type_: FieldType::JidMulti,
+                label: Some("People to invite".to_string()),
+                required: false,
+                desc: Some("Tell all your friends about your new bot!".to_string()),
+                options: vec![],
+                values: vec![],
                 media: vec![],
             }]
         );
