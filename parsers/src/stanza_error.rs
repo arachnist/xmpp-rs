@@ -10,7 +10,9 @@ use crate::presence::PresencePayload;
 use crate::util::error::Error;
 use crate::Element;
 use jid::Jid;
+use minidom::Node;
 use std::collections::BTreeMap;
+use std::convert::TryFrom;
 
 generate_attribute!(
     /// The type of the error.
@@ -209,6 +211,11 @@ pub struct StanzaError {
 
     /// A protocol-specific extension for this error.
     pub other: Option<Element>,
+
+    /// May include an alternate address if `defined_condition` is `Gone` or `Redirect`. It is
+    /// a Uniform Resource Identifier [URI] or Internationalized Resource Identifier [IRI] at
+    /// which the entity can be contacted, typically an XMPP IRI as specified in [XMPP‑URI]
+    pub alternate_address: Option<String>,
 }
 
 impl MessagePayload for StanzaError {}
@@ -236,6 +243,7 @@ impl StanzaError {
                 map
             },
             other: None,
+            alternate_address: None,
         }
     }
 }
@@ -255,6 +263,7 @@ impl TryFrom<Element> for StanzaError {
             defined_condition: DefinedCondition::UndefinedCondition,
             texts: BTreeMap::new(),
             other: None,
+            alternate_address: None,
         };
         let mut defined_condition = None;
 
@@ -277,6 +286,14 @@ impl TryFrom<Element> for StanzaError {
                 check_no_children!(child, "defined-condition");
                 check_no_attributes!(child, "defined-condition");
                 let condition = DefinedCondition::try_from(child.clone())?;
+
+                if condition == DefinedCondition::Gone || condition == DefinedCondition::Redirect {
+                    stanza_error.alternate_address = child.nodes().find_map(|node| {
+                        let Node::Text(text) = node else { return None };
+                        return Some(text.to_string());
+                    });
+                }
+
                 defined_condition = Some(condition);
             } else {
                 if stanza_error.other.is_some() {
@@ -319,7 +336,7 @@ mod tests {
     fn test_size() {
         assert_size!(ErrorType, 1);
         assert_size!(DefinedCondition, 1);
-        assert_size!(StanzaError, 92);
+        assert_size!(StanzaError, 104);
     }
 
     #[cfg(target_pointer_width = "64")]
@@ -327,7 +344,7 @@ mod tests {
     fn test_size() {
         assert_size!(ErrorType, 1);
         assert_size!(DefinedCondition, 1);
-        assert_size!(StanzaError, 184);
+        assert_size!(StanzaError, 208);
     }
 
     #[test]
@@ -414,5 +431,75 @@ mod tests {
             .unwrap();
         let stanza_error = StanzaError::try_from(elem).unwrap();
         assert_eq!(stanza_error.type_, ErrorType::Cancel);
+    }
+
+    #[test]
+    fn test_gone_with_new_address() {
+        #[cfg(not(feature = "component"))]
+            let elem: Element = "<error xmlns='jabber:client' type='cancel'><gone xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'>xmpp:room@muc.example.org?join</gone></error>"
+            .parse()
+            .unwrap();
+        #[cfg(feature = "component")]
+            let elem: Element = "<error xmlns='jabber:component:accept' type='cancel'><gone xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'>xmpp:room@muc.example.org?join</gone></error>"
+            .parse()
+            .unwrap();
+        let error = StanzaError::try_from(elem).unwrap();
+        assert_eq!(error.type_, ErrorType::Cancel);
+        assert_eq!(error.defined_condition, DefinedCondition::Gone);
+        assert_eq!(
+            error.alternate_address,
+            Some("xmpp:room@muc.example.org?join".to_string())
+        );
+    }
+
+    #[test]
+    fn test_gone_without_new_address() {
+        #[cfg(not(feature = "component"))]
+            let elem: Element = "<error xmlns='jabber:client' type='cancel'><gone xmlns='urn:ietf:params:xml:ns:xmpp-stanzas' /></error>"
+            .parse()
+            .unwrap();
+        #[cfg(feature = "component")]
+            let elem: Element = "<error xmlns='jabber:component:accept' type='cancel'><gone xmlns='urn:ietf:params:xml:ns:xmpp-stanzas' /></error>"
+            .parse()
+            .unwrap();
+        let error = StanzaError::try_from(elem).unwrap();
+        assert_eq!(error.type_, ErrorType::Cancel);
+        assert_eq!(error.defined_condition, DefinedCondition::Gone);
+        assert_eq!(error.alternate_address, None);
+    }
+
+    #[test]
+    fn test_redirect_with_alternate_address() {
+        #[cfg(not(feature = "component"))]
+            let elem: Element = "<error xmlns='jabber:client' type='modify'><redirect xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'>xmpp:characters@conference.example.org</redirect></error>"
+            .parse()
+            .unwrap();
+        #[cfg(feature = "component")]
+            let elem: Element = "<error xmlns='jabber:component:accept' type='modify'><redirect xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'>xmpp:characters@conference.example.org</redirect></error>"
+            .parse()
+            .unwrap();
+        let error = StanzaError::try_from(elem).unwrap();
+        assert_eq!(error.type_, ErrorType::Modify);
+        assert_eq!(error.defined_condition, DefinedCondition::Redirect);
+        assert_eq!(
+            error.alternate_address,
+            Some("xmpp:characters@conference.example.org".to_string())
+        );
+    }
+
+    #[test]
+    fn test_redirect_without_alternate_address() {
+        #[cfg(not(feature = "component"))]
+            let elem: Element = "<error xmlns='jabber:client' type='modify'><redirect xmlns='urn:ietf:params:xml:ns:xmpp-stanzas' /></error>"
+            .parse()
+            .unwrap();
+        #[cfg(feature = "component")]
+            let elem: Element = "<error xmlns='jabber:component:accept' type='modify'><redirect xmlns='urn:ietf:params:xml:ns:xmpp-stanzas' /></error>"
+            .parse()
+            .unwrap();
+        let error = StanzaError::try_from(elem).unwrap();
+        assert_eq!(error.type_, ErrorType::Modify);
+        assert_eq!(error.defined_condition, DefinedCondition::Redirect);
+        assert_eq!(error.alternate_address, None);
     }
 }
