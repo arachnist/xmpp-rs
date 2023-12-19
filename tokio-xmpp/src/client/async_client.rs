@@ -133,7 +133,10 @@ impl<C: ServerConnector> Stream for Client<C> {
                 self.state = ClientState::Connecting(connect);
                 self.poll_next(cx)
             }
-            ClientState::Disconnected => Poll::Ready(None),
+            ClientState::Disconnected => {
+                self.state = ClientState::Disconnected;
+                Poll::Pending
+            }
             ClientState::Connecting(mut connect) => match Pin::new(&mut connect).poll(cx) {
                 Poll::Ready(Ok(Ok(stream))) => {
                     let bound_jid = stream.jid.clone();
