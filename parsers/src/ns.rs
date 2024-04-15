@@ -63,6 +63,9 @@ pub const PUBSUB_OWNER: &str = "http://jabber.org/protocol/pubsub#owner";
 /// XEP-0060: Publish-Subscribe node configuration
 pub const PUBSUB_CONFIGURE: &str = "http://jabber.org/protocol/pubsub#node_config";
 
+/// XEP-0066: Out of Band Data
+pub const OOB: &str = "jabber:x:oob";
+
 /// XEP-0071: XHTML-IM
 pub const XHTML_IM: &str = "http://jabber.org/protocol/xhtml-im";
 /// XEP-0071: XHTML-IM

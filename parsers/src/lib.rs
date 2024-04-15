@@ -87,6 +87,9 @@ pub mod rsm;
 /// XEP-0060: Publish-Subscribe
 pub mod pubsub;
 
+/// XEP-0066: OOB
+pub mod oob;
+
 /// XEP-0071: XHTML-IM
 pub mod xhtml;
 
