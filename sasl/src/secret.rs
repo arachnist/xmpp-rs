@@ -30,8 +30,8 @@ impl Pbkdf2Sha1 {
         let digest = Sha1::derive(&Password::Plain(password.to_owned()), salt, iterations)?;
         Ok(Pbkdf2Sha1 {
             salt: salt.to_vec(),
-            iterations: iterations,
-            digest: digest,
+            iterations,
+            digest,
         })
     }
 }
@@ -70,8 +70,8 @@ impl Pbkdf2Sha256 {
         let digest = Sha256::derive(&Password::Plain(password.to_owned()), salt, iterations)?;
         Ok(Pbkdf2Sha256 {
             salt: salt.to_vec(),
-            iterations: iterations,
-            digest: digest,
+            iterations,
+            digest,
         })
     }
 }

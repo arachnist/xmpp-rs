@@ -11,6 +11,7 @@ impl Anonymous {
     ///
     /// It is recommended that instead you use a `Credentials` struct and turn it into the
     /// requested mechanism using `from_credentials`.
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Anonymous {
         Anonymous
     }

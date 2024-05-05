@@ -6,6 +6,7 @@ use getrandom::getrandom;
 pub struct Anonymous;
 
 impl Anonymous {
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Anonymous {
         Anonymous
     }

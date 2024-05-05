@@ -14,7 +14,7 @@ use base64::{engine::general_purpose::STANDARD as Base64, Engine};
 pub fn generate_nonce() -> Result<String, RngError> {
     let mut data = [0u8; 32];
     getrandom(&mut data)?;
-    Ok(Base64.encode(&data))
+    Ok(Base64.encode(data))
 }
 
 #[derive(Debug, PartialEq)]
@@ -111,7 +111,7 @@ impl ScramProvider for Sha1 {
                         method.to_string(),
                         Self::name().to_string(),
                     ))
-                } else if my_salt == &salt {
+                } else if my_salt == salt {
                     Err(DeriveError::IncorrectSalt)
                 } else if my_iterations == iterations {
                     Err(DeriveError::IncompatibleIterationCount(
@@ -171,7 +171,7 @@ impl ScramProvider for Sha256 {
                         method.to_string(),
                         Self::name().to_string(),
                     ))
-                } else if my_salt == &salt {
+                } else if my_salt == salt {
                     Err(DeriveError::IncorrectSalt)
                 } else if my_iterations == iterations {
                     Err(DeriveError::IncompatibleIterationCount(

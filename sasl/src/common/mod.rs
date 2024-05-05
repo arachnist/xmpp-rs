@@ -86,9 +86,9 @@ impl Secret {
     ) -> Secret {
         Secret::Password(Password::Pbkdf2 {
             method: method.into(),
-            salt: salt,
-            iterations: iterations,
-            data: data,
+            salt,
+            iterations,
+            data,
         })
     }
 }
@@ -135,7 +135,7 @@ fn xor_works() {
 pub fn xor(a: &[u8], b: &[u8]) -> Vec<u8> {
     assert_eq!(a.len(), b.len());
     let mut ret = Vec::with_capacity(a.len());
-    for (a, b) in a.into_iter().zip(b) {
+    for (a, b) in a.iter().zip(b) {
         ret.push(a ^ b);
     }
     ret
@@ -149,11 +149,8 @@ pub fn parse_frame(frame: &[u8]) -> Result<HashMap<String, String>, FromUtf8Erro
         let mut tmp = s.splitn(2, '=');
         let key = tmp.next();
         let val = tmp.next();
-        match (key, val) {
-            (Some(k), Some(v)) => {
-                ret.insert(k.to_owned(), v.to_owned());
-            }
-            _ => (),
+        if let (Some(k), Some(v)) = (key, val) {
+            ret.insert(k.to_owned(), v.to_owned());
         }
     }
     Ok(ret)

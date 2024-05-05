@@ -44,8 +44,8 @@ where
         Scram {
             name: format!("SCRAM-{}", S::name()),
             state: ScramState::Init,
-            channel_binding: channel_binding,
-            provider: provider,
+            channel_binding,
+            provider,
             _marker: PhantomData,
         }
     }
@@ -108,9 +108,9 @@ where
                 }
                 let frame =
                     parse_frame(&rest).map_err(|_| MechanismError::CannotDecodeInitialMessage)?;
-                let username = frame.get("n").ok_or_else(|| MechanismError::NoUsername)?;
+                let username = frame.get("n").ok_or(MechanismError::NoUsername)?;
                 let identity = Identity::Username(username.to_owned());
-                let client_nonce = frame.get("r").ok_or_else(|| MechanismError::NoNonce)?;
+                let client_nonce = frame.get("r").ok_or(MechanismError::NoNonce)?;
                 let mut server_nonce = String::new();
                 server_nonce += client_nonce;
                 server_nonce +=
@@ -125,12 +125,12 @@ where
                 buf.extend(pbkdf2.iterations().to_string().bytes());
                 ret = Response::Proceed(buf.clone());
                 next_state = ScramState::SentChallenge {
-                    server_nonce: server_nonce,
-                    identity: identity,
+                    server_nonce,
+                    identity,
                     salted_password: pbkdf2.digest().to_vec(),
                     initial_client_message: rest,
                     initial_server_message: buf,
-                    gs2_header: gs2_header,
+                    gs2_header,
                 };
             }
             ScramState::SentChallenge {
@@ -151,8 +151,8 @@ where
                 client_final_message_bare.extend(Base64.encode(&cb_data).bytes());
                 client_final_message_bare.extend(b",r=");
                 client_final_message_bare.extend(server_nonce.bytes());
-                let client_key = S::hmac(b"Client Key", &salted_password)?;
-                let server_key = S::hmac(b"Server Key", &salted_password)?;
+                let client_key = S::hmac(b"Client Key", salted_password)?;
+                let server_key = S::hmac(b"Server Key", salted_password)?;
                 let mut auth_message = Vec::new();
                 auth_message.extend(initial_client_message);
                 auth_message.extend(b",");
@@ -162,7 +162,7 @@ where
                 let stored_key = S::hash(&client_key);
                 let client_signature = S::hmac(&auth_message, &stored_key)?;
                 let client_proof = xor(&client_key, &client_signature);
-                let sent_proof = frame.get("p").ok_or_else(|| MechanismError::NoProof)?;
+                let sent_proof = frame.get("p").ok_or(MechanismError::NoProof)?;
                 let sent_proof = Base64
                     .decode(sent_proof)
                     .map_err(|_| MechanismError::CannotDecodeProof)?;
@@ -172,7 +172,7 @@ where
                 let server_signature = S::hmac(&auth_message, &server_key)?;
                 let mut buf = Vec::new();
                 buf.extend(b"v=");
-                buf.extend(Base64.encode(&server_signature).bytes());
+                buf.extend(Base64.encode(server_signature).bytes());
                 ret = Response::Success(identity.clone(), buf);
                 next_state = ScramState::Done;
             }
