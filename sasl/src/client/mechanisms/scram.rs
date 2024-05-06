@@ -27,6 +27,8 @@ pub struct Scram<S: ScramProvider> {
     name_plus: String,
     username: String,
     password: Password,
+    client_first_extensions: String,
+    client_final_extensions: String,
     client_nonce: String,
     state: ScramState,
     channel_binding: ChannelBinding,
@@ -49,11 +51,29 @@ impl<S: ScramProvider> Scram<S> {
             name_plus: format!("SCRAM-{}-PLUS", S::name()),
             username: username.into(),
             password: password.into(),
+            client_first_extensions: String::new(),
+            client_final_extensions: String::new(),
             client_nonce: generate_nonce()?,
             state: ScramState::Init,
             channel_binding,
             _marker: PhantomData,
         })
+    }
+
+    /// Sets extension data to be inserted into the client's first message.
+    /// Extension data must be in the format of a comma seperated list of SCRAM extensions to be used e.g. `foo=true,bar=baz`
+    /// If not called, no extensions will be used for the clients first message.
+    pub fn with_first_extensions(mut self, extensions: String) -> Self {
+        self.client_first_extensions = extensions;
+        self
+    }
+
+    /// Sets extension data to be inserted into the client's final message.
+    /// Extension data must be in the format of a comma seperated list of SCRAM extensions to be used e.g. `foo=true,bar=baz`
+    /// If not called, no extensions will be used for the clients final message.
+    pub fn with_final_extensions(mut self, extensions: String) -> Self {
+        self.client_final_extensions = extensions;
+        self
     }
 
     // Used for testing.
@@ -69,6 +89,8 @@ impl<S: ScramProvider> Scram<S> {
             name_plus: format!("SCRAM-{}-PLUS", S::name()),
             username: username.into(),
             password: password.into(),
+            client_first_extensions: String::new(),
+            client_final_extensions: String::new(),
             client_nonce: nonce,
             state: ScramState::Init,
             channel_binding: ChannelBinding::None,
@@ -107,6 +129,10 @@ impl<S: ScramProvider> Mechanism for Scram<S> {
         bare.extend(self.username.bytes());
         bare.extend(b",r=");
         bare.extend(self.client_nonce.bytes());
+        if !self.client_first_extensions.is_empty() {
+            bare.extend(b",");
+            bare.extend(self.client_first_extensions.bytes());
+        }
         let mut data = Vec::new();
         data.extend(&gs2_header);
         data.extend(&bare);
@@ -142,6 +168,10 @@ impl<S: ScramProvider> Mechanism for Scram<S> {
                 client_final_message_bare.extend(Base64.encode(&cb_data).bytes());
                 client_final_message_bare.extend(b",r=");
                 client_final_message_bare.extend(server_nonce.bytes());
+                if !self.client_final_extensions.is_empty() {
+                    client_final_message_bare.extend(b",");
+                    client_final_message_bare.extend(self.client_final_extensions.bytes());
+                }
                 let salted_password = S::derive(&self.password, &salt, iterations)?;
                 let client_key = S::hmac(b"Client Key", &salted_password)?;
                 let server_key = S::hmac(b"Server Key", &salted_password)?;
@@ -246,5 +276,55 @@ mod tests {
             String::from_utf8(client_final[..].to_owned()).unwrap()
         ); // again, depends on ordering…
         mechanism.success(&server_final[..]).unwrap();
+    }
+
+    #[test]
+    fn scram_kafka_token_delegation_works() {
+        // credentials and raw messages taken from a real kafka SCRAM token delegation authentication
+        let username = "6Lbb79aSTs-mDWUPc64D9Q";
+        let password = "O574x+7mB0B8R9Yt8DqwWbIzBgEm3lUE+fy7VWdvCwcLvGvwJK9GM4y0Qaz/MxiIxDHEnxDfSuB13uycXiUqyg==";
+        let client_nonce = "o6wj2xqdu0fxe4nmnukkj076m";
+        let client_init = b"n,,n=6Lbb79aSTs-mDWUPc64D9Q,r=o6wj2xqdu0fxe4nmnukkj076m,tokenauth=true";
+        let server_init = b"r=o6wj2xqdu0fxe4nmnukkj076m1eut816hvmsycqw2qzyn14zxvr,s=MWVtNWw1Mzc1MnFianNoYWhqMjhyYzVzZHM=,i=4096";
+        let client_final = b"c=biws,r=o6wj2xqdu0fxe4nmnukkj076m1eut816hvmsycqw2qzyn14zxvr,p=qVfqg28hDgroc6pal4qCF+8hO1/wiB84o7snGRDZKuE=";
+        let server_final = b"v=2ZSkAlHEUj6WehcizLhQRiiVGn+VDVtmAqj1v/IPa28=";
+        let mut mechanism =
+            Scram::<Sha256>::new_with_nonce(username, password, client_nonce.to_owned())
+                .with_first_extensions("tokenauth=true".to_owned());
+        let init = mechanism.initial();
+        assert_eq!(
+            std::str::from_utf8(&init).unwrap(),
+            std::str::from_utf8(client_init).unwrap()
+        ); // depends on ordering…
+        let resp = mechanism.response(server_init).unwrap();
+        assert_eq!(
+            std::str::from_utf8(&resp).unwrap(),
+            std::str::from_utf8(client_final).unwrap()
+        ); // again, depends on ordering…
+        mechanism.success(server_final).unwrap();
+    }
+
+    #[test]
+    fn scram_final_extension_works() {
+        let username = "some_user";
+        let password = "a_password";
+        let client_nonce = "client_nonce";
+        let client_init = b"n,,n=some_user,r=client_nonce";
+        let server_init =
+            b"r=client_nonceserver_nonce,s=MWVtNWw1Mzc1MnFianNoYWhqMjhyYzVzZHM=,i=4096";
+        let client_final = b"c=biws,r=client_nonceserver_nonce,foo=true,p=T9XQLmykBv74DzbaCtX90/ElJYJU2XWM/jHmHJ+BI/w=";
+        let mut mechanism =
+            Scram::<Sha256>::new_with_nonce(username, password, client_nonce.to_owned())
+                .with_final_extensions("foo=true".to_owned());
+        let init = mechanism.initial();
+        assert_eq!(
+            std::str::from_utf8(&init).unwrap(),
+            std::str::from_utf8(client_init).unwrap()
+        ); // depends on ordering…
+        let resp = mechanism.response(server_init).unwrap();
+        assert_eq!(
+            std::str::from_utf8(&resp).unwrap(),
+            std::str::from_utf8(client_final).unwrap()
+        ); // again, depends on ordering…
     }
 }
