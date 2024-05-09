@@ -120,6 +120,47 @@ impl Field {
     fn is_list(&self) -> bool {
         self.type_ == FieldType::ListSingle || self.type_ == FieldType::ListMulti
     }
+
+    /// Return true if this field is a valid form type specifier as per
+    /// [XEP-0068](https://xmpp.org/extensions/xep-0068.html).
+    ///
+    /// This function requires knowledge of the form's type attribute as the
+    /// criteria differ slighly among form types.
+    pub fn is_form_type(&self, ty: &DataFormType) -> bool {
+        // 1. A field must have the var FORM_TYPE
+        if self.var != "FORM_TYPE" {
+            return false;
+        }
+
+        match ty {
+            // https://xmpp.org/extensions/xep-0068.html#usecases-incorrect
+            // > If the FORM_TYPE field is not hidden in a form with
+            // > type="form" or type="result", it MUST be ignored as a context
+            // > indicator.
+            DataFormType::Form | DataFormType::Result_ => self.type_ == FieldType::Hidden,
+
+            // https://xmpp.org/extensions/xep-0068.html#impl
+            // > Data forms with the type "submit" are free to omit any
+            // > explicit field type declaration (as per Data Forms (XEP-0004)
+            // > § 3.2), as the type is implied by the corresponding
+            // > "form"-type data form. As consequence, implementations MUST
+            // > treat a FORM_TYPE field without an explicit type attribute,
+            // > in data forms of type "submit", as the FORM_TYPE field with
+            // > the special meaning defined herein.
+            DataFormType::Submit => match self.type_ {
+                FieldType::Hidden => true,
+                FieldType::TextSingle => true,
+                _ => false,
+            },
+
+            // XEP-0068 does not explicitly mention cancel type forms.
+            // However, XEP-0004 states:
+            // > a data form of type "cancel" SHOULD NOT contain any <field/>
+            // > elements.
+            // thus we ignore those.
+            DataFormType::Cancel => false,
+        }
+    }
 }
 
 impl TryFrom<Element> for Field {
@@ -276,13 +317,10 @@ impl TryFrom<Element> for DataForm {
                 form.instructions = Some(child.text());
             } else if child.is("field", ns::DATA_FORMS) {
                 let field = Field::try_from(child.clone())?;
-                if field.var == "FORM_TYPE" {
+                if field.is_form_type(&form.type_) {
                     let mut field = field;
                     if form.form_type.is_some() {
                         return Err(Error::ParseError("More than one FORM_TYPE in a data form."));
-                    }
-                    if field.type_ != FieldType::Hidden {
-                        return Err(Error::ParseError("Invalid field type for FORM_TYPE."));
                     }
                     if field.values.len() != 1 {
                         return Err(Error::ParseError("Wrong number of values in FORM_TYPE."));
@@ -417,5 +455,93 @@ mod tests {
             message,
             "Element option must not have more than one value child."
         );
+    }
+
+    #[test]
+    fn test_ignore_form_type_field_if_field_type_mismatches_in_form_typed_forms() {
+        // https://xmpp.org/extensions/xep-0068.html#usecases-incorrect
+        // […] it MUST be ignored as a context indicator
+        let elem: Element = "<x xmlns='jabber:x:data' type='form'><field var='FORM_TYPE' type='text-single'><value>foo</value></field></x>".parse().unwrap();
+        match DataForm::try_from(elem) {
+            Ok(form) => {
+                match form.form_type {
+                    None => (),
+                    other => panic!("unexpected extracted form type: {:?}", other),
+                };
+            }
+            other => panic!("unexpected result: {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_ignore_form_type_field_if_field_type_mismatches_in_result_typed_forms() {
+        // https://xmpp.org/extensions/xep-0068.html#usecases-incorrect
+        // […] it MUST be ignored as a context indicator
+        let elem: Element = "<x xmlns='jabber:x:data' type='result'><field var='FORM_TYPE' type='text-single'><value>foo</value></field></x>".parse().unwrap();
+        match DataForm::try_from(elem) {
+            Ok(form) => {
+                match form.form_type {
+                    None => (),
+                    other => panic!("unexpected extracted form type: {:?}", other),
+                };
+            }
+            other => panic!("unexpected result: {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_accept_form_type_field_without_type_attribute_in_submit_typed_forms() {
+        let elem: Element = "<x xmlns='jabber:x:data' type='submit'><field var='FORM_TYPE'><value>foo</value></field></x>".parse().unwrap();
+        match DataForm::try_from(elem) {
+            Ok(form) => {
+                match form.form_type {
+                    Some(ty) => assert_eq!(ty, "foo"),
+                    other => panic!("unexpected extracted form type: {:?}", other),
+                };
+            }
+            other => panic!("unexpected result: {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_accept_form_type_field_with_type_hidden_in_submit_typed_forms() {
+        let elem: Element = "<x xmlns='jabber:x:data' type='submit'><field var='FORM_TYPE' type='hidden'><value>foo</value></field></x>".parse().unwrap();
+        match DataForm::try_from(elem) {
+            Ok(form) => {
+                match form.form_type {
+                    Some(ty) => assert_eq!(ty, "foo"),
+                    other => panic!("unexpected extracted form type: {:?}", other),
+                };
+            }
+            other => panic!("unexpected result: {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_accept_form_type_field_with_type_hidden_in_result_typed_forms() {
+        let elem: Element = "<x xmlns='jabber:x:data' type='result'><field var='FORM_TYPE' type='hidden'><value>foo</value></field></x>".parse().unwrap();
+        match DataForm::try_from(elem) {
+            Ok(form) => {
+                match form.form_type {
+                    Some(ty) => assert_eq!(ty, "foo"),
+                    other => panic!("unexpected extracted form type: {:?}", other),
+                };
+            }
+            other => panic!("unexpected result: {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_accept_form_type_field_with_type_hidden_in_form_typed_forms() {
+        let elem: Element = "<x xmlns='jabber:x:data' type='form'><field var='FORM_TYPE' type='hidden'><value>foo</value></field></x>".parse().unwrap();
+        match DataForm::try_from(elem) {
+            Ok(form) => {
+                match form.form_type {
+                    Some(ty) => assert_eq!(ty, "foo"),
+                    other => panic!("unexpected extracted form type: {:?}", other),
+                };
+            }
+            other => panic!("unexpected result: {:?}", other),
+        }
     }
 }
