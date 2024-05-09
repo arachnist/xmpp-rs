@@ -241,6 +241,20 @@ impl From<PubSubEvent> for Element {
     }
 }
 
+impl PubSubEvent {
+    /// Return the name of the node to which this event is related.
+    pub fn node_name(&self) -> &NodeName {
+        match self {
+            Self::Purge { node, .. } => &node,
+            Self::PublishedItems { node, .. } => &node,
+            Self::RetractedItems { node, .. } => &node,
+            Self::Subscription { node, .. } => &node,
+            Self::Delete { node, .. } => &node,
+            Self::Configuration { node, .. } => &node,
+        }
+    }
+}
+
 impl MessagePayload for PubSubEvent {}
 
 #[cfg(test)]
