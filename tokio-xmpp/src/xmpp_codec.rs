@@ -357,7 +357,7 @@ mod tests {
         });
     }
 
-    /// By default, encode() only get's a BytesMut that has 8kb space reserved.
+    /// By default, encode() only gets a BytesMut that has 8 KiB space reserved.
     #[test]
     fn test_large_stanza() {
         use futures::{executor::block_on, sink::SinkExt};

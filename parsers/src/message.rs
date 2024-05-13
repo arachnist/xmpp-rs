@@ -209,7 +209,7 @@ impl Message {
     ///
     /// Returns the first matching payload element as parsed struct or its
     /// parse error. If no element matches, `Ok(None)` is returned. If an
-    /// element matches, but fails to parse, it is nontheless removed from
+    /// element matches, but fails to parse, it is nonetheless removed from
     /// the message.
     ///
     /// Elements which do not match the given type are not removed.

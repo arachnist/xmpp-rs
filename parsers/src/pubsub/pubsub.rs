@@ -293,7 +293,7 @@ pub enum PubSub {
         configure: Option<Configure>,
     },
 
-    /// A subcribe request.
+    /// A subscribe request.
     Subscribe {
         /// The subscribe request.
         subscribe: Option<Subscribe>,

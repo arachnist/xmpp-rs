@@ -28,7 +28,7 @@ pub async fn handle_message_chat<C: ServerConnector>(
                 let event = match from.clone().try_into_full() {
                     Err(bare) => {
                         // TODO: Can a service message be of type Chat/Normal and not Groupchat?
-                        warn!("Received misformed MessageType::Chat in muc#user namespace from a bare JID.");
+                        warn!("Received malformed MessageType::Chat in muc#user namespace from a bare JID.");
                         Event::ServiceMessage(
                             message.id.clone(),
                             bare,

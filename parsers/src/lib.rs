@@ -192,7 +192,7 @@ pub mod carbons;
 /// XEP-0293: Jingle RTP Feedback Negotiation
 pub mod jingle_rtcp_fb;
 
-/// XEP-0294: Jingle RTP Header Extensions Negociation
+/// XEP-0294: Jingle RTP Header Extensions Negotiation
 pub mod jingle_rtp_hdrext;
 
 /// XEP-0297: Stanza Forwarding

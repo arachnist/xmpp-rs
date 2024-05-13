@@ -23,7 +23,7 @@ pub enum Error {
     Auth(AuthError),
     /// Connection closed
     Disconnected,
-    /// Shoud never happen
+    /// Should never happen
     InvalidState,
     /// Fmt error
     Fmt(fmt::Error),

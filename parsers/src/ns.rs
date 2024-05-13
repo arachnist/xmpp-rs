@@ -183,7 +183,7 @@ pub const CARBONS: &str = "urn:xmpp:carbons:2";
 /// XEP-0293: Jingle RTP Feedback Negotiation
 pub const JINGLE_RTCP_FB: &str = "urn:xmpp:jingle:apps:rtp:rtcp-fb:0";
 
-/// XEP-0294: Jingle RTP Header Extensions Negociation
+/// XEP-0294: Jingle RTP Header Extensions Negotiation
 pub const JINGLE_RTP_HDREXT: &str = "urn:xmpp:jingle:apps:rtp:rtp-hdrext:0";
 
 /// XEP-0297: Stanza Forwarding

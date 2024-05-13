@@ -125,7 +125,7 @@ impl Field {
     /// [XEP-0068](https://xmpp.org/extensions/xep-0068.html).
     ///
     /// This function requires knowledge of the form's type attribute as the
-    /// criteria differ slighly among form types.
+    /// criteria differ slightly among form types.
     pub fn is_form_type(&self, ty: &DataFormType) -> bool {
         // 1. A field must have the var FORM_TYPE
         if self.var != "FORM_TYPE" {

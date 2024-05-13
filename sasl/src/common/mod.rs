@@ -57,7 +57,7 @@ impl Credentials {
         self
     }
 
-    /// Creates a new Credentials with the specified chanel binding.
+    /// Creates a new Credentials with the specified channel binding.
     pub fn with_channel_binding(mut self, channel_binding: ChannelBinding) -> Credentials {
         self.channel_binding = channel_binding;
         self
