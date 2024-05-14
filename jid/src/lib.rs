@@ -720,6 +720,24 @@ impl FullJid {
     pub fn resource(&self) -> &ResourceRef {
         self.inner.resource().unwrap()
     }
+
+    /// Return the inner String of this full JID.
+    pub fn into_inner(self) -> String {
+        self.inner.into_inner()
+    }
+
+    /// Transforms this full JID into a [`BareJid`], throwing away the
+    /// resource.
+    ///
+    /// ```
+    /// # use jid::{BareJid, FullJid};
+    /// let jid: FullJid = "foo@bar/baz".parse().unwrap();
+    /// let bare = jid.into_bare();
+    /// assert_eq!(bare.to_string(), "foo@bar");
+    /// ```
+    pub fn into_bare(self) -> BareJid {
+        self.inner.into_bare()
+    }
 }
 
 impl FromStr for BareJid {
@@ -825,6 +843,11 @@ impl BareJid {
     pub fn with_resource_str(&self, resource: &str) -> Result<FullJid, Error> {
         let resource = ResourcePart::new(resource)?;
         Ok(self.with_resource(&resource))
+    }
+
+    /// Return the inner String of this bare JID.
+    pub fn into_inner(self) -> String {
+        self.inner.into_inner()
     }
 }
 
