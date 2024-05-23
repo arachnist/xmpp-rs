@@ -21,13 +21,12 @@ use crate::tree_builder::TreeBuilder;
 
 use std::collections::{btree_map, BTreeMap};
 use std::io::{BufRead, Write};
-use std::sync::Arc;
 
 use std::borrow::Cow;
 use std::str;
 
 use rxml::writer::{Encoder, Item, TrackNamespace};
-use rxml::{RawParser, Reader, XmlVersion};
+use rxml::{Namespace as RxmlNamespace, RawReader, XmlVersion};
 
 use std::str::FromStr;
 
@@ -337,7 +336,7 @@ impl Element {
     /// Parse a document from a `BufRead`.
     pub fn from_reader<R: BufRead>(reader: R) -> Result<Element> {
         let mut tree_builder = TreeBuilder::new();
-        let mut driver = Reader::<_, RawParser>::new(reader);
+        let mut driver = RawReader::new(reader);
         while let Some(event) = driver.read()? {
             tree_builder.process_event(event)?;
 
@@ -356,7 +355,7 @@ impl Element {
         prefixes: P,
     ) -> Result<Element> {
         let mut tree_builder = TreeBuilder::new().with_prefixes_stack(vec![prefixes.into()]);
-        let mut driver = Reader::<_, RawParser>::new(reader);
+        let mut driver = RawReader::new(reader);
         while let Some(event) = driver.read()? {
             tree_builder.process_event(event)?;
 
@@ -395,16 +394,12 @@ impl Element {
         for (prefix, namespace) in self.prefixes.declared_prefixes() {
             assert!(writer.encoder.ns_tracker_mut().declare_fixed(
                 prefix.as_ref().map(|x| (&**x).try_into()).transpose()?,
-                Some(Arc::new(namespace.clone().try_into()?))
+                namespace.clone().into(),
             ));
         }
 
-        let namespace = if self.namespace.is_empty() {
-            None
-        } else {
-            Some(Arc::new(self.namespace.clone().try_into()?))
-        };
-        writer.write(Item::ElementHeadStart(namespace, (*self.name).try_into()?))?;
+        let namespace: RxmlNamespace = self.namespace.clone().into();
+        writer.write(Item::ElementHeadStart(&namespace, (*self.name).try_into()?))?;
 
         for (key, value) in self.attributes.iter() {
             let (prefix, name) = <&rxml::NameStr>::try_from(&**key)
@@ -413,12 +408,12 @@ impl Element {
                 .unwrap();
             let namespace = match prefix {
                 Some(prefix) => match writer.encoder.ns_tracker().lookup_prefix(Some(prefix)) {
-                    Ok(v) => Some(v),
+                    Ok(v) => v,
                     Err(rxml::writer::PrefixError::Undeclared) => return Err(Error::InvalidPrefix),
                 },
-                None => None,
+                None => RxmlNamespace::NONE,
             };
-            writer.write(Item::Attribute(namespace, name, (&**value).try_into()?))?;
+            writer.write(Item::Attribute(&namespace, name, (&**value).into()))?;
         }
 
         if !self.children.is_empty() {

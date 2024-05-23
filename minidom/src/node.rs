@@ -162,7 +162,7 @@ impl Node {
         match *self {
             Node::Element(ref elmt) => elmt.write_to_inner(writer)?,
             Node::Text(ref s) => {
-                writer.write(Item::Text((&**s).try_into()?))?;
+                writer.write(Item::Text((&**s).into()))?;
             }
         }
 

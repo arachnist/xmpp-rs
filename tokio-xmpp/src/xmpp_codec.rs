@@ -96,7 +96,7 @@ impl Decoder for XMPPCodec {
 
     fn decode(&mut self, buf: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
         loop {
-            let token = match self.driver.parse(buf, false) {
+            let token = match self.driver.parse_buf(buf, false) {
                 Ok(Some(token)) => token,
                 Ok(None) => break,
                 Err(rxml::Error::IO(e)) if e.kind() == std::io::ErrorKind::WouldBlock => break,

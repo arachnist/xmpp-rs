@@ -71,5 +71,11 @@ impl From<rxml::error::XmlError> for Error {
     }
 }
 
+impl From<rxml::strings::Error> for Error {
+    fn from(err: rxml::strings::Error) -> Error {
+        rxml::error::XmlError::from(err).into()
+    }
+}
+
 /// Our simplified Result type.
 pub type Result<T> = ::std::result::Result<T, Error>;
