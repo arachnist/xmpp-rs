@@ -18,7 +18,7 @@ chrono = "0.4"
 futures = "0.3"
 tokio = { version = "1", features = ["fs"] }
 log = "0.4"
-reqwest = { version = "0.12", features = ["stream"] }
+reqwest = { version = "0.12", features = ["stream"], default-features = false }
 tokio-util = { version = "0.7", features = ["codec"] }
 # same repository dependencies
 tokio-xmpp = { version = "3.4", path = "../tokio-xmpp", default-features = false }
@@ -32,6 +32,6 @@ required-features = ["avatars"]
 
 [features]
 default = ["avatars", "starttls-rust"]
-starttls-native = ["tokio-xmpp/starttls", "tokio-xmpp/tls-native"]
-starttls-rust = ["tokio-xmpp/starttls", "tokio-xmpp/tls-rust"]
+starttls-native = ["tokio-xmpp/starttls", "tokio-xmpp/tls-native", "reqwest/native-tls"]
+starttls-rust = ["tokio-xmpp/starttls", "tokio-xmpp/tls-rust", "reqwest/rustls-tls"]
 avatars = []
