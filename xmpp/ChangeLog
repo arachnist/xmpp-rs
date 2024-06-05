@@ -10,6 +10,7 @@ Version 0.5.0:
       - ClientBuilder now has a set_resource method for manual resource management (#72)
       - Update dependencies
       - Re-export jid structs, minidom::Element, and parsers module.
+	  - Add serde feature, passed to jid crate
 
 Version 0.4.0:
 2023-05-18 [ Maxime “pep” Buquet <pep@bouah.net>, Emmanuel Gil Peyrot <linkmauve@linkmauve.fr> ]

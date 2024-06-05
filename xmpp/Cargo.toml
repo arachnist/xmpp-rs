@@ -36,3 +36,5 @@ starttls-native = ["tokio-xmpp/starttls", "tokio-xmpp/tls-native", "reqwest/nati
 starttls-rust = ["tokio-xmpp/starttls", "tokio-xmpp/tls-rust", "reqwest/rustls-tls"]
 avatars = []
 syntax-highlighting = [ "tokio-xmpp/syntax-highlighting" ]
+# Enable serde support in jid crate
+serde = [ "tokio-xmpp/serde" ]

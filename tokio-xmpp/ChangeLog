@@ -6,6 +6,7 @@ Version 3.5.0:
         previous release anyway.
       - Various fixes that were guarded under the tls-rust feature. All
         updates from dependencies.
+      - Add serde feature, passed to jid crate
 
 Version 3.4.0:
 2023-08-17 Maxime “pep” Buquet <pep@bouah.net>

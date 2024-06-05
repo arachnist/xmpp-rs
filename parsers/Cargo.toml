@@ -30,6 +30,8 @@ minidom = { version = "0.15", path = "../minidom" }
 component = []
 # Disable validation of unknown attributes.
 disable-validation = []
+# Enable serde support in jid crate
+serde = [ "jid/serde" ]
 
 [package.metadata.docs.rs]
 rustdoc-args = [ "--sort-modules-by-appearance", "-Zunstable-options" ]
