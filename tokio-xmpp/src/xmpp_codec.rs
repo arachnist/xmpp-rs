@@ -59,7 +59,7 @@ pub enum Packet {
 }
 
 /// Stateful encoder/decoder for a bytestream from/to XMPP `Packet`
-pub struct XMPPCodec {
+pub struct XmppCodec {
     /// Outgoing
     ns: Option<String>,
     /// Incoming
@@ -67,7 +67,7 @@ pub struct XMPPCodec {
     stanza_builder: TreeBuilder,
 }
 
-impl XMPPCodec {
+impl XmppCodec {
     /// Constructor
     pub fn new() -> Self {
         let stanza_builder = TreeBuilder::new();
@@ -76,7 +76,7 @@ impl XMPPCodec {
         if log::log_enabled!(log::Level::Debug) && PS.get().is_none() {
             init_syntect();
         }
-        XMPPCodec {
+        XmppCodec {
             ns: None,
             driver,
             stanza_builder,
@@ -84,13 +84,13 @@ impl XMPPCodec {
     }
 }
 
-impl Default for XMPPCodec {
+impl Default for XmppCodec {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl Decoder for XMPPCodec {
+impl Decoder for XmppCodec {
     type Item = Packet;
     type Error = Error;
 
@@ -149,7 +149,7 @@ impl Decoder for XMPPCodec {
     }
 }
 
-impl Encoder<Packet> for XMPPCodec {
+impl Encoder<Packet> for XmppCodec {
     type Error = Error;
 
     fn encode(&mut self, item: Packet, dst: &mut BytesMut) -> Result<(), Self::Error> {
@@ -253,7 +253,7 @@ mod tests {
 
     #[test]
     fn test_stream_start() {
-        let mut c = XMPPCodec::new();
+        let mut c = XmppCodec::new();
         let mut b = BytesMut::with_capacity(1024);
         b.put_slice(b"<?xml version='1.0'?><stream:stream xmlns:stream='http://etherx.jabber.org/streams' version='1.0' xmlns='jabber:client'>");
         let r = c.decode(&mut b);
@@ -265,7 +265,7 @@ mod tests {
 
     #[test]
     fn test_stream_end() {
-        let mut c = XMPPCodec::new();
+        let mut c = XmppCodec::new();
         let mut b = BytesMut::with_capacity(1024);
         b.put_slice(b"<?xml version='1.0'?><stream:stream xmlns:stream='http://etherx.jabber.org/streams' version='1.0' xmlns='jabber:client'>");
         let r = c.decode(&mut b);
@@ -283,7 +283,7 @@ mod tests {
 
     #[test]
     fn test_truncated_stanza() {
-        let mut c = XMPPCodec::new();
+        let mut c = XmppCodec::new();
         let mut b = BytesMut::with_capacity(1024);
         b.put_slice(b"<?xml version='1.0'?><stream:stream xmlns:stream='http://etherx.jabber.org/streams' version='1.0' xmlns='jabber:client'>");
         let r = c.decode(&mut b);
@@ -309,7 +309,7 @@ mod tests {
 
     #[test]
     fn test_truncated_utf8() {
-        let mut c = XMPPCodec::new();
+        let mut c = XmppCodec::new();
         let mut b = BytesMut::with_capacity(1024);
         b.put_slice(b"<?xml version='1.0'?><stream:stream xmlns:stream='http://etherx.jabber.org/streams' version='1.0' xmlns='jabber:client'>");
         let r = c.decode(&mut b);
@@ -336,7 +336,7 @@ mod tests {
     /// test case for https://gitlab.com/xmpp-rs/tokio-xmpp/issues/3
     #[test]
     fn test_atrribute_prefix() {
-        let mut c = XMPPCodec::new();
+        let mut c = XmppCodec::new();
         let mut b = BytesMut::with_capacity(1024);
         b.put_slice(b"<?xml version='1.0'?><stream:stream xmlns:stream='http://etherx.jabber.org/streams' version='1.0' xmlns='jabber:client'>");
         let r = c.decode(&mut b);
@@ -363,7 +363,7 @@ mod tests {
         use futures::{executor::block_on, sink::SinkExt};
         use std::io::Cursor;
         use tokio_util::codec::FramedWrite;
-        let mut framed = FramedWrite::new(Cursor::new(vec![]), XMPPCodec::new());
+        let mut framed = FramedWrite::new(Cursor::new(vec![]), XmppCodec::new());
         let mut text = "".to_owned();
         for _ in 0..2usize.pow(15) {
             text = text + "A";
@@ -388,7 +388,7 @@ mod tests {
 
     #[test]
     fn test_cut_out_stanza() {
-        let mut c = XMPPCodec::new();
+        let mut c = XmppCodec::new();
         let mut b = BytesMut::with_capacity(1024);
         b.put_slice(b"<?xml version='1.0'?><stream:stream xmlns:stream='http://etherx.jabber.org/streams' version='1.0' xmlns='jabber:client'>");
         let r = c.decode(&mut b);

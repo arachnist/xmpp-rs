@@ -3,14 +3,14 @@ use tokio::io::{AsyncRead, AsyncWrite};
 use tokio_util::codec::Framed;
 use xmpp_parsers::{ns, Element, Jid};
 
-use crate::xmpp_codec::{Packet, XMPPCodec};
+use crate::xmpp_codec::{Packet, XmppCodec};
 use crate::xmpp_stream::XMPPStream;
 use crate::{Error, ProtocolError};
 
 /// Sends a `<stream:stream>`, then wait for one from the server, and
 /// construct an XMPPStream.
 pub async fn start<S: AsyncRead + AsyncWrite + Unpin>(
-    mut stream: Framed<S, XMPPCodec>,
+    mut stream: Framed<S, XmppCodec>,
     jid: Jid,
     ns: String,
 ) -> Result<XMPPStream<S>, Error> {

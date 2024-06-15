@@ -11,7 +11,7 @@ use xmpp_parsers::{Element, Jid};
 
 use crate::stream_features::StreamFeatures;
 use crate::stream_start;
-use crate::xmpp_codec::{Packet, XMPPCodec};
+use crate::xmpp_codec::{Packet, XmppCodec};
 use crate::Error;
 
 fn make_id() -> String {
@@ -40,7 +40,7 @@ pub struct XMPPStream<S: AsyncRead + AsyncWrite + Unpin> {
     /// The local Jabber-Id
     pub jid: Jid,
     /// Codec instance
-    pub stream: Framed<S, XMPPCodec>,
+    pub stream: Framed<S, XmppCodec>,
     /// `<stream:features/>` for XMPP version 1.0
     pub stream_features: StreamFeatures,
     /// Root namespace
@@ -56,7 +56,7 @@ impl<S: AsyncRead + AsyncWrite + Unpin> XMPPStream<S> {
     /// Constructor
     pub fn new(
         jid: Jid,
-        stream: Framed<S, XMPPCodec>,
+        stream: Framed<S, XmppCodec>,
         ns: String,
         id: String,
         stream_features: Element,
@@ -72,7 +72,7 @@ impl<S: AsyncRead + AsyncWrite + Unpin> XMPPStream<S> {
 
     /// Send a `<stream:stream>` start tag
     pub async fn start(stream: S, jid: Jid, ns: String) -> Result<Self, Error> {
-        let xmpp_stream = Framed::new(stream, XMPPCodec::new());
+        let xmpp_stream = Framed::new(stream, XmppCodec::new());
         stream_start::start(xmpp_stream, jid, ns).await
     }
 

@@ -25,7 +25,7 @@ mod stream_start;
 #[cfg(feature = "insecure-tcp")]
 pub mod tcp;
 mod xmpp_codec;
-pub use crate::xmpp_codec::{Packet, XMPPCodec};
+pub use crate::xmpp_codec::{Packet, XmppCodec};
 mod event;
 pub use event::Event;
 mod client;

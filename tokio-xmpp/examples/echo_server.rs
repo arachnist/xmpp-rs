@@ -2,7 +2,7 @@ use futures::{SinkExt, StreamExt};
 use tokio::{self, io, net::TcpSocket};
 use tokio_util::codec::Framed;
 
-use tokio_xmpp::XMPPCodec;
+use tokio_xmpp::XmppCodec;
 
 #[tokio::main]
 async fn main() -> Result<(), io::Error> {
@@ -18,7 +18,7 @@ async fn main() -> Result<(), io::Error> {
         let (stream, _addr) = listener.accept().await?;
 
         // Use the `XMPPCodec` to encode and decode frames
-        let mut framed = Framed::new(stream, XMPPCodec::new());
+        let mut framed = Framed::new(stream, XmppCodec::new());
 
         tokio::spawn(async move {
             while let Some(packet) = framed.next().await {
