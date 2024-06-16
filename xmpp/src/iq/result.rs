@@ -6,7 +6,7 @@
 
 use tokio_xmpp::connect::ServerConnector;
 use tokio_xmpp::{
-    parsers::{ns, private::Query as PrivateXMLQuery, roster::Roster},
+    parsers::{disco::DiscoInfoResult, ns, private::Query as PrivateXMLQuery, roster::Roster},
     Element, Jid,
 };
 
@@ -46,6 +46,13 @@ pub async fn handle_iq_result<C: ServerConnector>(
             }
         }
     } else if payload.is("query", ns::DISCO_INFO) {
-        disco::handle_disco_info_result_payload(agent, payload, from).await;
+        match DiscoInfoResult::try_from(payload.clone()) {
+            Ok(disco) => {
+                disco::handle_disco_info_result(agent, disco, from).await;
+            }
+            Err(e) => match e {
+                _ => panic!("Wrong disco#info format: {}", e),
+            },
+        }
     }
 }

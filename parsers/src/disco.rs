@@ -163,13 +163,6 @@ impl TryFrom<Element> for DiscoInfoResult {
                     "There must be at least one feature in disco#info.",
                 ));
             }
-            if !result.features.contains(&Feature {
-                var: ns::DISCO_INFO.to_owned(),
-            }) {
-                return Err(Error::ParseError(
-                    "disco#info feature not present in disco#info.",
-                ));
-            }
         }
 
         Ok(result)
@@ -403,14 +396,6 @@ mod tests {
             _ => panic!(),
         };
         assert_eq!(message, "There must be at least one feature in disco#info.");
-
-        let elem: Element = "<query xmlns='http://jabber.org/protocol/disco#info'><identity category='client' type='pc'/><feature var='http://jabber.org/protocol/disco#items'/></query>".parse().unwrap();
-        let error = DiscoInfoResult::try_from(elem).unwrap_err();
-        let message = match error {
-            Error::ParseError(string) => string,
-            _ => panic!(),
-        };
-        assert_eq!(message, "disco#info feature not present in disco#info.");
     }
 
     #[test]

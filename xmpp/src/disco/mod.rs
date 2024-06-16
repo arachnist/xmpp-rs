@@ -8,57 +8,16 @@ use tokio_xmpp::connect::ServerConnector;
 use tokio_xmpp::{
     parsers::{
         bookmarks,
-        disco::{DiscoInfoResult, Feature},
+        disco::DiscoInfoResult,
         iq::Iq,
         ns,
         private::Query as PrivateXMLQuery,
         pubsub::pubsub::{Items, PubSub},
-        Error as ParsersError,
     },
-    Element, Jid,
+    Jid,
 };
 
 use crate::Agent;
-
-// This method is a workaround due to prosody bug https://issues.prosody.im/1664
-// FIXME: To be removed in the future
-// The server doesn't return disco#info feature when querying the account
-// so we add it manually because we know it's true
-pub async fn handle_disco_info_result_payload<C: ServerConnector>(
-    agent: &mut Agent<C>,
-    payload: Element,
-    from: Jid,
-) {
-    match DiscoInfoResult::try_from(payload.clone()) {
-        Ok(disco) => {
-            handle_disco_info_result(agent, disco, from).await;
-        }
-        Err(e) => match e {
-            ParsersError::ParseError(reason) => {
-                if reason == "disco#info feature not present in disco#info." {
-                    let mut payload = payload.clone();
-                    let disco_feature =
-                        Feature::new("http://jabber.org/protocol/disco#info").into();
-                    payload.append_child(disco_feature);
-                    match DiscoInfoResult::try_from(payload) {
-                        Ok(disco) => {
-                            handle_disco_info_result(agent, disco, from).await;
-                        }
-                        Err(e) => {
-                            panic!("Wrong disco#info format after workaround: {}", e)
-                        }
-                    }
-                } else {
-                    panic!(
-                        "Wrong disco#info format (reason cannot be worked around): {}",
-                        e
-                    )
-                }
-            }
-            _ => panic!("Wrong disco#info format: {}", e),
-        },
-    }
-}
 
 pub async fn handle_disco_info_result<C: ServerConnector>(
     agent: &mut Agent<C>,
