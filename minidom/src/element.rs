@@ -427,6 +427,11 @@ impl Element {
         Ok(())
     }
 
+    /// Extracts all children into a collection.
+    pub fn take_nodes(&mut self) -> Vec<Node> {
+        self.children.drain(..).collect()
+    }
+
     /// Returns an iterator over references to every child node of this element.
     ///
     /// # Examples

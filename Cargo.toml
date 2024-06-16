@@ -6,6 +6,7 @@ members = [  # alphabetically sorted
   "sasl",
   "tokio-xmpp",
   "xmpp",
+  "xso",
 ]
 resolver = "2"
 
