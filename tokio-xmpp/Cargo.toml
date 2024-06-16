@@ -50,3 +50,6 @@ insecure-tcp = []
 syntax-highlighting = ["syntect"]
 # Enable serde support in jid crate
 serde = [ "xmpp-parsers/serde" ]
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(xmpprs_doc_build)'] }
