@@ -676,6 +676,23 @@ macro_rules! generate_element {
             )*
         }
 
+        impl ::xso::FromXml for $elem {
+            type Builder = ::xso::minidom_compat::FromEventsViaElement<$elem>;
+
+            fn from_events(
+                qname: ::xso::exports::rxml::QName,
+                attrs: ::xso::exports::rxml::AttrMap,
+            ) -> Result<Self::Builder, ::xso::error::FromEventsError> {
+                if qname.0 != crate::ns::$ns || qname.1 != $name {
+                    return Err(::xso::error::FromEventsError::Mismatch {
+                        name: qname,
+                        attrs,
+                    })
+                }
+                Self::Builder::new(qname, attrs)
+            }
+        }
+
         impl ::std::convert::TryFrom<crate::Element> for $elem {
             type Error = crate::util::error::Error;
 
@@ -746,6 +763,14 @@ macro_rules! generate_element {
                 )*
 
                 builder.build()
+            }
+        }
+
+        impl ::xso::IntoXml for $elem {
+            type EventIter = ::xso::minidom_compat::IntoEventsViaElement;
+
+            fn into_event_iter(self) -> Result<Self::EventIter, ::xso::error::Error> {
+                Self::EventIter::new(self)
             }
         }
     );

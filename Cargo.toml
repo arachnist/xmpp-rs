@@ -17,3 +17,4 @@ sasl = { path = "sasl" }
 tokio-xmpp = { path = "tokio-xmpp" }
 xmpp-parsers = { path = "parsers" }
 xmpp = { path = "xmpp" }
+xso = { path = "xso" }

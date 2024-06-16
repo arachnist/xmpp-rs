@@ -131,3 +131,18 @@ impl From<chrono::ParseError> for Error {
         Error::ChronoParseError(err)
     }
 }
+
+impl From<Error> for xso::error::Error {
+    fn from(other: Error) -> Self {
+        match other {
+            Error::ParseError(e) => Self::Other(e.to_string().into()),
+            Error::TypeMismatch { .. } => Self::TypeMismatch,
+            Error::Base64Error(e) => Self::TextParseError(Box::new(e)),
+            Error::ParseIntError(e) => Self::TextParseError(Box::new(e)),
+            Error::ParseStringError(e) => Self::TextParseError(Box::new(e)),
+            Error::ParseAddrError(e) => Self::TextParseError(Box::new(e)),
+            Error::JidParseError(e) => Self::TextParseError(Box::new(e)),
+            Error::ChronoParseError(e) => Self::TextParseError(Box::new(e)),
+        }
+    }
+}

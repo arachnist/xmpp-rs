@@ -21,6 +21,9 @@ pub enum Error {
     /// Attempt to parse text data failed with the provided nested error.
     TextParseError(Box<dyn std::error::Error + Send + Sync + 'static>),
 
+    /// Generic, unspecified other error.
+    Other(Box<str>),
+
     /// An element header did not match an expected element.
     ///
     /// This is only rarely generated: most of the time, a mismatch of element
@@ -35,6 +38,7 @@ impl fmt::Display for Error {
             Self::XmlError(ref e) => write!(f, "xml parse error: {}", e),
             Self::TextParseError(ref e) => write!(f, "text parse error: {}", e),
             Self::TypeMismatch => f.write_str("mismatch between expected and actual XML data"),
+            Self::Other(msg) => f.write_str(msg),
         }
     }
 }
@@ -61,6 +65,12 @@ impl From<rxml::strings::Error> for Error {
     }
 }
 
+impl From<std::convert::Infallible> for Error {
+    fn from(other: std::convert::Infallible) -> Self {
+        match other {}
+    }
+}
+
 /// Error returned from
 /// [`FromXml::from_events`][`crate::FromXml::from_events`].
 #[derive(Debug)]
@@ -84,6 +94,12 @@ pub enum FromEventsError {
 impl From<Error> for FromEventsError {
     fn from(other: Error) -> Self {
         Self::Invalid(other)
+    }
+}
+
+impl From<std::convert::Infallible> for FromEventsError {
+    fn from(other: std::convert::Infallible) -> Self {
+        match other {}
     }
 }
 

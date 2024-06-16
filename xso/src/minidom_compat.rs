@@ -4,6 +4,7 @@
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
+use std::marker::PhantomData;
 use std::vec::IntoIter;
 
 use minidom::{Element, Node};
@@ -232,6 +233,73 @@ impl FromXml for Element {
             inner: Some(element),
             nested: None,
         })
+    }
+}
+
+/// Helper struct to streamingly parse a struct which implements conversion
+/// from [`minidom::Element`].
+pub struct FromEventsViaElement<T> {
+    inner: ElementFromEvents,
+    // needed here because we need to keep the type `T` around until
+    // `FromEventsBuilder` is done and it must always be the same type, so we
+    // have to nail it down in the struct's type, and to do that we need to
+    // bind it to a field. that's what PhantomData is for.
+    _phantom: PhantomData<T>,
+}
+
+impl<E, T: TryFrom<minidom::Element, Error = E>> FromEventsViaElement<T>
+where
+    Error: From<E>,
+{
+    /// Create a new streaming parser for `T`.
+    pub fn new(qname: rxml::QName, attrs: rxml::AttrMap) -> Result<Self, FromEventsError> {
+        Ok(Self {
+            _phantom: PhantomData,
+            inner: Element::from_events(qname, attrs)?,
+        })
+    }
+}
+
+impl<E, T: TryFrom<minidom::Element, Error = E>> FromEventsBuilder for FromEventsViaElement<T>
+where
+    Error: From<E>,
+{
+    type Output = T;
+
+    fn feed(&mut self, ev: Event) -> Result<Option<Self::Output>, Error> {
+        match self.inner.feed(ev) {
+            Ok(Some(v)) => Ok(Some(v.try_into()?)),
+            Ok(None) => Ok(None),
+            Err(e) => Err(e),
+        }
+    }
+}
+
+/// Helper struct to stream a struct which implements conversion
+/// to [`minidom::Element`].
+pub struct IntoEventsViaElement {
+    inner: IntoEvents,
+}
+
+impl IntoEventsViaElement {
+    /// Create a new streaming parser for `T`.
+    pub fn new<E, T>(value: T) -> Result<Self, crate::error::Error>
+    where
+        Error: From<E>,
+        minidom::Element: TryFrom<T, Error = E>,
+    {
+        let element: minidom::Element = value.try_into()?;
+        Ok(Self {
+            inner: element.into_event_iter()?,
+        })
+    }
+}
+
+impl Iterator for IntoEventsViaElement {
+    type Item = Result<Event, Error>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.inner.next()
     }
 }
 

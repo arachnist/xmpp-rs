@@ -20,6 +20,11 @@ use of this library in parsing XML streams like specified in RFC 6120.
 pub mod error;
 pub mod minidom_compat;
 
+#[doc(hidden)]
+pub mod exports {
+    pub use rxml;
+}
+
 /// Trait allowing to consume a struct and iterate its contents as
 /// serialisable [`rxml::Event`] items.
 pub trait IntoXml {
