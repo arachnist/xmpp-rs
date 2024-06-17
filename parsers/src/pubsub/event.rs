@@ -14,13 +14,13 @@ use crate::Element;
 use jid::Jid;
 
 /// Event wrapper for a PubSub `<item/>`.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Item(pub PubSubItem);
 
 impl_pubsub_item!(Item, PUBSUB_EVENT);
 
 /// Represents an event happening to a PubSub node.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum PubSubEvent {
     /*
     Collection {

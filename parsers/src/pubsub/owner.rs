@@ -122,7 +122,7 @@ generate_element!(
 /// Main payload used to communicate with a PubSubOwner service.
 ///
 /// `<pubsub xmlns="http://jabber.org/protocol/pubsub#owner"/>`
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum PubSubOwner {
     /// Manage the affiliations of a node.
     Affiliations(Affiliations),
