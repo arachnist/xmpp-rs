@@ -19,6 +19,7 @@ jobs:
         run: |
           rustup update
           rustup component add rustfmt
+          cargo fmt --version
           cargo fmt --check
 
   test-stable:
