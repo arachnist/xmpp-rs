@@ -27,8 +27,18 @@ pub mod exports {
 
 /// Trait allowing to consume a struct and iterate its contents as
 /// serialisable [`rxml::Event`] items.
+///
+/// **Important:** Changing the [`EventIter`][`Self::EventIter`] associated
+/// type is considered a non-breaking change for any given implementation of
+/// this trait. Always refer to a type's iterator type using fully-qualified
+/// notation, for example: `<T as xso::IntoXml>::EventIter`.
 pub trait IntoXml {
     /// The iterator type.
+    ///
+    /// **Important:** Changing this type is considered a non-breaking change
+    /// for any given implementation of this trait. Always refer to a type's
+    /// iterator type using fully-qualified notation, for example:
+    /// `<T as xso::IntoXml>::EventIter`.
     type EventIter: Iterator<Item = Result<rxml::Event, self::error::Error>>;
 
     /// Return an iterator which emits the contents of the struct or enum as
