@@ -8,7 +8,7 @@ This module contains the error types used throughout the `xso` crate.
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
-use std::fmt;
+use core::fmt;
 
 use rxml::error::XmlError;
 
@@ -65,8 +65,8 @@ impl From<rxml::strings::Error> for Error {
     }
 }
 
-impl From<std::convert::Infallible> for Error {
-    fn from(other: std::convert::Infallible) -> Self {
+impl From<core::convert::Infallible> for Error {
+    fn from(other: core::convert::Infallible) -> Self {
         match other {}
     }
 }
@@ -97,8 +97,8 @@ impl From<Error> for FromEventsError {
     }
 }
 
-impl From<std::convert::Infallible> for FromEventsError {
-    fn from(other: std::convert::Infallible) -> Self {
+impl From<core::convert::Infallible> for FromEventsError {
+    fn from(other: core::convert::Infallible) -> Self {
         match other {}
     }
 }
