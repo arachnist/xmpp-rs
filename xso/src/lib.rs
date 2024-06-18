@@ -1,4 +1,5 @@
-#![forbid(missing_docs, unsafe_code)]
+#![forbid(unsafe_code)]
+#![warn(missing_docs)]
 /*!
 # XML Streamed Objects -- serde-like parsing for XML
 
