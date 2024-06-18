@@ -223,22 +223,12 @@ mod tests {
 
         let pubsub = PubSubOwner::Configure(Configure {
             node: Some(NodeName(String::from("foo"))),
-            form: Some(DataForm {
-                type_: DataFormType::Submit,
-                form_type: Some(String::from(ns::PUBSUB_CONFIGURE)),
-                title: None,
-                instructions: None,
-                fields: vec![Field {
-                    var: Some(String::from("pubsub#access_model")),
-                    type_: FieldType::ListSingle,
-                    label: None,
-                    required: false,
-                    desc: None,
-                    options: vec![],
-                    values: vec![String::from("whitelist")],
-                    media: vec![],
-                }],
-            }),
+            form: Some(DataForm::new(
+                DataFormType::Submit,
+                ns::PUBSUB_CONFIGURE,
+                vec![Field::new("pubsub#access_model", FieldType::ListSingle)
+                    .with_value("whitelist")],
+            )),
         });
 
         let elem2 = Element::from(pubsub);
@@ -271,22 +261,12 @@ mod tests {
         let elem1 = elem.clone();
 
         let pubsub = PubSubOwner::Default(Default {
-            form: Some(DataForm {
-                type_: DataFormType::Submit,
-                form_type: Some(String::from(ns::PUBSUB_CONFIGURE)),
-                title: None,
-                instructions: None,
-                fields: vec![Field {
-                    var: Some(String::from("pubsub#access_model")),
-                    type_: FieldType::ListSingle,
-                    label: None,
-                    required: false,
-                    desc: None,
-                    options: vec![],
-                    values: vec![String::from("whitelist")],
-                    media: vec![],
-                }],
-            }),
+            form: Some(DataForm::new(
+                DataFormType::Submit,
+                ns::PUBSUB_CONFIGURE,
+                vec![Field::new("pubsub#access_model", FieldType::ListSingle)
+                    .with_value("whitelist")],
+            )),
         });
 
         let elem2 = Element::from(pubsub);

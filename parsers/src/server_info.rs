@@ -116,81 +116,24 @@ mod tests {
 
     #[test]
     fn test_simple() {
-        let form = DataForm {
-            type_: DataFormType::Result_,
-            form_type: Some(String::from(ns::SERVER_INFO)),
-            title: None,
-            instructions: None,
-            fields: vec![
-                Field {
-                    var: Some(String::from("abuse-addresses")),
-                    type_: FieldType::ListMulti,
-                    label: None,
-                    required: false,
-                    desc: None,
-                    options: vec![],
-                    values: vec![],
-                    media: vec![],
-                },
-                Field {
-                    var: Some(String::from("admin-addresses")),
-                    type_: FieldType::ListMulti,
-                    label: None,
-                    required: false,
-                    desc: None,
-                    options: vec![],
-                    values: vec![
-                        String::from("xmpp:admin@foo.bar"),
-                        String::from("https://foo.bar/chat/"),
-                        String::from("mailto:admin@foo.bar"),
-                    ],
-                    media: vec![],
-                },
-                Field {
-                    var: Some(String::from("feedback-addresses")),
-                    type_: FieldType::ListMulti,
-                    label: None,
-                    required: false,
-                    desc: None,
-                    options: vec![],
-                    values: vec![],
-                    media: vec![],
-                },
-                Field {
-                    var: Some(String::from("sales-addresses")),
-                    type_: FieldType::ListMulti,
-                    label: None,
-                    required: false,
-                    desc: None,
-                    options: vec![],
-                    values: vec![],
-                    media: vec![],
-                },
-                Field {
-                    var: Some(String::from("security-addresses")),
-                    type_: FieldType::ListMulti,
-                    label: None,
-                    required: false,
-                    desc: None,
-                    options: vec![],
-                    values: vec![
-                        String::from("xmpp:security@foo.bar"),
-                        String::from("mailto:security@foo.bar"),
-                    ],
-                    media: vec![],
-                },
-                Field {
-                    var: Some(String::from("support-addresses")),
-                    type_: FieldType::ListMulti,
-                    label: None,
-                    required: false,
-                    desc: None,
-                    options: vec![],
-                    values: vec![String::from("mailto:support@foo.bar")],
-                    media: vec![],
-                },
+        let form = DataForm::new(
+            DataFormType::Result_,
+            ns::SERVER_INFO,
+            vec![
+                Field::new("abuse-addresses", FieldType::ListMulti),
+                Field::new("admin-addresses", FieldType::ListMulti)
+                    .with_value("xmpp:admin@foo.bar")
+                    .with_value("https://foo.bar/chat/")
+                    .with_value("mailto:admin@foo.bar"),
+                Field::new("feedback-addresses", FieldType::ListMulti),
+                Field::new("sales-addresses", FieldType::ListMulti),
+                Field::new("security-addresses", FieldType::ListMulti)
+                    .with_value("xmpp:security@foo.bar")
+                    .with_value("mailto:security@foo.bar"),
+                Field::new("support-addresses", FieldType::ListMulti)
+                    .with_value("mailto:support@foo.bar"),
             ],
-        };
+        );
 
         let server_info = ServerInfo {
             abuse: vec![],
