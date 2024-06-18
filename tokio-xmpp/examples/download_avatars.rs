@@ -230,10 +230,7 @@ fn handle_iq_result(pubsub: PubSub, from: &Jid) {
 fn save_avatar(from: &Jid, id: String, data: &[u8]) -> io::Result<()> {
     let directory = format!("data/{}", from);
     let filename = format!("data/{}/{}", from, id);
-    println!(
-        "Saving avatar from [1m{}[0m to [4m{}[0m.",
-        from, filename
-    );
+    println!("Saving avatar from [1m{}[0m to [4m{}[0m.", from, filename);
     create_dir_all(directory)?;
     let mut file = File::create(filename)?;
     file.write_all(data)
