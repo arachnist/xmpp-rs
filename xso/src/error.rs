@@ -3,6 +3,7 @@
 
 This module contains the error types used throughout the `xso` crate.
 */
+
 // Copyright (c) 2024 Jonas Schäfer <jonas@zombofant.net>
 //
 // This Source Code Form is subject to the terms of the Mozilla Public

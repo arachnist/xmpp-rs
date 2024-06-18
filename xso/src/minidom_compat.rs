@@ -1,4 +1,5 @@
 //! Implementations of traits from this crate for minidom types
+
 // Copyright (c) 2024 Jonas Schäfer <jonas@zombofant.net>
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
