@@ -210,8 +210,8 @@ impl TryFrom<Element> for Field {
                 let media_element = MediaElement::try_from(element.clone())?;
                 field.media.push(media_element);
             } else if element.is("desc", ns::DATA_FORMS) {
-                check_no_children!(element, "value");
-                check_no_attributes!(element, "value");
+                check_no_children!(element, "desc");
+                check_no_attributes!(element, "desc");
                 field.desc = Some(element.text());
             } else {
                 return Err(Error::ParseError(
