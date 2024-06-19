@@ -95,6 +95,7 @@ pub fn generate_address_field<S: Into<String>>(var: S, values: Vec<String>) -> F
         options: vec![],
         values,
         media: vec![],
+        validate: None,
     }
 }
 

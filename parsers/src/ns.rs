@@ -290,6 +290,9 @@ pub const OID: &str = "urn:xmpp:occupant-id:0";
 /// XEP-0444: Message Reactions
 pub const REACTIONS: &str = "urn:xmpp:reactions:0";
 
+/// XEP-0122: Data Forms Validation
+pub const XDATA_VALIDATE: &str = "http://jabber.org/protocol/xdata-validate";
+
 /// Alias for the main namespace of the stream, that is "jabber:client" when
 /// the component feature isn’t enabled.
 #[cfg(not(feature = "component"))]

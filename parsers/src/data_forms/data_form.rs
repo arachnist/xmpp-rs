@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use crate::data_forms::Validate;
 use crate::media_element::MediaElement;
 use crate::ns;
 use crate::Element;
@@ -93,6 +94,9 @@ pub struct Field {
 
     /// A list of media related to this field.
     pub media: Vec<MediaElement>,
+
+    /// Validation rules for this field.
+    pub validate: Option<Validate>,
 }
 
 impl Field {
@@ -107,6 +111,7 @@ impl Field {
             options: Vec::new(),
             media: Vec::new(),
             values: Vec::new(),
+            validate: None,
         }
     }
 
@@ -182,6 +187,7 @@ impl TryFrom<Element> for Field {
             options: vec![],
             values: vec![],
             media: vec![],
+            validate: None,
         };
 
         if field.type_ != FieldType::Fixed && field.var.is_none() {
@@ -213,6 +219,13 @@ impl TryFrom<Element> for Field {
                 check_no_children!(element, "desc");
                 check_no_attributes!(element, "desc");
                 field.desc = Some(element.text());
+            } else if element.is("validate", ns::XDATA_VALIDATE) {
+                if field.validate.is_some() {
+                    return Err(Error::ParseError(
+                        "More than one validate element in field.",
+                    ));
+                }
+                field.validate = Some(Validate::try_from(element.clone())?);
             } else {
                 return Err(
                     Error::Other("Field child isn’t a value, option or media element.").into(),
@@ -242,6 +255,7 @@ impl From<Field> for Element {
                     .map(|value| Element::builder("value", ns::DATA_FORMS).append(value)),
             )
             .append_all(field.media.iter().cloned().map(Element::from))
+            .append_all(field.validate)
             .build()
     }
 }
@@ -375,13 +389,14 @@ impl From<DataForm> for Element {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::data_forms::{Datatype, Validate};
 
     #[cfg(target_pointer_width = "32")]
     #[test]
     fn test_size() {
         assert_size!(Option_, 24);
         assert_size!(FieldType, 1);
-        assert_size!(Field, 76);
+        assert_size!(Field, 132);
         assert_size!(DataFormType, 1);
         assert_size!(DataForm, 52);
     }
@@ -391,7 +406,7 @@ mod tests {
     fn test_size() {
         assert_size!(Option_, 48);
         assert_size!(FieldType, 1);
-        assert_size!(Field, 152);
+        assert_size!(Field, 264);
         assert_size!(DataFormType, 1);
         assert_size!(DataForm, 104);
     }
@@ -439,6 +454,7 @@ mod tests {
                 options: vec![],
                 values: vec!["Section 1: Bot Info".to_string()],
                 media: vec![],
+                validate: None,
             }]
         );
     }
@@ -463,6 +479,40 @@ mod tests {
                 options: vec![],
                 values: vec![],
                 media: vec![],
+                validate: None,
+            }]
+        );
+    }
+
+    #[test]
+    fn test_validate() {
+        let elem: Element = r#"<x xmlns='jabber:x:data' type='form'>
+                <field var='evt.date' type='text-single' label='Event Date/Time'>
+                    <validate xmlns='http://jabber.org/protocol/xdata-validate' datatype='xs:dateTime'/>
+                    <value>2003-10-06T11:22:00-07:00</value>
+                </field>
+            </x>"#
+            .parse()
+            .unwrap();
+        let form = DataForm::try_from(elem).unwrap();
+        assert_eq!(form.type_, DataFormType::Form);
+        assert!(form.form_type.is_none());
+        assert_eq!(
+            form.fields,
+            vec![Field {
+                var: Some("evt.date".to_string()),
+                type_: FieldType::TextSingle,
+                label: Some("Event Date/Time".to_string()),
+                required: false,
+                desc: None,
+                options: vec![],
+                values: vec!["2003-10-06T11:22:00-07:00".to_string()],
+                media: vec![],
+                validate: Some(Validate {
+                    datatype: Some(Datatype::DateTime),
+                    method: None,
+                    list_range: None,
+                }),
             }]
         );
     }
