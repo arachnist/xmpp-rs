@@ -173,3 +173,58 @@ pub fn try_from_element<T: FromXml>(
     // implementations must be constructible from that.
     unreachable!("minidom::Element did not produce enough events to complete element")
 }
+
+fn map_nonio_error<T>(r: Result<T, rxml::Error>) -> Result<T, self::error::Error> {
+    match r {
+        Ok(v) => Ok(v),
+        Err(rxml::Error::IO(_)) => unreachable!(),
+        Err(rxml::Error::Xml(e)) => Err(e.into()),
+        Err(rxml::Error::InvalidUtf8Byte(_)) => Err(self::error::Error::Other("invalid utf-8")),
+        Err(rxml::Error::InvalidChar(_)) => {
+            Err(self::error::Error::Other("non-character encountered"))
+        }
+        Err(rxml::Error::RestrictedXml(_)) => Err(self::error::Error::Other("restricted xml")),
+    }
+}
+
+fn read_start_event<I: std::io::BufRead>(
+    r: &mut rxml::Reader<I>,
+) -> Result<(rxml::QName, rxml::AttrMap), self::error::Error> {
+    for ev in r {
+        match map_nonio_error(ev)? {
+            rxml::Event::XmlDeclaration(_, rxml::XmlVersion::V1_0) => (),
+            rxml::Event::StartElement(_, name, attrs) => return Ok((name, attrs)),
+            _ => {
+                return Err(self::error::Error::Other(
+                    "Unexpected event at start of document",
+                ))
+            }
+        }
+    }
+    Err(self::error::Error::XmlError(
+        rxml::error::XmlError::InvalidEof("before start of element"),
+    ))
+}
+
+/// Attempt to parse a type implementing [`FromXml`] from a byte buffer
+/// containing XML data.
+pub fn from_bytes<T: FromXml>(mut buf: &[u8]) -> Result<T, self::error::Error> {
+    let mut reader = rxml::Reader::new(&mut buf);
+    let (name, attrs) = read_start_event(&mut reader)?;
+    let mut builder = match T::from_events(name, attrs) {
+        Ok(v) => v,
+        Err(self::error::FromEventsError::Mismatch { .. }) => {
+            return Err(self::error::Error::TypeMismatch)
+        }
+        Err(self::error::FromEventsError::Invalid(e)) => return Err(e),
+    };
+    for ev in reader {
+        match builder.feed(map_nonio_error(ev)?)? {
+            Some(v) => return Ok(v),
+            None => (),
+        }
+    }
+    Err(self::error::Error::XmlError(
+        rxml::error::XmlError::InvalidEof("while parsing FromXml impl"),
+    ))
+}
