@@ -4,6 +4,9 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use xso::{FromXml, IntoXml};
+
+use crate::ns;
 use crate::stanza_error::DefinedCondition;
 
 generate_element!(
@@ -101,12 +104,10 @@ generate_element!(
     ]
 );
 
-generate_empty_element!(
-    /// Requests the currently received stanzas by the other party.
-    R,
-    "r",
-    SM
-);
+/// Requests the currently received stanzas by the other party.
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::SM, name = "r")]
+pub struct R;
 
 generate_element!(
     /// Requests a stream resumption.
@@ -135,12 +136,10 @@ generate_element!(
 );
 
 // TODO: add support for optional and required.
-generate_empty_element!(
-    /// Represents availability of Stream Management in `<stream:features/>`.
-    StreamManagement,
-    "sm",
-    SM
-);
+/// Represents availability of Stream Management in `<stream:features/>`.
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::SM, name = "sm")]
+pub struct StreamManagement;
 
 #[cfg(test)]
 mod tests {

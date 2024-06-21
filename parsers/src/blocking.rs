@@ -4,19 +4,19 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use xso::{FromXml, IntoXml};
+
 use crate::iq::{IqGetPayload, IqResultPayload, IqSetPayload};
 use crate::ns;
 use crate::Element;
 use jid::Jid;
 use xso::error::FromElementError;
 
-generate_empty_element!(
-    /// The element requesting the blocklist, the result iq will contain a
-    /// [BlocklistResult].
-    BlocklistRequest,
-    "blocklist",
-    BLOCKING
-);
+/// The element requesting the blocklist, the result iq will contain a
+/// [BlocklistResult].
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::BLOCKING, name = "blocklist")]
+pub struct BlocklistRequest;
 
 impl IqGetPayload for BlocklistRequest {}
 
@@ -87,12 +87,10 @@ generate_blocking_element!(
 
 impl IqSetPayload for Unblock {}
 
-generate_empty_element!(
-    /// The application-specific error condition when a message is blocked.
-    Blocked,
-    "blocked",
-    BLOCKING_ERRORS
-);
+/// The application-specific error condition when a message is blocked.
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::BLOCKING_ERRORS, name = "blocked")]
+pub struct Blocked;
 
 #[cfg(test)]
 mod tests {

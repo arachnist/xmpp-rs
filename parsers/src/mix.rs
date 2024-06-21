@@ -7,8 +7,11 @@
 // TODO: validate nicks by applying the “nickname” profile of the PRECIS OpaqueString class, as
 // defined in RFC 7700.
 
+use xso::{FromXml, IntoXml};
+
 use crate::iq::{IqResultPayload, IqSetPayload};
 use crate::message::MessagePayload;
+use crate::ns;
 use crate::pubsub::{NodeName, PubSubPayload};
 use jid::BareJid;
 
@@ -146,13 +149,11 @@ impl UpdateSubscription {
     }
 }
 
-generate_empty_element!(
-    /// Request to leave a given MIX channel.  It will automatically unsubscribe the user from all
-    /// nodes on this channel.
-    Leave,
-    "leave",
-    MIX_CORE
-);
+/// Request to leave a given MIX channel.  It will automatically unsubscribe the user from all
+/// nodes on this channel.
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::MIX_CORE, name = "leave")]
+pub struct Leave;
 
 impl IqSetPayload for Leave {}
 impl IqResultPayload for Leave {}

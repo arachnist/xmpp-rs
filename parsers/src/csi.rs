@@ -4,26 +4,24 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-generate_empty_element!(
-    /// Stream:feature sent by the server to advertise it supports CSI.
-    Feature,
-    "csi",
-    CSI
-);
+use xso::{FromXml, IntoXml};
 
-generate_empty_element!(
-    /// Client indicates it is inactive.
-    Inactive,
-    "inactive",
-    CSI
-);
+use crate::ns;
 
-generate_empty_element!(
-    /// Client indicates it is active again.
-    Active,
-    "active",
-    CSI
-);
+/// Stream:feature sent by the server to advertise it supports CSI.
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::CSI, name = "csi")]
+pub struct Feature;
+
+/// Client indicates it is inactive.
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::CSI, name = "inactive")]
+pub struct Inactive;
+
+/// Client indicates it is active again.
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::CSI, name = "active")]
+pub struct Active;
 
 #[cfg(test)]
 mod tests {

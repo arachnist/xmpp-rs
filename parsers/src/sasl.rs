@@ -4,6 +4,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use xso::{FromXml, IntoXml};
+
 use crate::ns;
 use crate::util::text_node_codecs::{Base64, Codec};
 use crate::Element;
@@ -78,13 +80,11 @@ generate_element!(
     )
 );
 
-generate_empty_element!(
-    /// Sent by the client at any point after [auth](struct.Auth.html) if it
-    /// wants to cancel the current authentication process.
-    Abort,
-    "abort",
-    SASL
-);
+/// Sent by the client at any point after [auth](struct.Auth.html) if it
+/// wants to cancel the current authentication process.
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::SASL, name = "abort")]
+pub struct Abort;
 
 generate_element!(
     /// Sent by the server on SASL success.

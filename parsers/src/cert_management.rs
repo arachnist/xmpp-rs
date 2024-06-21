@@ -4,7 +4,10 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use xso::{FromXml, IntoXml};
+
 use crate::iq::{IqGetPayload, IqResultPayload, IqSetPayload};
+use crate::ns;
 use crate::util::text_node_codecs::{Base64, Codec};
 
 generate_elem_id!(
@@ -40,12 +43,10 @@ generate_element!(
 
 impl IqSetPayload for Append {}
 
-generate_empty_element!(
-    /// Client requests the current list of X.509 certificates.
-    ListCertsQuery,
-    "items",
-    SASL_CERT
-);
+/// Client requests the current list of X.509 certificates.
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::SASL_CERT, name = "items")]
+pub struct ListCertsQuery;
 
 impl IqGetPayload for ListCertsQuery {}
 

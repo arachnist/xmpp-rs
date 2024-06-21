@@ -4,15 +4,16 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use crate::message::MessagePayload;
+use xso::{FromXml, IntoXml};
 
-generate_empty_element!(
-    /// Requests that this message is acked by the final recipient once
-    /// received.
-    Request,
-    "request",
-    RECEIPTS
-);
+use crate::message::MessagePayload;
+use crate::ns;
+
+/// Requests that this message is acked by the final recipient once
+/// received.
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::RECEIPTS, name = "request")]
+pub struct Request;
 
 impl MessagePayload for Request {}
 

@@ -365,32 +365,6 @@ macro_rules! check_no_unknown_attributes {
     );
 }
 
-macro_rules! generate_empty_element {
-    ($(#[$meta:meta])* $elem:ident, $name:tt, $ns:ident) => (
-        $(#[$meta])*
-        #[derive(Debug, Clone, PartialEq)]
-        pub struct $elem;
-
-        impl ::std::convert::TryFrom<crate::Element> for $elem {
-            type Error = xso::error::FromElementError;
-
-            fn try_from(elem: crate::Element) -> Result<$elem, xso::error::FromElementError> {
-                check_self!(elem, $name, $ns);
-                check_no_children!(elem, $name);
-                check_no_attributes!(elem, $name);
-                Ok($elem)
-            }
-        }
-
-        impl From<$elem> for crate::Element {
-            fn from(_: $elem) -> crate::Element {
-                crate::Element::builder($name, crate::ns::$ns)
-                    .build()
-            }
-        }
-    );
-}
-
 macro_rules! generate_id {
     ($(#[$meta:meta])* $elem:ident) => (
         $(#[$meta])*

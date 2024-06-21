@@ -4,17 +4,18 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use xso::{FromXml, IntoXml};
+
 use crate::jingle_rtcp_fb::RtcpFb;
 use crate::jingle_rtp_hdrext::RtpHdrext;
 use crate::jingle_ssma::{Group, Source};
+use crate::ns;
 
-generate_empty_element!(
-    /// Specifies the ability to multiplex RTP Data and Control Packets on a single port as
-    /// described in RFC 5761.
-    RtcpMux,
-    "rtcp-mux",
-    JINGLE_RTP
-);
+/// Specifies the ability to multiplex RTP Data and Control Packets on a single port as
+/// described in RFC 5761.
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::JINGLE_RTP, name = "rtcp-mux")]
+pub struct RtcpMux;
 
 generate_element!(
     /// Wrapper element describing an RTP session.

@@ -5,15 +5,16 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use crate::iq::IqGetPayload;
+use xso::{FromXml, IntoXml};
 
-generate_empty_element!(
-    /// Represents a ping to the recipient, which must be answered with an
-    /// empty `<iq/>` or with an error.
-    Ping,
-    "ping",
-    PING
-);
+use crate::iq::IqGetPayload;
+use crate::ns;
+
+/// Represents a ping to the recipient, which must be answered with an
+/// empty `<iq/>` or with an error.
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::PING, name = "ping")]
+pub struct Ping;
 
 impl IqGetPayload for Ping {}
 

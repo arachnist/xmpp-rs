@@ -4,35 +4,32 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use xso::{FromXml, IntoXml};
+
 use crate::forwarding::Forwarded;
 use crate::iq::IqSetPayload;
 use crate::message::MessagePayload;
+use crate::ns;
 
-generate_empty_element!(
-    /// Enable carbons for this session.
-    Enable,
-    "enable",
-    CARBONS
-);
+/// Enable carbons for this session.
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::CARBONS, name = "enable")]
+pub struct Enable;
 
 impl IqSetPayload for Enable {}
 
-generate_empty_element!(
-    /// Disable a previously-enabled carbons.
-    Disable,
-    "disable",
-    CARBONS
-);
+/// Disable a previously-enabled carbons.
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::CARBONS, name = "disable")]
+pub struct Disable;
 
 impl IqSetPayload for Disable {}
 
-generate_empty_element!(
-    /// Request the enclosing message to not be copied to other carbons-enabled
-    /// resources of the user.
-    Private,
-    "private",
-    CARBONS
-);
+/// Request the enclosing message to not be copied to other carbons-enabled
+/// resources of the user.
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::CARBONS, name = "private")]
+pub struct Private;
 
 impl MessagePayload for Private {}
 

@@ -4,6 +4,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use xso::{FromXml, IntoXml};
+
 use crate::date::DateTime;
 use crate::iq::{IqGetPayload, IqResultPayload};
 use crate::ns;
@@ -12,12 +14,10 @@ use chrono::FixedOffset;
 use std::str::FromStr;
 use xso::error::{Error, FromElementError};
 
-generate_empty_element!(
-    /// An entity time query.
-    TimeQuery,
-    "time",
-    TIME
-);
+/// An entity time query.
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::TIME, name = "time")]
+pub struct TimeQuery;
 
 impl IqGetPayload for TimeQuery {}
 
