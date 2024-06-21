@@ -5,10 +5,10 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 use crate::ns;
-use crate::util::error::Error;
 use crate::Element;
 use jid::Jid;
 use std::net::IpAddr;
+use xso::error::{Error, FromElementError};
 
 generate_attribute!(
     /// The type of the connection being proposed by this candidate.
@@ -171,9 +171,9 @@ impl Transport {
 }
 
 impl TryFrom<Element> for Transport {
-    type Error = Error;
+    type Error = FromElementError;
 
-    fn try_from(elem: Element) -> Result<Transport, Error> {
+    fn try_from(elem: Element) -> Result<Transport, FromElementError> {
         check_self!(elem, "transport", JINGLE_S5B);
         check_no_unknown_attributes!(elem, "transport", ["sid", "dstaddr", "mode"]);
         let sid = get_attr!(elem, "sid", Required);
@@ -186,47 +186,50 @@ impl TryFrom<Element> for Transport {
                 let mut candidates =
                     match payload {
                         Some(TransportPayload::Candidates(candidates)) => candidates,
-                        Some(_) => return Err(Error::ParseError(
+                        Some(_) => return Err(Error::Other(
                             "Non-candidate child already present in JingleS5B transport element.",
-                        )),
+                        )
+                        .into()),
                         None => vec![],
                     };
                 candidates.push(Candidate::try_from(child.clone())?);
                 TransportPayload::Candidates(candidates)
             } else if child.is("activated", ns::JINGLE_S5B) {
                 if payload.is_some() {
-                    return Err(Error::ParseError(
+                    return Err(Error::Other(
                         "Non-activated child already present in JingleS5B transport element.",
-                    ));
+                    )
+                    .into());
                 }
                 let cid = get_attr!(child, "cid", Required);
                 TransportPayload::Activated(cid)
             } else if child.is("candidate-error", ns::JINGLE_S5B) {
                 if payload.is_some() {
-                    return Err(Error::ParseError(
+                    return Err(Error::Other(
                         "Non-candidate-error child already present in JingleS5B transport element.",
-                    ));
+                    )
+                    .into());
                 }
                 TransportPayload::CandidateError
             } else if child.is("candidate-used", ns::JINGLE_S5B) {
                 if payload.is_some() {
-                    return Err(Error::ParseError(
+                    return Err(Error::Other(
                         "Non-candidate-used child already present in JingleS5B transport element.",
-                    ));
+                    )
+                    .into());
                 }
                 let cid = get_attr!(child, "cid", Required);
                 TransportPayload::CandidateUsed(cid)
             } else if child.is("proxy-error", ns::JINGLE_S5B) {
                 if payload.is_some() {
-                    return Err(Error::ParseError(
+                    return Err(Error::Other(
                         "Non-proxy-error child already present in JingleS5B transport element.",
-                    ));
+                    )
+                    .into());
                 }
                 TransportPayload::ProxyError
             } else {
-                return Err(Error::ParseError(
-                    "Unknown child in JingleS5B transport element.",
-                ));
+                return Err(Error::Other("Unknown child in JingleS5B transport element.").into());
             });
         }
         let payload = payload.unwrap_or(TransportPayload::None);

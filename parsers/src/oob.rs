@@ -22,8 +22,8 @@ impl MessagePayload for Oob {}
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::util::error::Error;
     use crate::Element;
+    use xso::error::{Error, FromElementError};
 
     #[cfg(target_pointer_width = "32")]
     #[test]
@@ -59,7 +59,7 @@ mod tests {
         let elem: Element = "<x xmlns='jabber:x:oob'></x>".parse().unwrap();
         let error = Oob::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Missing child url in x element.");

@@ -9,9 +9,9 @@ use crate::date::DateTime;
 use crate::message::MessagePayload;
 use crate::ns;
 use crate::pubsub::{Item as PubSubItem, ItemId, NodeName, Subscription, SubscriptionId};
-use crate::util::error::Error;
 use crate::Element;
 use jid::Jid;
+use xso::error::{Error, FromElementError};
 
 /// Event wrapper for a PubSub `<item/>`.
 #[derive(Debug, Clone, PartialEq)]
@@ -97,9 +97,7 @@ fn parse_items(elem: Element, node: NodeName) -> Result<PubSubEvent, Error> {
                 None => is_retract = Some(false),
                 Some(false) => (),
                 Some(true) => {
-                    return Err(Error::ParseError(
-                        "Mix of item and retract in items element.",
-                    ));
+                    return Err(Error::Other("Mix of item and retract in items element.").into());
                 }
             }
             items.push(Item::try_from(child.clone())?);
@@ -108,9 +106,7 @@ fn parse_items(elem: Element, node: NodeName) -> Result<PubSubEvent, Error> {
                 None => is_retract = Some(true),
                 Some(true) => (),
                 Some(false) => {
-                    return Err(Error::ParseError(
-                        "Mix of item and retract in items element.",
-                    ));
+                    return Err(Error::Other("Mix of item and retract in items element.").into());
                 }
             }
             check_no_children!(child, "retract");
@@ -118,7 +114,7 @@ fn parse_items(elem: Element, node: NodeName) -> Result<PubSubEvent, Error> {
             let id = get_attr!(child, "id", Required);
             retracts.push(id);
         } else {
-            return Err(Error::ParseError("Invalid child in items element."));
+            return Err(Error::Other("Invalid child in items element.").into());
         }
     }
     Ok(match is_retract {
@@ -127,14 +123,14 @@ fn parse_items(elem: Element, node: NodeName) -> Result<PubSubEvent, Error> {
             node,
             items: retracts,
         },
-        None => return Err(Error::ParseError("Missing children in items element.")),
+        None => return Err(Error::Other("Missing children in items element.").into()),
     })
 }
 
 impl TryFrom<Element> for PubSubEvent {
-    type Error = Error;
+    type Error = FromElementError;
 
-    fn try_from(elem: Element) -> Result<PubSubEvent, Error> {
+    fn try_from(elem: Element) -> Result<PubSubEvent, FromElementError> {
         check_self!(elem, "event", PUBSUB_EVENT);
         check_no_attributes!(elem, "event");
 
@@ -145,9 +141,10 @@ impl TryFrom<Element> for PubSubEvent {
                 let mut payloads = child.children().cloned().collect::<Vec<_>>();
                 let item = payloads.pop();
                 if !payloads.is_empty() {
-                    return Err(Error::ParseError(
+                    return Err(Error::Other(
                         "More than a single payload in configuration element.",
-                    ));
+                    )
+                    .into());
                 }
                 let form = match item {
                     None => None,
@@ -159,14 +156,14 @@ impl TryFrom<Element> for PubSubEvent {
                 for item in child.children() {
                     if item.is("redirect", ns::PUBSUB_EVENT) {
                         if redirect.is_some() {
-                            return Err(Error::ParseError(
-                                "More than one redirect in delete element.",
-                            ));
+                            return Err(
+                                Error::Other("More than one redirect in delete element.").into()
+                            );
                         }
                         let uri = get_attr!(item, "uri", Required);
                         redirect = Some(uri);
                     } else {
-                        return Err(Error::ParseError("Unknown child in delete element."));
+                        return Err(Error::Other("Unknown child in delete element.").into());
                     }
                 }
                 payload = Some(PubSubEvent::Delete { node, redirect });
@@ -185,10 +182,10 @@ impl TryFrom<Element> for PubSubEvent {
                     subscription: get_attr!(child, "subscription", Option),
                 });
             } else {
-                return Err(Error::ParseError("Unknown child in event element."));
+                return Err(Error::Other("Unknown child in event element.").into());
             }
         }
-        payload.ok_or(Error::ParseError("No payload in event element."))
+        payload.ok_or(Error::Other("No payload in event element.").into())
     }
 }
 
@@ -270,7 +267,7 @@ mod tests {
                 .unwrap();
         let error = PubSubEvent::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Missing children in items element.");
@@ -375,7 +372,7 @@ mod tests {
                 .unwrap();
         let error = PubSubEvent::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Unknown child in event element.");
@@ -389,7 +386,7 @@ mod tests {
             .unwrap();
         let error = PubSubEvent::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Unknown attribute in event element.");

@@ -7,12 +7,12 @@
 use crate::message::MessagePayload;
 use crate::ns;
 use crate::presence::PresencePayload;
-use crate::util::error::Error;
 use crate::Element;
 use jid::Jid;
 use minidom::Node;
 use std::collections::BTreeMap;
 use std::convert::TryFrom;
+use xso::error::{Error, FromElementError};
 
 generate_attribute!(
     /// The type of the error.
@@ -249,9 +249,9 @@ impl StanzaError {
 }
 
 impl TryFrom<Element> for StanzaError {
-    type Error = Error;
+    type Error = FromElementError;
 
-    fn try_from(elem: Element) -> Result<StanzaError, Error> {
+    fn try_from(elem: Element) -> Result<StanzaError, FromElementError> {
         check_self!(elem, "error", DEFAULT_NS);
         // The code attribute has been deprecated in [XEP-0086](https://xmpp.org/extensions/xep-0086.html)
         // which was deprecated in 2007. We don't error when it's here, but don't include it in the final struct.
@@ -273,15 +273,16 @@ impl TryFrom<Element> for StanzaError {
                 check_no_unknown_attributes!(child, "text", ["xml:lang"]);
                 let lang = get_attr!(child, "xml:lang", Default);
                 if stanza_error.texts.insert(lang, child.text()).is_some() {
-                    return Err(Error::ParseError(
-                        "Text element present twice for the same xml:lang.",
-                    ));
+                    return Err(
+                        Error::Other("Text element present twice for the same xml:lang.").into(),
+                    );
                 }
             } else if child.has_ns(ns::XMPP_STANZAS) {
                 if defined_condition.is_some() {
-                    return Err(Error::ParseError(
+                    return Err(Error::Other(
                         "Error must not have more than one defined-condition.",
-                    ));
+                    )
+                    .into());
                 }
                 check_no_children!(child, "defined-condition");
                 check_no_attributes!(child, "defined-condition");
@@ -297,15 +298,15 @@ impl TryFrom<Element> for StanzaError {
                 defined_condition = Some(condition);
             } else {
                 if stanza_error.other.is_some() {
-                    return Err(Error::ParseError(
-                        "Error must not have more than one other element.",
-                    ));
+                    return Err(
+                        Error::Other("Error must not have more than one other element.").into(),
+                    );
                 }
                 stanza_error.other = Some(child.clone());
             }
         }
         stanza_error.defined_condition =
-            defined_condition.ok_or(Error::ParseError("Error must have a defined-condition."))?;
+            defined_condition.ok_or(Error::Other("Error must have a defined-condition."))?;
 
         Ok(stanza_error)
     }
@@ -369,7 +370,7 @@ mod tests {
         let elem: Element = "<error xmlns='jabber:component:accept'/>".parse().unwrap();
         let error = StanzaError::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Required attribute 'type' missing.");
@@ -384,10 +385,10 @@ mod tests {
             .unwrap();
         let error = StanzaError::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::TextParseError(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Unknown value for 'type' attribute.");
+        assert_eq!(message.to_string(), "Unknown value for 'type' attribute.");
     }
 
     #[test]
@@ -402,7 +403,7 @@ mod tests {
             .unwrap();
         let error = StanzaError::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Error must have a defined-condition.");

@@ -7,10 +7,10 @@
 use crate::date::DateTime;
 use crate::iq::{IqGetPayload, IqResultPayload};
 use crate::ns;
-use crate::util::error::Error;
 use crate::Element;
 use chrono::FixedOffset;
 use std::str::FromStr;
+use xso::error::{Error, FromElementError};
 
 generate_empty_element!(
     /// An entity time query.
@@ -28,9 +28,9 @@ pub struct TimeResult(pub DateTime);
 impl IqResultPayload for TimeResult {}
 
 impl TryFrom<Element> for TimeResult {
-    type Error = Error;
+    type Error = FromElementError;
 
-    fn try_from(elem: Element) -> Result<TimeResult, Error> {
+    fn try_from(elem: Element) -> Result<TimeResult, FromElementError> {
         check_self!(elem, "time", TIME);
         check_no_attributes!(elem, "time");
 
@@ -40,33 +40,34 @@ impl TryFrom<Element> for TimeResult {
         for child in elem.children() {
             if child.is("tzo", ns::TIME) {
                 if tzo.is_some() {
-                    return Err(Error::ParseError("More than one tzo element in time."));
+                    return Err(Error::Other("More than one tzo element in time.").into());
                 }
                 check_no_children!(child, "tzo");
                 check_no_attributes!(child, "tzo");
                 // TODO: Add a FromStr implementation to FixedOffset to avoid this hack.
                 let fake_date = format!("{}{}", "2019-04-22T11:38:00", child.text());
-                let date_time = DateTime::from_str(&fake_date)?;
+                let date_time = DateTime::from_str(&fake_date).map_err(Error::text_parse_error)?;
                 tzo = Some(date_time.timezone());
             } else if child.is("utc", ns::TIME) {
                 if utc.is_some() {
-                    return Err(Error::ParseError("More than one utc element in time."));
+                    return Err(Error::Other("More than one utc element in time.").into());
                 }
                 check_no_children!(child, "utc");
                 check_no_attributes!(child, "utc");
-                let date_time = DateTime::from_str(&child.text())?;
+                let date_time =
+                    DateTime::from_str(&child.text()).map_err(Error::text_parse_error)?;
                 match FixedOffset::east_opt(0) {
                     Some(tz) if date_time.timezone() == tz => (),
-                    _ => return Err(Error::ParseError("Non-UTC timezone for utc element.")),
+                    _ => return Err(Error::Other("Non-UTC timezone for utc element.").into()),
                 }
                 utc = Some(date_time);
             } else {
-                return Err(Error::ParseError("Unknown child in time element."));
+                return Err(Error::Other("Unknown child in time element.").into());
             }
         }
 
-        let tzo = tzo.ok_or(Error::ParseError("Missing tzo child in time element."))?;
-        let utc = utc.ok_or(Error::ParseError("Missing utc child in time element."))?;
+        let tzo = tzo.ok_or(Error::Other("Missing tzo child in time element."))?;
+        let utc = utc.ok_or(Error::Other("Missing utc child in time element."))?;
         let date = utc.with_timezone(tzo);
 
         Ok(TimeResult(date))

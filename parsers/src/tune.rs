@@ -6,8 +6,8 @@
 
 use crate::ns;
 use crate::pubsub::PubSubPayload;
-use crate::util::error::Error;
 use crate::Element;
+use xso::error::{Error, FromElementError};
 
 generate_elem_id!(
     /// The artist or performer of the song or piece.
@@ -106,9 +106,9 @@ impl Tune {
 }
 
 impl TryFrom<Element> for Tune {
-    type Error = Error;
+    type Error = FromElementError;
 
-    fn try_from(elem: Element) -> Result<Tune, Error> {
+    fn try_from(elem: Element) -> Result<Tune, FromElementError> {
         check_self!(elem, "tune", TUNE);
         check_no_attributes!(elem, "tune");
 
@@ -116,41 +116,41 @@ impl TryFrom<Element> for Tune {
         for child in elem.children() {
             if child.is("artist", ns::TUNE) {
                 if tune.artist.is_some() {
-                    return Err(Error::ParseError("Tune can’t have more than one artist."));
+                    return Err(Error::Other("Tune can’t have more than one artist.").into());
                 }
                 tune.artist = Some(Artist::try_from(child.clone())?);
             } else if child.is("length", ns::TUNE) {
                 if tune.length.is_some() {
-                    return Err(Error::ParseError("Tune can’t have more than one length."));
+                    return Err(Error::Other("Tune can’t have more than one length.").into());
                 }
                 tune.length = Some(Length::try_from(child.clone())?);
             } else if child.is("rating", ns::TUNE) {
                 if tune.rating.is_some() {
-                    return Err(Error::ParseError("Tune can’t have more than one rating."));
+                    return Err(Error::Other("Tune can’t have more than one rating.").into());
                 }
                 tune.rating = Some(Rating::try_from(child.clone())?);
             } else if child.is("source", ns::TUNE) {
                 if tune.source.is_some() {
-                    return Err(Error::ParseError("Tune can’t have more than one source."));
+                    return Err(Error::Other("Tune can’t have more than one source.").into());
                 }
                 tune.source = Some(Source::try_from(child.clone())?);
             } else if child.is("title", ns::TUNE) {
                 if tune.title.is_some() {
-                    return Err(Error::ParseError("Tune can’t have more than one title."));
+                    return Err(Error::Other("Tune can’t have more than one title.").into());
                 }
                 tune.title = Some(Title::try_from(child.clone())?);
             } else if child.is("track", ns::TUNE) {
                 if tune.track.is_some() {
-                    return Err(Error::ParseError("Tune can’t have more than one track."));
+                    return Err(Error::Other("Tune can’t have more than one track.").into());
                 }
                 tune.track = Some(Track::try_from(child.clone())?);
             } else if child.is("uri", ns::TUNE) {
                 if tune.uri.is_some() {
-                    return Err(Error::ParseError("Tune can’t have more than one uri."));
+                    return Err(Error::Other("Tune can’t have more than one uri.").into());
                 }
                 tune.uri = Some(Uri::try_from(child.clone())?);
             } else {
-                return Err(Error::ParseError("Unknown element in User Tune."));
+                return Err(Error::Other("Unknown element in User Tune.").into());
             }
         }
 

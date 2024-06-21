@@ -6,8 +6,8 @@
 
 use crate::iq::{IqGetPayload, IqResultPayload};
 use crate::ns;
-use crate::util::error::Error;
 use crate::Element;
+use xso::error::{Error, FromElementError};
 
 generate_element!(
     /// Requesting a slot
@@ -40,8 +40,8 @@ pub enum Header {
 }
 
 impl TryFrom<Element> for Header {
-    type Error = Error;
-    fn try_from(elem: Element) -> Result<Header, Error> {
+    type Error = FromElementError;
+    fn try_from(elem: Element) -> Result<Header, FromElementError> {
         check_self!(elem, "header", HTTP_UPLOAD);
         check_no_children!(elem, "header");
         check_no_unknown_attributes!(elem, "header", ["name"]);
@@ -53,9 +53,10 @@ impl TryFrom<Element> for Header {
             "cookie" => Header::Cookie(text),
             "expires" => Header::Expires(text),
             _ => {
-                return Err(Error::ParseError(
+                return Err(Error::Other(
                     "Header name must be either 'Authorization', 'Cookie', or 'Expires'.",
-                ))
+                )
+                .into())
             }
         })
     }

@@ -6,9 +6,9 @@
 
 use crate::iq::{IqGetPayload, IqResultPayload, IqSetPayload};
 use crate::ns;
-use crate::util::error::Error;
 use crate::Element;
 use jid::Jid;
+use xso::error::FromElementError;
 
 generate_empty_element!(
     /// The element requesting the blocklist, the result iq will contain a
@@ -30,9 +30,9 @@ macro_rules! generate_blocking_element {
         }
 
         impl TryFrom<Element> for $elem {
-            type Error = Error;
+            type Error = FromElementError;
 
-            fn try_from(elem: Element) -> Result<$elem, Error> {
+            fn try_from(elem: Element) -> Result<$elem, FromElementError> {
                 check_self!(elem, $name, BLOCKING);
                 check_no_attributes!(elem, $name);
                 let mut items = vec!();
@@ -96,6 +96,8 @@ generate_empty_element!(
 
 #[cfg(test)]
 mod tests {
+    use xso::error::Error;
+
     use super::*;
 
     #[cfg(target_pointer_width = "32")]
@@ -165,7 +167,7 @@ mod tests {
         let request_elem = elem.clone();
         let error = BlocklistRequest::try_from(request_elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Unknown attribute in blocklist element.");
@@ -173,7 +175,7 @@ mod tests {
         let result_elem = elem.clone();
         let error = BlocklistResult::try_from(result_elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Unknown attribute in blocklist element.");
@@ -183,7 +185,7 @@ mod tests {
             .unwrap();
         let error = Block::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Unknown attribute in block element.");
@@ -193,7 +195,7 @@ mod tests {
             .unwrap();
         let error = Unblock::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Unknown attribute in unblock element.");
@@ -205,7 +207,7 @@ mod tests {
         let elem: Element = "<blocklist xmlns='urn:xmpp:blocking'><item jid='coucou@coucou'/><item jid='domain'/></blocklist>".parse().unwrap();
         let error = BlocklistRequest::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Unknown child in blocklist element.");

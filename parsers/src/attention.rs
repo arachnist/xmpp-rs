@@ -18,9 +18,9 @@ impl MessagePayload for Attention {}
 #[cfg(test)]
 mod tests {
     use super::*;
-    #[cfg(not(feature = "disable-validation"))]
-    use crate::util::error::Error;
     use crate::Element;
+    #[cfg(not(feature = "disable-validation"))]
+    use xso::error::{Error, FromElementError};
 
     #[test]
     fn test_size() {
@@ -41,7 +41,7 @@ mod tests {
             .unwrap();
         let error = Attention::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Unknown child in attention element.");
@@ -55,7 +55,7 @@ mod tests {
             .unwrap();
         let error = Attention::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Unknown attribute in attention element.");

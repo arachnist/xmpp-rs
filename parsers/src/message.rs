@@ -5,10 +5,10 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 use crate::ns;
-use crate::util::error::Error;
 use crate::Element;
 use jid::Jid;
 use std::collections::BTreeMap;
+use xso::error::{Error, FromElementError};
 
 /// Should be implemented on every known payload of a `<message/>`.
 pub trait MessagePayload: TryFrom<Element> + Into<Element> {}
@@ -213,7 +213,7 @@ impl Message {
     /// the message.
     ///
     /// Elements which do not match the given type are not removed.
-    pub fn extract_payload<T: TryFrom<Element, Error = Error>>(
+    pub fn extract_payload<T: TryFrom<Element, Error = FromElementError>>(
         &mut self,
     ) -> Result<Option<T>, Error> {
         let mut buf = Vec::with_capacity(self.payloads.len());
@@ -225,10 +225,10 @@ impl Message {
                     result = Ok(Some(v));
                     break;
                 }
-                Err(Error::TypeMismatch(_, _, residual)) => {
+                Err(FromElementError::Mismatch(residual)) => {
                     buf.push(residual);
                 }
-                Err(other) => {
+                Err(FromElementError::Invalid(other)) => {
                     result = Err(other);
                     break;
                 }
@@ -241,9 +241,9 @@ impl Message {
 }
 
 impl TryFrom<Element> for Message {
-    type Error = Error;
+    type Error = FromElementError;
 
-    fn try_from(root: Element) -> Result<Message, Error> {
+    fn try_from(root: Element) -> Result<Message, FromElementError> {
         check_self!(root, "message", DEFAULT_NS);
         let from = get_attr!(root, "from", Option);
         let to = get_attr!(root, "to", Option);
@@ -259,22 +259,23 @@ impl TryFrom<Element> for Message {
                 let lang = get_attr!(elem, "xml:lang", Default);
                 let body = Body(elem.text());
                 if bodies.insert(lang, body).is_some() {
-                    return Err(Error::ParseError(
-                        "Body element present twice for the same xml:lang.",
-                    ));
+                    return Err(
+                        Error::Other("Body element present twice for the same xml:lang.").into(),
+                    );
                 }
             } else if elem.is("subject", ns::DEFAULT_NS) {
                 check_no_children!(elem, "subject");
                 let lang = get_attr!(elem, "xml:lang", Default);
                 let subject = Subject(elem.text());
                 if subjects.insert(lang, subject).is_some() {
-                    return Err(Error::ParseError(
+                    return Err(Error::Other(
                         "Subject element present twice for the same xml:lang.",
-                    ));
+                    )
+                    .into());
                 }
             } else if elem.is("thread", ns::DEFAULT_NS) {
                 if thread.is_some() {
-                    return Err(Error::ParseError("Thread element present twice."));
+                    return Err(Error::Other("Thread element present twice.").into());
                 }
                 check_no_children!(elem, "thread");
                 thread = Some(Thread(elem.text()));

@@ -6,9 +6,9 @@
 
 use crate::iq::{IqGetPayload, IqResultPayload, IqSetPayload};
 use crate::ns;
-use crate::util::error::Error;
 use jid::Jid;
 use minidom::{Element, Node};
+use xso::error::{Error, FromElementError};
 
 generate_attribute!(
     /// Notes the default archiving preference for the user.
@@ -44,9 +44,9 @@ impl IqSetPayload for Prefs {}
 impl IqResultPayload for Prefs {}
 
 impl TryFrom<Element> for Prefs {
-    type Error = Error;
+    type Error = FromElementError;
 
-    fn try_from(elem: Element) -> Result<Prefs, Error> {
+    fn try_from(elem: Element) -> Result<Prefs, FromElementError> {
         check_self!(elem, "prefs", MAM);
         check_no_unknown_attributes!(elem, "prefs", ["default"]);
         let mut always = vec![];
@@ -55,19 +55,19 @@ impl TryFrom<Element> for Prefs {
             if child.is("always", ns::MAM) {
                 for jid_elem in child.children() {
                     if !jid_elem.is("jid", ns::MAM) {
-                        return Err(Error::ParseError("Invalid jid element in always."));
+                        return Err(Error::Other("Invalid jid element in always.").into());
                     }
-                    always.push(jid_elem.text().parse()?);
+                    always.push(jid_elem.text().parse().map_err(Error::text_parse_error)?);
                 }
             } else if child.is("never", ns::MAM) {
                 for jid_elem in child.children() {
                     if !jid_elem.is("jid", ns::MAM) {
-                        return Err(Error::ParseError("Invalid jid element in never."));
+                        return Err(Error::Other("Invalid jid element in never.").into());
                     }
-                    never.push(jid_elem.text().parse()?);
+                    never.push(jid_elem.text().parse().map_err(Error::text_parse_error)?);
                 }
             } else {
-                return Err(Error::ParseError("Unknown child in prefs element."));
+                return Err(Error::Other("Unknown child in prefs element.").into());
             }
         }
         let default_ = get_attr!(elem, "default", Required);

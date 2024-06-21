@@ -6,9 +6,9 @@
 
 use crate::message::MessagePayload;
 use crate::ns;
-use crate::util::error::Error;
 use minidom::{Element, Node};
 use std::collections::HashMap;
+use xso::error::{Error, FromElementError};
 
 // TODO: Use a proper lang type.
 type Lang = String;
@@ -60,9 +60,9 @@ impl XhtmlIm {
 impl MessagePayload for XhtmlIm {}
 
 impl TryFrom<Element> for XhtmlIm {
-    type Error = Error;
+    type Error = FromElementError;
 
-    fn try_from(elem: Element) -> Result<XhtmlIm, Error> {
+    fn try_from(elem: Element) -> Result<XhtmlIm, FromElementError> {
         check_self!(elem, "html", XHTML_IM);
         check_no_attributes!(elem, "html");
 
@@ -75,13 +75,14 @@ impl TryFrom<Element> for XhtmlIm {
                 match bodies.insert(lang, body) {
                     None => (),
                     Some(_) => {
-                        return Err(Error::ParseError(
+                        return Err(Error::Other(
                             "Two identical language bodies found in XHTML-IM.",
-                        ))
+                        )
+                        .into())
                     }
                 }
             } else {
-                return Err(Error::ParseError("Unknown element in XHTML-IM."));
+                return Err(Error::Other("Unknown element in XHTML-IM.").into());
             }
         }
 
@@ -544,7 +545,7 @@ mod tests {
             .unwrap();
         let error = XhtmlIm::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Two identical language bodies found in XHTML-IM.");

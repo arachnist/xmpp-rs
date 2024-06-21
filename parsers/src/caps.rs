@@ -9,7 +9,6 @@ use crate::disco::{DiscoInfoQuery, DiscoInfoResult, Feature, Identity};
 use crate::hashes::{Algo, Hash};
 use crate::ns;
 use crate::presence::PresencePayload;
-use crate::util::error::Error;
 use crate::Element;
 use base64::{engine::general_purpose::STANDARD as Base64, Engine};
 use blake2::Blake2bVar;
@@ -17,6 +16,7 @@ use digest::{Digest, Update, VariableOutput};
 use sha1::Sha1;
 use sha2::{Sha256, Sha512};
 use sha3::{Sha3_256, Sha3_512};
+use xso::error::{Error, FromElementError};
 
 /// Represents a capability hash for a given client.
 #[derive(Debug, Clone)]
@@ -39,16 +39,16 @@ pub struct Caps {
 impl PresencePayload for Caps {}
 
 impl TryFrom<Element> for Caps {
-    type Error = Error;
+    type Error = FromElementError;
 
-    fn try_from(elem: Element) -> Result<Caps, Error> {
+    fn try_from(elem: Element) -> Result<Caps, FromElementError> {
         check_self!(elem, "c", CAPS, "caps");
         check_no_children!(elem, "caps");
         check_no_unknown_attributes!(elem, "caps", ["hash", "ver", "ext", "node"]);
         let ver: String = get_attr!(elem, "ver", Required);
         let hash = Hash {
             algo: get_attr!(elem, "hash", Required),
-            hash: Base64.decode(ver)?,
+            hash: Base64.decode(ver).map_err(Error::text_parse_error)?,
         };
         Ok(Caps {
             ext: get_attr!(elem, "ext", Option),
@@ -253,7 +253,7 @@ mod tests {
         let elem: Element = "<c xmlns='http://jabber.org/protocol/caps'><hash xmlns='urn:xmpp:hashes:2' algo='sha-256'>K1Njy3HZBThlo4moOD5gBGhn0U0oK7/CbfLlIUDi6o4=</hash></c>".parse().unwrap();
         let error = Caps::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Unknown child in caps element.");

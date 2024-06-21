@@ -23,7 +23,7 @@
 
 #![warn(missing_docs)]
 
-pub use crate::util::error::Error;
+pub use xso::error::{Error, FromElementError};
 // TODO: only export top-level module on the next major release
 pub use jid::{self, BareJid, Error as JidParseError, FullJid, Jid};
 pub use minidom::Element;

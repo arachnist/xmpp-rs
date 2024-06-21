@@ -26,8 +26,8 @@ generate_element!(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::util::error::Error;
     use crate::Element;
+    use xso::error::{Error, FromElementError};
 
     #[cfg(target_pointer_width = "32")]
     #[test]
@@ -54,7 +54,7 @@ mod tests {
             .unwrap();
         let error = Forwarded::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Unknown child in forwarded element.");

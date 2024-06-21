@@ -6,11 +6,11 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 use crate::ns;
-use crate::util::error::Error;
 use jid::Jid;
 use minidom::{Element, IntoAttributeValue};
 use std::collections::BTreeMap;
 use std::str::FromStr;
+use xso::error::{Error, FromElementError};
 
 /// Should be implemented on every known payload of a `<presence/>`.
 pub trait PresencePayload: TryFrom<Element> + Into<Element> {}
@@ -42,7 +42,7 @@ impl FromStr for Show {
             "dnd" => Show::Dnd,
             "xa" => Show::Xa,
 
-            _ => return Err(Error::ParseError("Invalid value for show.")),
+            _ => return Err(Error::Other("Invalid value for show.").into()),
         })
     }
 }
@@ -114,9 +114,7 @@ impl FromStr for Type {
             "unsubscribed" => Type::Unsubscribed,
 
             _ => {
-                return Err(Error::ParseError(
-                    "Invalid 'type' attribute on presence element.",
-                ));
+                return Err(Error::Other("Invalid 'type' attribute on presence element.").into());
             }
         })
     }
@@ -281,9 +279,9 @@ impl Presence {
 }
 
 impl TryFrom<Element> for Presence {
-    type Error = Error;
+    type Error = FromElementError;
 
-    fn try_from(root: Element) -> Result<Presence, Error> {
+    fn try_from(root: Element) -> Result<Presence, FromElementError> {
         check_self!(root, "presence", DEFAULT_NS);
         let mut show = None;
         let mut priority = None;
@@ -300,9 +298,7 @@ impl TryFrom<Element> for Presence {
         for elem in root.children() {
             if elem.is("show", ns::DEFAULT_NS) {
                 if show.is_some() {
-                    return Err(Error::ParseError(
-                        "More than one show element in a presence.",
-                    ));
+                    return Err(Error::Other("More than one show element in a presence.").into());
                 }
                 check_no_attributes!(elem, "show");
                 check_no_children!(elem, "show");
@@ -312,19 +308,22 @@ impl TryFrom<Element> for Presence {
                 check_no_children!(elem, "status");
                 let lang = get_attr!(elem, "xml:lang", Default);
                 if presence.statuses.insert(lang, elem.text()).is_some() {
-                    return Err(Error::ParseError(
+                    return Err(Error::Other(
                         "Status element present twice for the same xml:lang.",
-                    ));
+                    )
+                    .into());
                 }
             } else if elem.is("priority", ns::DEFAULT_NS) {
                 if priority.is_some() {
-                    return Err(Error::ParseError(
-                        "More than one priority element in a presence.",
-                    ));
+                    return Err(
+                        Error::Other("More than one priority element in a presence.").into(),
+                    );
                 }
                 check_no_attributes!(elem, "priority");
                 check_no_children!(elem, "priority");
-                priority = Some(Priority::from_str(elem.text().as_ref())?);
+                priority = Some(
+                    Priority::from_str(elem.text().as_ref()).map_err(Error::text_parse_error)?,
+                );
             } else {
                 presence.payloads.push(elem.clone());
             }
@@ -461,7 +460,7 @@ mod tests {
             .unwrap();
         let error = Presence::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Invalid value for show.");
@@ -481,7 +480,7 @@ mod tests {
                 .unwrap();
         let error = Presence::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Invalid value for show.");
@@ -541,7 +540,7 @@ mod tests {
         let elem: Element = "<presence xmlns='jabber:component:accept'><status xml:lang='fr'>Here!</status><status xml:lang='fr'>Là!</status></presence>".parse().unwrap();
         let error = Presence::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(
@@ -579,7 +578,11 @@ mod tests {
                 .unwrap();
         let error = Presence::try_from(elem).unwrap_err();
         match error {
-            Error::ParseIntError(_) => (),
+            FromElementError::Invalid(Error::TextParseError(e))
+                if e.is::<std::num::ParseIntError>() =>
+            {
+                ()
+            }
             _ => panic!(),
         };
     }
@@ -614,7 +617,7 @@ mod tests {
                 .unwrap();
         let error = Presence::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Unknown child in status element.");
@@ -634,7 +637,7 @@ mod tests {
                 .unwrap();
         let error = Presence::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Unknown attribute in status element.");

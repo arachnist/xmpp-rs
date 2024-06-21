@@ -21,9 +21,9 @@ impl PresencePayload for Idle {}
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::util::error::Error;
     use crate::Element;
     use std::str::FromStr;
+    use xso::error::{Error, FromElementError};
 
     #[test]
     fn test_size() {
@@ -45,7 +45,7 @@ mod tests {
             .unwrap();
         let error = Idle::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Unknown child in idle element.");
@@ -56,7 +56,7 @@ mod tests {
         let elem: Element = "<idle xmlns='urn:xmpp:idle:1'/>".parse().unwrap();
         let error = Idle::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Required attribute 'since' missing.");
@@ -70,8 +70,12 @@ mod tests {
             .unwrap();
         let error = Idle::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ChronoParseError(string) => string,
-            _ => panic!(),
+            FromElementError::Invalid(Error::TextParseError(string))
+                if string.is::<chrono::ParseError>() =>
+            {
+                string
+            }
+            other => panic!("unexpected result: {:?}", other),
         };
         assert_eq!(message.to_string(), "input is out of range");
 
@@ -81,7 +85,11 @@ mod tests {
             .unwrap();
         let error = Idle::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ChronoParseError(string) => string,
+            FromElementError::Invalid(Error::TextParseError(string))
+                if string.is::<chrono::ParseError>() =>
+            {
+                string
+            }
             _ => panic!(),
         };
         assert_eq!(message.to_string(), "input is out of range");
@@ -92,7 +100,11 @@ mod tests {
             .unwrap();
         let error = Idle::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ChronoParseError(string) => string,
+            FromElementError::Invalid(Error::TextParseError(string))
+                if string.is::<chrono::ParseError>() =>
+            {
+                string
+            }
             _ => panic!(),
         };
         assert_eq!(message.to_string(), "input contains invalid characters");
@@ -103,7 +115,11 @@ mod tests {
             .unwrap();
         let error = Idle::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ChronoParseError(string) => string,
+            FromElementError::Invalid(Error::TextParseError(string))
+                if string.is::<chrono::ParseError>() =>
+            {
+                string
+            }
             _ => panic!(),
         };
         assert_eq!(message.to_string(), "input contains invalid characters");
@@ -114,7 +130,11 @@ mod tests {
             .unwrap();
         let error = Idle::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ChronoParseError(string) => string,
+            FromElementError::Invalid(Error::TextParseError(string))
+                if string.is::<chrono::ParseError>() =>
+            {
+                string
+            }
             _ => panic!(),
         };
         assert_eq!(message.to_string(), "input contains invalid characters");
@@ -125,7 +145,11 @@ mod tests {
             .unwrap();
         let error = Idle::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ChronoParseError(string) => string,
+            FromElementError::Invalid(Error::TextParseError(string))
+                if string.is::<chrono::ParseError>() =>
+            {
+                string
+            }
             _ => panic!(),
         };
         assert_eq!(message.to_string(), "premature end of input");

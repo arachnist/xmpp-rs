@@ -55,14 +55,12 @@ pub struct VCard {
 }
 
 impl TryFrom<Element> for VCard {
-    type Error = crate::util::error::Error;
+    type Error = xso::error::Error;
 
     fn try_from(value: Element) -> Result<Self, Self::Error> {
         // Check that the root element is <vCard>
         if !value.is("vCard", ns::VCARD) {
-            return Err(Error::ParseError(
-                "Root element is not <vCard xmlns='vcard-temp'>",
-            ));
+            return Err(Error::Other("Root element is not <vCard xmlns='vcard-temp'>").into());
         }
 
         // Parse the <PHOTO> element, if any.

@@ -6,8 +6,8 @@
 
 use crate::jingle::SessionId;
 use crate::ns;
-use crate::util::error::Error;
 use crate::Element;
+use xso::error::{Error, FromElementError};
 
 /// Defines a protocol for broadcasting Jingle requests to all of the clients
 /// of a user.
@@ -47,27 +47,27 @@ fn check_empty_and_get_sid(elem: Element) -> Result<SessionId, Error> {
 }
 
 impl TryFrom<Element> for JingleMI {
-    type Error = Error;
+    type Error = FromElementError;
 
-    fn try_from(elem: Element) -> Result<JingleMI, Error> {
+    fn try_from(elem: Element) -> Result<JingleMI, FromElementError> {
         if !elem.has_ns(ns::JINGLE_MESSAGE) {
-            return Err(Error::ParseError("This is not a Jingle message element."));
+            return Err(Error::Other("This is not a Jingle message element.").into());
         }
         Ok(match elem.name() {
             "propose" => {
                 let mut description = None;
                 for child in elem.children() {
                     if child.name() != "description" {
-                        return Err(Error::ParseError("Unknown child in propose element."));
+                        return Err(Error::Other("Unknown child in propose element.").into());
                     }
                     if description.is_some() {
-                        return Err(Error::ParseError("Too many children in propose element."));
+                        return Err(Error::Other("Too many children in propose element.").into());
                     }
                     description = Some(child.clone());
                 }
                 JingleMI::Propose {
                     sid: get_sid(elem)?,
-                    description: description.ok_or(Error::ParseError(
+                    description: description.ok_or(Error::Other(
                         "Propose element doesn’t contain a description.",
                     ))?,
                 }
@@ -76,7 +76,7 @@ impl TryFrom<Element> for JingleMI {
             "accept" => JingleMI::Accept(check_empty_and_get_sid(elem)?),
             "proceed" => JingleMI::Proceed(check_empty_and_get_sid(elem)?),
             "reject" => JingleMI::Reject(check_empty_and_get_sid(elem)?),
-            _ => return Err(Error::ParseError("This is not a Jingle message element.")),
+            _ => return Err(Error::Other("This is not a Jingle message element.").into()),
         })
     }
 }
@@ -134,7 +134,7 @@ mod tests {
                 .unwrap();
         let error = JingleMI::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Unknown child in propose element.");

@@ -9,9 +9,9 @@ use crate::data_forms::DataForm;
 use crate::iq::{IqGetPayload, IqResultPayload, IqSetPayload};
 use crate::ns;
 use crate::pubsub::{AffiliationAttribute, NodeName, Subscription};
-use crate::util::error::Error;
 use crate::Element;
 use jid::Jid;
+use xso::error::{Error, FromElementError};
 
 generate_element!(
     /// A list of affiliations you have on a service, or on a node.
@@ -143,9 +143,9 @@ impl IqSetPayload for PubSubOwner {}
 impl IqResultPayload for PubSubOwner {}
 
 impl TryFrom<Element> for PubSubOwner {
-    type Error = Error;
+    type Error = FromElementError;
 
-    fn try_from(elem: Element) -> Result<PubSubOwner, Error> {
+    fn try_from(elem: Element) -> Result<PubSubOwner, FromElementError> {
         check_self!(elem, "pubsub", PUBSUB_OWNER);
         check_no_attributes!(elem, "pubsub");
 
@@ -153,17 +153,18 @@ impl TryFrom<Element> for PubSubOwner {
         for child in elem.children() {
             if child.is("configure", ns::PUBSUB_OWNER) {
                 if payload.is_some() {
-                    return Err(Error::ParseError(
+                    return Err(Error::Other(
                         "Payload is already defined in pubsub owner element.",
-                    ));
+                    )
+                    .into());
                 }
                 let configure = Configure::try_from(child.clone())?;
                 payload = Some(PubSubOwner::Configure(configure));
             } else {
-                return Err(Error::ParseError("Unknown child in pubsub element."));
+                return Err(Error::Other("Unknown child in pubsub element.").into());
             }
         }
-        payload.ok_or(Error::ParseError("No payload in pubsub element."))
+        payload.ok_or(Error::Other("No payload in pubsub element.").into())
     }
 }
 

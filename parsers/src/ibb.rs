@@ -72,8 +72,8 @@ impl IqSetPayload for Close {}
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::util::error::Error;
     use crate::Element;
+    use xso::error::{Error, FromElementError};
 
     #[cfg(target_pointer_width = "32")]
     #[test]
@@ -131,7 +131,7 @@ mod tests {
             .unwrap();
         let error = Open::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Required attribute 'block-size' missing.");
@@ -141,7 +141,11 @@ mod tests {
             .unwrap();
         let error = Open::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseIntError(error) => error,
+            FromElementError::Invalid(Error::TextParseError(error))
+                if error.is::<std::num::ParseIntError>() =>
+            {
+                error
+            }
             _ => panic!(),
         };
         assert_eq!(message.to_string(), "invalid digit found in string");
@@ -151,7 +155,7 @@ mod tests {
             .unwrap();
         let error = Open::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(error) => error,
+            FromElementError::Invalid(Error::Other(error)) => error,
             _ => panic!(),
         };
         assert_eq!(message, "Required attribute 'sid' missing.");
@@ -162,9 +166,9 @@ mod tests {
         let elem: Element = "<open xmlns='http://jabber.org/protocol/ibb' block-size='128' sid='coucou' stanza='fdsq'/>".parse().unwrap();
         let error = Open::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::TextParseError(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Unknown value for 'stanza' attribute.");
+        assert_eq!(message.to_string(), "Unknown value for 'stanza' attribute.");
     }
 }

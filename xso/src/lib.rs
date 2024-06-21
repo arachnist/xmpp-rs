@@ -138,3 +138,38 @@ pub fn transform<T: FromXml, F: IntoXml>(from: F) -> Result<T, self::error::Erro
         rxml::error::XmlError::InvalidEof("during transform"),
     ))
 }
+
+/// Attempt to convert a [`minidom::Element`] into a type implementing
+/// [`FromXml`], fallably.
+///
+/// Unlike [`transform`] (which can also be used with an element), this
+/// function will return the element unharmed if its element header does not
+/// match the expectations of `T`.
+pub fn try_from_element<T: FromXml>(
+    from: minidom::Element,
+) -> Result<T, self::error::FromElementError> {
+    let (qname, attrs) = minidom_compat::make_start_ev_parts(&from)?;
+    let mut sink = match T::from_events(qname, attrs) {
+        Ok(v) => v,
+        Err(self::error::FromEventsError::Mismatch { .. }) => {
+            return Err(self::error::FromElementError::Mismatch(from))
+        }
+        Err(self::error::FromEventsError::Invalid(e)) => {
+            return Err(self::error::FromElementError::Invalid(e))
+        }
+    };
+
+    let mut iter = from.into_event_iter()?;
+    iter.next().expect("first event from minidom::Element")?;
+    for event in iter {
+        let event = event?;
+        match sink.feed(event)? {
+            Some(v) => return Ok(v),
+            None => (),
+        }
+    }
+    // unreachable! instead of error here, because minidom::Element always
+    // produces the complete event sequence of a single element, and FromXml
+    // implementations must be constructible from that.
+    unreachable!("minidom::Element did not produce enough events to complete element")
+}

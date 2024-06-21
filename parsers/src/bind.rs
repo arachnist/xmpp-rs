@@ -6,10 +6,10 @@
 
 use crate::iq::{IqResultPayload, IqSetPayload};
 use crate::ns;
-use crate::util::error::Error;
 use crate::Element;
 use jid::{FullJid, Jid};
 use std::str::FromStr;
+use xso::error::{Error, FromElementError};
 
 /// The request for resource binding, which is the process by which a client
 /// can obtain a full JID and start exchanging on the XMPP network.
@@ -34,23 +34,23 @@ impl BindQuery {
 impl IqSetPayload for BindQuery {}
 
 impl TryFrom<Element> for BindQuery {
-    type Error = Error;
+    type Error = FromElementError;
 
-    fn try_from(elem: Element) -> Result<BindQuery, Error> {
+    fn try_from(elem: Element) -> Result<BindQuery, FromElementError> {
         check_self!(elem, "bind", BIND);
         check_no_attributes!(elem, "bind");
 
         let mut resource = None;
         for child in elem.children() {
             if resource.is_some() {
-                return Err(Error::ParseError("Bind can only have one child."));
+                return Err(Error::Other("Bind can only have one child.").into());
             }
             if child.is("resource", ns::BIND) {
                 check_no_attributes!(child, "resource");
                 check_no_children!(child, "resource");
                 resource = Some(child.text());
             } else {
-                return Err(Error::ParseError("Unknown element in bind request."));
+                return Err(Error::Other("Unknown element in bind request.").into());
             }
         }
 
@@ -93,32 +93,30 @@ impl From<BindResponse> for Jid {
 }
 
 impl TryFrom<Element> for BindResponse {
-    type Error = Error;
+    type Error = FromElementError;
 
-    fn try_from(elem: Element) -> Result<BindResponse, Error> {
+    fn try_from(elem: Element) -> Result<BindResponse, FromElementError> {
         check_self!(elem, "bind", BIND);
         check_no_attributes!(elem, "bind");
 
         let mut jid = None;
         for child in elem.children() {
             if jid.is_some() {
-                return Err(Error::ParseError("Bind can only have one child."));
+                return Err(Error::Other("Bind can only have one child.").into());
             }
             if child.is("jid", ns::BIND) {
                 check_no_attributes!(child, "jid");
                 check_no_children!(child, "jid");
-                jid = Some(FullJid::from_str(&child.text())?);
+                jid = Some(FullJid::from_str(&child.text()).map_err(Error::text_parse_error)?);
             } else {
-                return Err(Error::ParseError("Unknown element in bind response."));
+                return Err(Error::Other("Unknown element in bind response.").into());
             }
         }
 
         Ok(BindResponse {
             jid: match jid {
                 None => {
-                    return Err(Error::ParseError(
-                        "Bind response must contain a jid element.",
-                    ))
+                    return Err(Error::Other("Bind response must contain a jid element.").into())
                 }
                 Some(jid) => jid,
             },
@@ -187,7 +185,7 @@ mod tests {
             .unwrap();
         let error = BindQuery::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Unknown attribute in resource element.");
@@ -197,7 +195,7 @@ mod tests {
             .unwrap();
         let error = BindQuery::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Unknown child in resource element.");

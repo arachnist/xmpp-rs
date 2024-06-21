@@ -5,8 +5,8 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 use crate::hashes::{Algo, Hash};
-use crate::util::error::Error;
 use crate::util::text_node_codecs::{Codec, ColonSeparatedHex};
+use xso::error::Error;
 
 generate_attribute!(
     /// Indicates which of the end points should initiate the TCP connection establishment.
@@ -64,7 +64,7 @@ impl Fingerprint {
         hash: &str,
     ) -> Result<Fingerprint, Error> {
         let algo = algo.parse()?;
-        let hash = Hash::from_colon_separated_hex(algo, hash)?;
+        let hash = Hash::from_colon_separated_hex(algo, hash).map_err(Error::text_parse_error)?;
         Ok(Fingerprint::from_hash(setup, hash))
     }
 }

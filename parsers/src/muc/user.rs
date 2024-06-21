@@ -8,8 +8,8 @@
 use crate::message::MessagePayload;
 use crate::ns;
 use crate::presence::PresencePayload;
-use crate::util::error::Error;
 use crate::Element;
+use xso::error::{Error, FromElementError};
 
 use jid::FullJid;
 
@@ -94,9 +94,9 @@ pub enum Actor {
 }
 
 impl TryFrom<Element> for Actor {
-    type Error = Error;
+    type Error = FromElementError;
 
-    fn try_from(elem: Element) -> Result<Actor, Error> {
+    fn try_from(elem: Element) -> Result<Actor, FromElementError> {
         check_self!(elem, "actor", MUC_USER);
         check_no_unknown_attributes!(elem, "actor", ["jid", "nick"]);
         check_no_children!(elem, "actor");
@@ -104,9 +104,9 @@ impl TryFrom<Element> for Actor {
         let nick = get_attr!(elem, "nick", Option);
 
         match (jid, nick) {
-            (Some(_), Some(_)) | (None, None) => Err(Error::ParseError(
-                "Either 'jid' or 'nick' attribute is required.",
-            )),
+            (Some(_), Some(_)) | (None, None) => {
+                Err(Error::Other("Either 'jid' or 'nick' attribute is required.").into())
+            }
             (Some(jid), _) => Ok(Actor::Jid(jid)),
             (_, Some(nick)) => Ok(Actor::Nick(nick)),
         }
@@ -343,7 +343,7 @@ mod tests {
             .unwrap();
         let error = MucUser::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Unknown child in x element.");
@@ -370,7 +370,7 @@ mod tests {
             .unwrap();
         let error = MucUser::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Unknown attribute in x element.");
@@ -391,7 +391,7 @@ mod tests {
             .unwrap();
         let error = Status::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Required attribute 'code' missing.");
@@ -407,7 +407,7 @@ mod tests {
             .unwrap();
         let error = Status::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Unknown child in status element.");
@@ -429,7 +429,7 @@ mod tests {
             .unwrap();
         let error = Status::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Invalid status code value.");
@@ -442,7 +442,11 @@ mod tests {
             .unwrap();
         let error = Status::try_from(elem).unwrap_err();
         let error = match error {
-            Error::ParseIntError(error) => error,
+            FromElementError::Invalid(Error::TextParseError(error))
+                if error.is::<std::num::ParseIntError>() =>
+            {
+                error
+            }
             _ => panic!(),
         };
         assert_eq!(error.to_string(), "invalid digit found in string");
@@ -455,7 +459,7 @@ mod tests {
             .unwrap();
         let error = Actor::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Either 'jid' or 'nick' attribute is required.");
@@ -470,7 +474,7 @@ mod tests {
             .unwrap();
         let error = Actor::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Either 'jid' or 'nick' attribute is required.");
@@ -530,7 +534,7 @@ mod tests {
             .unwrap();
         let continue_ = Continue::try_from(elem).unwrap_err();
         let message = match continue_ {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Unknown child in continue element.".to_owned());
@@ -557,7 +561,7 @@ mod tests {
             .unwrap();
         let error = Reason::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Unknown attribute in reason element.".to_owned());
@@ -573,7 +577,7 @@ mod tests {
             .unwrap();
         let error = Reason::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Unknown child in reason element.".to_owned());
@@ -588,7 +592,7 @@ mod tests {
             .unwrap();
         let error = Item::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Unknown attribute in item element.".to_owned());
@@ -612,7 +616,7 @@ mod tests {
             .unwrap();
         let error = Item::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Required attribute 'role' missing.".to_owned());
@@ -640,7 +644,7 @@ mod tests {
             .unwrap();
         let error = Item::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(

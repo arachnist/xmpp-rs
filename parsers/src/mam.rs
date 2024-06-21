@@ -11,9 +11,9 @@ use crate::message::MessagePayload;
 use crate::ns;
 use crate::pubsub::NodeName;
 use crate::rsm::{SetQuery, SetResult};
-use crate::util::error::Error;
 use crate::Element;
 use minidom::Node;
+use xso::error::{Error, FromElementError};
 
 generate_id!(
     /// An identifier matching a result message to the query requesting it.
@@ -41,8 +41,8 @@ impl IqSetPayload for Query {}
 impl IqResultPayload for Query {}
 
 impl TryFrom<Element> for Query {
-    type Error = Error;
-    fn try_from(elem: Element) -> Result<Query, Error> {
+    type Error = FromElementError;
+    fn try_from(elem: Element) -> Result<Query, FromElementError> {
         check_self!(elem, "query", MAM);
         check_no_unknown_attributes!(elem, "query", ["queryid", "node"]);
 
@@ -52,32 +52,34 @@ impl TryFrom<Element> for Query {
         for child in elem.children() {
             if child.is("x", ns::DATA_FORMS) {
                 if form.is_some() {
-                    return Err(Error::ParseError(
-                        "Element query must not have more than one x child.",
-                    ));
+                    return Err(
+                        Error::Other("Element query must not have more than one x child.").into(),
+                    );
                 }
                 form = Some(DataForm::try_from(child.clone())?);
                 continue;
             }
             if child.is("set", ns::RSM) {
                 if set.is_some() {
-                    return Err(Error::ParseError(
+                    return Err(Error::Other(
                         "Element query must not have more than one set child.",
-                    ));
+                    )
+                    .into());
                 }
                 set = Some(SetQuery::try_from(child.clone())?);
                 continue;
             }
             if child.is("flip-page", ns::MAM) {
                 if flip_page.is_some() {
-                    return Err(Error::ParseError(
+                    return Err(Error::Other(
                         "Element query must not have more than one flip-page child.",
-                    ));
+                    )
+                    .into());
                 }
                 flip_page = Some(true);
                 continue;
             }
-            return Err(Error::ParseError("Unknown child in query element."));
+            return Err(Error::Other("Unknown child in query element.").into());
         }
         Ok(Query {
             queryid: match elem.attr("queryid") {
@@ -296,7 +298,7 @@ mod tests {
             .unwrap();
         let error = Query::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Unknown child in query element.");

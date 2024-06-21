@@ -5,7 +5,7 @@
 
 use crate::data_forms::{DataForm, DataFormType, Field, FieldType};
 use crate::ns;
-use crate::util::error::Error;
+use xso::error::Error;
 
 /// Structure representing a `http://jabber.org/network/serverinfo` form type.
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -34,15 +34,15 @@ impl TryFrom<DataForm> for ServerInfo {
 
     fn try_from(form: DataForm) -> Result<ServerInfo, Error> {
         if form.type_ != DataFormType::Result_ {
-            return Err(Error::ParseError("Wrong type of form."));
+            return Err(Error::Other("Wrong type of form."));
         }
         if form.form_type != Some(String::from(ns::SERVER_INFO)) {
-            return Err(Error::ParseError("Wrong FORM_TYPE for form."));
+            return Err(Error::Other("Wrong FORM_TYPE for form."));
         }
         let mut server_info = ServerInfo::default();
         for field in form.fields {
             if field.type_ != FieldType::ListMulti {
-                return Err(Error::ParseError("Field is not of the required type."));
+                return Err(Error::Other("Field is not of the required type."));
             }
             if field.var.as_deref() == Some("abuse-addresses") {
                 server_info.abuse = field.values;
@@ -57,7 +57,7 @@ impl TryFrom<DataForm> for ServerInfo {
             } else if field.var.as_deref() == Some("support-addresses") {
                 server_info.support = field.values;
             } else {
-                return Err(Error::ParseError("Unknown form field var."));
+                return Err(Error::Other("Unknown form field var."));
             }
         }
 

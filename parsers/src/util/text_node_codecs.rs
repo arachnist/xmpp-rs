@@ -4,10 +4,10 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use crate::util::error::Error;
 use base64::{engine::general_purpose::STANDARD as Base64Engine, Engine};
 use jid::Jid;
 use std::str::FromStr;
+use xso::error::Error;
 
 /// A trait for codecs that can decode and encode text nodes.
 pub trait Codec {
@@ -70,7 +70,7 @@ where
         match s.trim() {
             // TODO: This error message can be a bit opaque when used
             // in-context; ideally it'd be configurable.
-            "" => Err(Error::ParseError(
+            "" => Err(Error::Other(
                 "The text in the element's text node was empty after trimming.",
             )),
             trimmed => T::decode(trimmed),
@@ -89,7 +89,7 @@ impl Codec for Base64 {
     type Decoded = Vec<u8>;
 
     fn decode(s: &str) -> Result<Vec<u8>, Error> {
-        Ok(Base64Engine.decode(s)?)
+        Base64Engine.decode(s).map_err(Error::text_parse_error)
     }
 
     fn encode(decoded: &Vec<u8>) -> Option<String> {
@@ -109,7 +109,7 @@ impl Codec for WhitespaceAwareBase64 {
             .filter(|ch| *ch != ' ' && *ch != '\n' && *ch != '\t')
             .collect();
 
-        Ok(Base64Engine.decode(s)?)
+        Base64Engine.decode(s).map_err(Error::text_parse_error)
     }
 
     fn encode(decoded: &Self::Decoded) -> Option<String> {
@@ -125,12 +125,13 @@ impl<const N: usize> Codec for FixedHex<N> {
 
     fn decode(s: &str) -> Result<Self::Decoded, Error> {
         if s.len() != 2 * N {
-            return Err(Error::ParseError("Invalid length"));
+            return Err(Error::Other("Invalid length"));
         }
 
         let mut bytes = [0u8; N];
         for i in 0..N {
-            bytes[i] = u8::from_str_radix(&s[2 * i..2 * i + 2], 16)?;
+            bytes[i] =
+                u8::from_str_radix(&s[2 * i..2 * i + 2], 16).map_err(Error::text_parse_error)?;
         }
 
         Ok(bytes)
@@ -154,7 +155,8 @@ impl Codec for ColonSeparatedHex {
     fn decode(s: &str) -> Result<Self::Decoded, Error> {
         let mut bytes = vec![];
         for i in 0..(1 + s.len()) / 3 {
-            let byte = u8::from_str_radix(&s[3 * i..3 * i + 2], 16)?;
+            let byte =
+                u8::from_str_radix(&s[3 * i..3 * i + 2], 16).map_err(Error::text_parse_error)?;
             if 3 * i + 2 < s.len() {
                 assert_eq!(&s[3 * i + 2..3 * i + 3], ":");
             }
@@ -179,7 +181,7 @@ impl Codec for JidCodec {
     type Decoded = Jid;
 
     fn decode(s: &str) -> Result<Jid, Error> {
-        Ok(Jid::from_str(s)?)
+        Jid::from_str(s).map_err(Error::text_parse_error)
     }
 
     fn encode(jid: &Jid) -> Option<String> {
@@ -205,28 +207,28 @@ mod tests {
 
         // What if we give it a string that's too long?
         let err = FixedHex::<3>::decode("01feEF01").unwrap_err();
-        assert_eq!(err.to_string(), "parse error: Invalid length");
+        assert_eq!(err.to_string(), "Invalid length");
 
         // Too short?
         let err = FixedHex::<3>::decode("01fe").unwrap_err();
-        assert_eq!(err.to_string(), "parse error: Invalid length");
+        assert_eq!(err.to_string(), "Invalid length");
 
         // Not-even numbers?
         let err = FixedHex::<3>::decode("01feE").unwrap_err();
-        assert_eq!(err.to_string(), "parse error: Invalid length");
+        assert_eq!(err.to_string(), "Invalid length");
 
         // No colon supported.
         let err = FixedHex::<3>::decode("0:f:EF").unwrap_err();
         assert_eq!(
             err.to_string(),
-            "integer parsing error: invalid digit found in string"
+            "text parse error: invalid digit found in string"
         );
 
         // No non-hex character allowed.
         let err = FixedHex::<3>::decode("01defg").unwrap_err();
         assert_eq!(
             err.to_string(),
-            "integer parsing error: invalid digit found in string"
+            "text parse error: invalid digit found in string"
         );
     }
 }

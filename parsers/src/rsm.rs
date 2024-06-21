@@ -5,8 +5,8 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 use crate::ns;
-use crate::util::error::Error;
 use crate::Element;
+use xso::error::{Error, FromElementError};
 
 /// Requests paging through a potentially big set of items (represented by an
 /// UID).
@@ -28,9 +28,9 @@ pub struct SetQuery {
 }
 
 impl TryFrom<Element> for SetQuery {
-    type Error = Error;
+    type Error = FromElementError;
 
-    fn try_from(elem: Element) -> Result<SetQuery, Error> {
+    fn try_from(elem: Element) -> Result<SetQuery, FromElementError> {
         check_self!(elem, "set", RSM, "RSM set");
         let mut set = SetQuery {
             max: None,
@@ -41,26 +41,26 @@ impl TryFrom<Element> for SetQuery {
         for child in elem.children() {
             if child.is("max", ns::RSM) {
                 if set.max.is_some() {
-                    return Err(Error::ParseError("Set can’t have more than one max."));
+                    return Err(Error::Other("Set can’t have more than one max.").into());
                 }
-                set.max = Some(child.text().parse()?);
+                set.max = Some(child.text().parse().map_err(Error::text_parse_error)?);
             } else if child.is("after", ns::RSM) {
                 if set.after.is_some() {
-                    return Err(Error::ParseError("Set can’t have more than one after."));
+                    return Err(Error::Other("Set can’t have more than one after.").into());
                 }
                 set.after = Some(child.text());
             } else if child.is("before", ns::RSM) {
                 if set.before.is_some() {
-                    return Err(Error::ParseError("Set can’t have more than one before."));
+                    return Err(Error::Other("Set can’t have more than one before.").into());
                 }
                 set.before = Some(child.text());
             } else if child.is("index", ns::RSM) {
                 if set.index.is_some() {
-                    return Err(Error::ParseError("Set can’t have more than one index."));
+                    return Err(Error::Other("Set can’t have more than one index.").into());
                 }
-                set.index = Some(child.text().parse()?);
+                set.index = Some(child.text().parse().map_err(Error::text_parse_error)?);
             } else {
-                return Err(Error::ParseError("Unknown child in set element."));
+                return Err(Error::Other("Unknown child in set element.").into());
             }
         }
         Ok(set)
@@ -111,9 +111,9 @@ pub struct SetResult {
 }
 
 impl TryFrom<Element> for SetResult {
-    type Error = Error;
+    type Error = FromElementError;
 
-    fn try_from(elem: Element) -> Result<SetResult, Error> {
+    fn try_from(elem: Element) -> Result<SetResult, FromElementError> {
         check_self!(elem, "set", RSM, "RSM set");
         let mut set = SetResult {
             first: None,
@@ -124,22 +124,22 @@ impl TryFrom<Element> for SetResult {
         for child in elem.children() {
             if child.is("first", ns::RSM) {
                 if set.first.is_some() {
-                    return Err(Error::ParseError("Set can’t have more than one first."));
+                    return Err(Error::Other("Set can’t have more than one first.").into());
                 }
                 set.first_index = get_attr!(child, "index", Option);
                 set.first = Some(child.text());
             } else if child.is("last", ns::RSM) {
                 if set.last.is_some() {
-                    return Err(Error::ParseError("Set can’t have more than one last."));
+                    return Err(Error::Other("Set can’t have more than one last.").into());
                 }
                 set.last = Some(child.text());
             } else if child.is("count", ns::RSM) {
                 if set.count.is_some() {
-                    return Err(Error::ParseError("Set can’t have more than one count."));
+                    return Err(Error::Other("Set can’t have more than one count.").into());
                 }
-                set.count = Some(child.text().parse()?);
+                set.count = Some(child.text().parse().map_err(Error::text_parse_error)?);
             } else {
-                return Err(Error::ParseError("Unknown child in set element."));
+                return Err(Error::Other("Unknown child in set element.").into());
             }
         }
         Ok(set)
@@ -215,7 +215,7 @@ mod tests {
             .unwrap();
         let error = SetQuery::try_from(elem.clone()).unwrap_err();
         let returned_elem = match error {
-            Error::TypeMismatch(_, _, elem) => elem,
+            FromElementError::Mismatch(elem) => elem,
             _ => panic!(),
         };
         assert_eq!(elem, returned_elem);
@@ -225,7 +225,7 @@ mod tests {
             .unwrap();
         let error = SetResult::try_from(elem.clone()).unwrap_err();
         let returned_elem = match error {
-            Error::TypeMismatch(_, _, elem) => elem,
+            FromElementError::Mismatch(elem) => elem,
             _ => panic!(),
         };
         assert_eq!(elem, returned_elem);
@@ -238,7 +238,7 @@ mod tests {
             .unwrap();
         let error = SetQuery::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Unknown child in set element.");
@@ -248,7 +248,7 @@ mod tests {
             .unwrap();
         let error = SetResult::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Unknown child in set element.");

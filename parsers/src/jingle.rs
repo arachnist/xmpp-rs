@@ -11,12 +11,12 @@ use crate::jingle_ice_udp::Transport as IceUdpTransport;
 use crate::jingle_rtp::Description as RtpDescription;
 use crate::jingle_s5b::Transport as Socks5Transport;
 use crate::ns;
-use crate::util::error::Error;
 use crate::Element;
 use jid::Jid;
 use std::collections::BTreeMap;
 use std::fmt;
 use std::str::FromStr;
+use xso::error::{Error, FromElementError};
 
 generate_attribute!(
     /// The action attribute.
@@ -428,7 +428,7 @@ impl FromStr for Reason {
             "unsupported-applications" => Reason::UnsupportedApplications,
             "unsupported-transports" => Reason::UnsupportedTransports,
 
-            _ => return Err(Error::ParseError("Unknown reason.")),
+            _ => return Err(Error::Other("Unknown reason.")),
         })
     }
 }
@@ -486,9 +486,9 @@ impl fmt::Display for ReasonElement {
 }
 
 impl TryFrom<Element> for ReasonElement {
-    type Error = Error;
+    type Error = FromElementError;
 
-    fn try_from(elem: Element) -> Result<ReasonElement, Error> {
+    fn try_from(elem: Element) -> Result<ReasonElement, FromElementError> {
         check_self!(elem, "reason", JINGLE);
         check_no_attributes!(elem, "reason");
         let mut reason = None;
@@ -499,24 +499,22 @@ impl TryFrom<Element> for ReasonElement {
                 check_no_unknown_attributes!(child, "text", ["xml:lang"]);
                 let lang = get_attr!(elem, "xml:lang", Default);
                 if texts.insert(lang, child.text()).is_some() {
-                    return Err(Error::ParseError(
-                        "Text element present twice for the same xml:lang.",
-                    ));
+                    return Err(
+                        Error::Other("Text element present twice for the same xml:lang.").into(),
+                    );
                 }
             } else if child.has_ns(ns::JINGLE) {
                 if reason.is_some() {
-                    return Err(Error::ParseError(
-                        "Reason must not have more than one reason.",
-                    ));
+                    return Err(Error::Other("Reason must not have more than one reason.").into());
                 }
                 check_no_children!(child, "reason");
                 check_no_attributes!(child, "reason");
                 reason = Some(child.name().parse()?);
             } else {
-                return Err(Error::ParseError("Reason contains a foreign element."));
+                return Err(Error::Other("Reason contains a foreign element.").into());
             }
         }
-        let reason = reason.ok_or(Error::ParseError("Reason doesn’t contain a valid reason."))?;
+        let reason = reason.ok_or(Error::Other("Reason doesn’t contain a valid reason."))?;
         Ok(ReasonElement { reason, texts })
     }
 }
@@ -616,9 +614,9 @@ impl Jingle {
 }
 
 impl TryFrom<Element> for Jingle {
-    type Error = Error;
+    type Error = FromElementError;
 
-    fn try_from(root: Element) -> Result<Jingle, Error> {
+    fn try_from(root: Element) -> Result<Jingle, FromElementError> {
         check_self!(root, "jingle", JINGLE, "Jingle");
         check_no_unknown_attributes!(root, "Jingle", ["action", "initiator", "responder", "sid"]);
 
@@ -639,17 +637,13 @@ impl TryFrom<Element> for Jingle {
                 jingle.contents.push(content);
             } else if child.is("reason", ns::JINGLE) {
                 if jingle.reason.is_some() {
-                    return Err(Error::ParseError(
-                        "Jingle must not have more than one reason.",
-                    ));
+                    return Err(Error::Other("Jingle must not have more than one reason.").into());
                 }
                 let reason = ReasonElement::try_from(child)?;
                 jingle.reason = Some(reason);
             } else if child.is("group", ns::JINGLE_GROUPING) {
                 if jingle.group.is_some() {
-                    return Err(Error::ParseError(
-                        "Jingle must not have more than one grouping.",
-                    ));
+                    return Err(Error::Other("Jingle must not have more than one grouping.").into());
                 }
                 let group = Group::try_from(child)?;
                 jingle.group = Some(group);
@@ -726,7 +720,7 @@ mod tests {
         let elem: Element = "<jingle xmlns='urn:xmpp:jingle:1'/>".parse().unwrap();
         let error = Jingle::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Required attribute 'action' missing.");
@@ -736,7 +730,7 @@ mod tests {
             .unwrap();
         let error = Jingle::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Required attribute 'sid' missing.");
@@ -746,10 +740,10 @@ mod tests {
             .unwrap();
         let error = Jingle::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::TextParseError(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Unknown value for 'action' attribute.");
+        assert_eq!(message.to_string(), "Unknown value for 'action' attribute.");
     }
 
     #[test]
@@ -775,7 +769,7 @@ mod tests {
         let elem: Element = "<jingle xmlns='urn:xmpp:jingle:1' action='session-initiate' sid='coucou'><content/></jingle>".parse().unwrap();
         let error = Jingle::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Required attribute 'creator' missing.");
@@ -783,7 +777,7 @@ mod tests {
         let elem: Element = "<jingle xmlns='urn:xmpp:jingle:1' action='session-initiate' sid='coucou'><content creator='initiator'/></jingle>".parse().unwrap();
         let error = Jingle::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Required attribute 'name' missing.");
@@ -791,26 +785,35 @@ mod tests {
         let elem: Element = "<jingle xmlns='urn:xmpp:jingle:1' action='session-initiate' sid='coucou'><content creator='coucou' name='coucou'/></jingle>".parse().unwrap();
         let error = Jingle::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
-            _ => panic!(),
+            FromElementError::Invalid(Error::TextParseError(string)) => string,
+            other => panic!("unexpected result: {:?}", other),
         };
-        assert_eq!(message, "Unknown value for 'creator' attribute.");
+        assert_eq!(
+            message.to_string(),
+            "Unknown value for 'creator' attribute."
+        );
 
         let elem: Element = "<jingle xmlns='urn:xmpp:jingle:1' action='session-initiate' sid='coucou'><content creator='initiator' name='coucou' senders='coucou'/></jingle>".parse().unwrap();
         let error = Jingle::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::TextParseError(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Unknown value for 'senders' attribute.");
+        assert_eq!(
+            message.to_string(),
+            "Unknown value for 'senders' attribute."
+        );
 
         let elem: Element = "<jingle xmlns='urn:xmpp:jingle:1' action='session-initiate' sid='coucou'><content creator='initiator' name='coucou' senders=''/></jingle>".parse().unwrap();
         let error = Jingle::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::TextParseError(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Unknown value for 'senders' attribute.");
+        assert_eq!(
+            message.to_string(),
+            "Unknown value for 'senders' attribute."
+        );
     }
 
     #[test]
@@ -833,7 +836,7 @@ mod tests {
         let elem: Element = "<jingle xmlns='urn:xmpp:jingle:1' action='session-initiate' sid='coucou'><reason/></jingle>".parse().unwrap();
         let error = Jingle::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Reason doesn’t contain a valid reason.");
@@ -841,7 +844,7 @@ mod tests {
         let elem: Element = "<jingle xmlns='urn:xmpp:jingle:1' action='session-initiate' sid='coucou'><reason><a/></reason></jingle>".parse().unwrap();
         let error = Jingle::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Unknown reason.");
@@ -849,7 +852,7 @@ mod tests {
         let elem: Element = "<jingle xmlns='urn:xmpp:jingle:1' action='session-initiate' sid='coucou'><reason><a xmlns='http://www.w3.org/1999/xhtml'/></reason></jingle>".parse().unwrap();
         let error = Jingle::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Reason contains a foreign element.");
@@ -857,7 +860,7 @@ mod tests {
         let elem: Element = "<jingle xmlns='urn:xmpp:jingle:1' action='session-initiate' sid='coucou'><reason><decline/></reason><reason/></jingle>".parse().unwrap();
         let error = Jingle::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Jingle must not have more than one reason.");
@@ -865,7 +868,7 @@ mod tests {
         let elem: Element = "<jingle xmlns='urn:xmpp:jingle:1' action='session-initiate' sid='coucou'><reason><decline/><text/><text/></reason></jingle>".parse().unwrap();
         let error = Jingle::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Text element present twice for the same xml:lang.");

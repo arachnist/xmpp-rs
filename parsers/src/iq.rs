@@ -7,10 +7,10 @@
 
 use crate::ns;
 use crate::stanza_error::StanzaError;
-use crate::util::error::Error;
 use crate::Element;
 use jid::Jid;
 use minidom::IntoAttributeValue;
+use xso::error::{Error, FromElementError};
 
 /// Should be implemented on every known payload of an `<iq type='get'/>`.
 pub trait IqGetPayload: TryFrom<Element> + Into<Element> {}
@@ -139,9 +139,9 @@ impl Iq {
 }
 
 impl TryFrom<Element> for Iq {
-    type Error = Error;
+    type Error = FromElementError;
 
-    fn try_from(root: Element) -> Result<Iq, Error> {
+    fn try_from(root: Element) -> Result<Iq, FromElementError> {
         check_self!(root, "iq", DEFAULT_NS);
         let from = get_attr!(root, "from", Option);
         let to = get_attr!(root, "to", Option);
@@ -152,16 +152,16 @@ impl TryFrom<Element> for Iq {
         let mut error_payload = None;
         for elem in root.children() {
             if payload.is_some() {
-                return Err(Error::ParseError("Wrong number of children in iq element."));
+                return Err(Error::Other("Wrong number of children in iq element.").into());
             }
             if type_ == "error" {
                 if elem.is("error", ns::DEFAULT_NS) {
                     if error_payload.is_some() {
-                        return Err(Error::ParseError("Wrong number of children in iq element."));
+                        return Err(Error::Other("Wrong number of children in iq element.").into());
                     }
                     error_payload = Some(StanzaError::try_from(elem.clone())?);
                 } else if root.children().count() != 2 {
-                    return Err(Error::ParseError("Wrong number of children in iq element."));
+                    return Err(Error::Other("Wrong number of children in iq element.").into());
                 }
             } else {
                 payload = Some(elem.clone());
@@ -172,13 +172,13 @@ impl TryFrom<Element> for Iq {
             if let Some(payload) = payload {
                 IqType::Get(payload)
             } else {
-                return Err(Error::ParseError("Wrong number of children in iq element."));
+                return Err(Error::Other("Wrong number of children in iq element.").into());
             }
         } else if type_ == "set" {
             if let Some(payload) = payload {
                 IqType::Set(payload)
             } else {
-                return Err(Error::ParseError("Wrong number of children in iq element."));
+                return Err(Error::Other("Wrong number of children in iq element.").into());
             }
         } else if type_ == "result" {
             if let Some(payload) = payload {
@@ -190,10 +190,10 @@ impl TryFrom<Element> for Iq {
             if let Some(payload) = error_payload {
                 IqType::Error(payload)
             } else {
-                return Err(Error::ParseError("Wrong number of children in iq element."));
+                return Err(Error::Other("Wrong number of children in iq element.").into());
             }
         } else {
-            return Err(Error::ParseError("Unknown iq type."));
+            return Err(Error::Other("Unknown iq type.").into());
         };
 
         Ok(Iq {
@@ -251,7 +251,7 @@ mod tests {
         let elem: Element = "<iq xmlns='jabber:component:accept'/>".parse().unwrap();
         let error = Iq::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Required attribute 'id' missing.");
@@ -264,7 +264,7 @@ mod tests {
             .unwrap();
         let error = Iq::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Required attribute 'type' missing.");
@@ -418,7 +418,7 @@ mod tests {
             .unwrap();
         let error = Iq::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Wrong number of children in iq element.");

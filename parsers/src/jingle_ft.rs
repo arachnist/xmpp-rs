@@ -8,10 +8,10 @@ use crate::date::DateTime;
 use crate::hashes::Hash;
 use crate::jingle::{ContentId, Creator};
 use crate::ns;
-use crate::util::error::Error;
 use minidom::{Element, Node};
 use std::collections::BTreeMap;
 use std::str::FromStr;
+use xso::error::{Error, FromElementError};
 
 generate_element!(
     /// Represents a range in a file.
@@ -85,7 +85,7 @@ impl File {
     /// Sets the date of last modification on this file from an ISO-8601
     /// string.
     pub fn with_date_str(mut self, date: &str) -> Result<File, Error> {
-        self.date = Some(DateTime::from_str(date)?);
+        self.date = Some(DateTime::from_str(date).map_err(Error::text_parse_error)?);
         Ok(self)
     }
 
@@ -127,9 +127,9 @@ impl File {
 }
 
 impl TryFrom<Element> for File {
-    type Error = Error;
+    type Error = FromElementError;
 
-    fn try_from(elem: Element) -> Result<File, Error> {
+    fn try_from(elem: Element) -> Result<File, FromElementError> {
         check_self!(elem, "file", JINGLE_FT);
         check_no_attributes!(elem, "file");
 
@@ -146,43 +146,41 @@ impl TryFrom<Element> for File {
         for child in elem.children() {
             if child.is("date", ns::JINGLE_FT) {
                 if file.date.is_some() {
-                    return Err(Error::ParseError("File must not have more than one date."));
+                    return Err(Error::Other("File must not have more than one date.").into());
                 }
-                file.date = Some(child.text().parse()?);
+                file.date = Some(child.text().parse().map_err(Error::text_parse_error)?);
             } else if child.is("media-type", ns::JINGLE_FT) {
                 if file.media_type.is_some() {
-                    return Err(Error::ParseError(
-                        "File must not have more than one media-type.",
-                    ));
+                    return Err(Error::Other("File must not have more than one media-type.").into());
                 }
                 file.media_type = Some(child.text());
             } else if child.is("name", ns::JINGLE_FT) {
                 if file.name.is_some() {
-                    return Err(Error::ParseError("File must not have more than one name."));
+                    return Err(Error::Other("File must not have more than one name.").into());
                 }
                 file.name = Some(child.text());
             } else if child.is("desc", ns::JINGLE_FT) {
                 let lang = get_attr!(child, "xml:lang", Default);
                 let desc = Desc(child.text());
                 if file.descs.insert(lang, desc).is_some() {
-                    return Err(Error::ParseError(
-                        "Desc element present twice for the same xml:lang.",
-                    ));
+                    return Err(
+                        Error::Other("Desc element present twice for the same xml:lang.").into(),
+                    );
                 }
             } else if child.is("size", ns::JINGLE_FT) {
                 if file.size.is_some() {
-                    return Err(Error::ParseError("File must not have more than one size."));
+                    return Err(Error::Other("File must not have more than one size.").into());
                 }
-                file.size = Some(child.text().parse()?);
+                file.size = Some(child.text().parse().map_err(Error::text_parse_error)?);
             } else if child.is("range", ns::JINGLE_FT) {
                 if file.range.is_some() {
-                    return Err(Error::ParseError("File must not have more than one range."));
+                    return Err(Error::Other("File must not have more than one range.").into());
                 }
                 file.range = Some(Range::try_from(child.clone())?);
             } else if child.is("hash", ns::HASHES) {
                 file.hashes.push(Hash::try_from(child.clone())?);
             } else {
-                return Err(Error::ParseError("Unknown element in JingleFT file."));
+                return Err(Error::Other("Unknown element in JingleFT file.").into());
             }
         }
 
@@ -230,24 +228,25 @@ pub struct Description {
 }
 
 impl TryFrom<Element> for Description {
-    type Error = Error;
+    type Error = FromElementError;
 
-    fn try_from(elem: Element) -> Result<Description, Error> {
+    fn try_from(elem: Element) -> Result<Description, FromElementError> {
         check_self!(elem, "description", JINGLE_FT, "JingleFT description");
         check_no_attributes!(elem, "JingleFT description");
         let mut file = None;
         for child in elem.children() {
             if file.is_some() {
-                return Err(Error::ParseError(
+                return Err(Error::Other(
                     "JingleFT description element must have exactly one child.",
-                ));
+                )
+                .into());
             }
             file = Some(File::try_from(child.clone())?);
         }
         if file.is_none() {
-            return Err(Error::ParseError(
-                "JingleFT description element must have exactly one child.",
-            ));
+            return Err(
+                Error::Other("JingleFT description element must have exactly one child.").into(),
+            );
         }
         Ok(Description {
             file: file.unwrap(),
@@ -277,24 +276,30 @@ pub struct Checksum {
 }
 
 impl TryFrom<Element> for Checksum {
-    type Error = Error;
+    type Error = FromElementError;
 
-    fn try_from(elem: Element) -> Result<Checksum, Error> {
+    fn try_from(elem: Element) -> Result<Checksum, FromElementError> {
         check_self!(elem, "checksum", JINGLE_FT);
         check_no_unknown_attributes!(elem, "checksum", ["name", "creator"]);
         let mut file = None;
         for child in elem.children() {
             if file.is_some() {
-                return Err(Error::ParseError(
-                    "JingleFT checksum element must have exactly one child.",
-                ));
+                return Err(
+                    Error::Other("JingleFT checksum element must have exactly one child.").into(),
+                );
             }
-            file = Some(File::try_from(child.clone()).map_err(|e| e.hide_type_mismatch())?);
+            file = Some(match File::try_from(child.clone()) {
+                Ok(v) => v,
+                Err(FromElementError::Mismatch(_)) => {
+                    return Err(Error::Other("Unexpected child element").into())
+                }
+                Err(other) => return Err(other),
+            });
         }
         if file.is_none() {
-            return Err(Error::ParseError(
-                "JingleFT checksum element must have exactly one child.",
-            ));
+            return Err(
+                Error::Other("JingleFT checksum element must have exactly one child.").into(),
+            );
         }
         Ok(Checksum {
             name: get_attr!(elem, "name", Required),
@@ -451,7 +456,7 @@ mod tests {
         .unwrap();
         let error = Description::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Desc element present twice for the same xml:lang.");
@@ -471,7 +476,7 @@ mod tests {
         let elem: Element = "<received xmlns='urn:xmpp:jingle:apps:file-transfer:5' name='coucou' creator='initiator'><coucou/></received>".parse().unwrap();
         let error = Received::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Unknown child in received element.");
@@ -482,7 +487,7 @@ mod tests {
                 .unwrap();
         let error = Received::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Required attribute 'name' missing.");
@@ -490,10 +495,13 @@ mod tests {
         let elem: Element = "<received xmlns='urn:xmpp:jingle:apps:file-transfer:5' name='coucou' creator='coucou'/>".parse().unwrap();
         let error = Received::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::TextParseError(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Unknown value for 'creator' attribute.");
+        assert_eq!(
+            message.to_string(),
+            "Unknown value for 'creator' attribute."
+        );
     }
 
     #[cfg(not(feature = "disable-validation"))]
@@ -502,7 +510,7 @@ mod tests {
         let elem: Element = "<received xmlns='urn:xmpp:jingle:apps:file-transfer:5' name='coucou' creator='initiator' coucou=''/>".parse().unwrap();
         let error = Received::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Unknown attribute in received element.");
@@ -540,7 +548,7 @@ mod tests {
         let elem: Element = "<checksum xmlns='urn:xmpp:jingle:apps:file-transfer:5' name='coucou' creator='initiator'><coucou/></checksum>".parse().unwrap();
         let error = Checksum::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             other => panic!("unexpected error: {:?}", other),
         };
         assert_eq!(message, "Unexpected child element");
@@ -548,7 +556,7 @@ mod tests {
         let elem: Element = "<checksum xmlns='urn:xmpp:jingle:apps:file-transfer:5' creator='initiator'><file><hash xmlns='urn:xmpp:hashes:2' algo='sha-1'>w0mcJylzCn+AfvuGdqkty2+KP48=</hash></file></checksum>".parse().unwrap();
         let error = Checksum::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Required attribute 'name' missing.");
@@ -556,10 +564,13 @@ mod tests {
         let elem: Element = "<checksum xmlns='urn:xmpp:jingle:apps:file-transfer:5' name='coucou' creator='coucou'><file><hash xmlns='urn:xmpp:hashes:2' algo='sha-1'>w0mcJylzCn+AfvuGdqkty2+KP48=</hash></file></checksum>".parse().unwrap();
         let error = Checksum::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::TextParseError(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Unknown value for 'creator' attribute.");
+        assert_eq!(
+            message.to_string(),
+            "Unknown value for 'creator' attribute."
+        );
     }
 
     #[cfg(not(feature = "disable-validation"))]
@@ -568,7 +579,7 @@ mod tests {
         let elem: Element = "<checksum xmlns='urn:xmpp:jingle:apps:file-transfer:5' name='coucou' creator='initiator' coucou=''><file><hash xmlns='urn:xmpp:hashes:2' algo='sha-1'>w0mcJylzCn+AfvuGdqkty2+KP48=</hash></file></checksum>".parse().unwrap();
         let error = Checksum::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Unknown attribute in checksum element.");
@@ -611,7 +622,7 @@ mod tests {
             .unwrap();
         let error = Range::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Unknown attribute in range element.");

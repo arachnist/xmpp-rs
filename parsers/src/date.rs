@@ -4,7 +4,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use crate::util::error::Error;
 use chrono::{DateTime as ChronoDateTime, FixedOffset};
 use minidom::{IntoAttributeValue, Node};
 use std::str::FromStr;
@@ -33,9 +32,9 @@ impl DateTime {
 }
 
 impl FromStr for DateTime {
-    type Err = Error;
+    type Err = chrono::ParseError;
 
-    fn from_str(s: &str) -> Result<DateTime, Error> {
+    fn from_str(s: &str) -> Result<DateTime, Self::Err> {
         Ok(DateTime(ChronoDateTime::parse_from_rfc3339(s)?))
     }
 }
@@ -80,51 +79,27 @@ mod tests {
     fn test_invalid_date() {
         // There is no thirteenth month.
         let error = DateTime::from_str("2017-13-01T12:23:34Z").unwrap_err();
-        let message = match error {
-            Error::ChronoParseError(string) => string,
-            _ => panic!(),
-        };
-        assert_eq!(message.to_string(), "input is out of range");
+        assert_eq!(error.to_string(), "input is out of range");
 
         // Timezone ≥24:00 aren’t allowed.
         let error = DateTime::from_str("2017-05-27T12:11:02+25:00").unwrap_err();
-        let message = match error {
-            Error::ChronoParseError(string) => string,
-            _ => panic!(),
-        };
-        assert_eq!(message.to_string(), "input is out of range");
+        assert_eq!(error.to_string(), "input is out of range");
 
         // Timezone without the : separator aren’t allowed.
         let error = DateTime::from_str("2017-05-27T12:11:02+0100").unwrap_err();
-        let message = match error {
-            Error::ChronoParseError(string) => string,
-            _ => panic!(),
-        };
-        assert_eq!(message.to_string(), "input contains invalid characters");
+        assert_eq!(error.to_string(), "input contains invalid characters");
 
         // No seconds, error message could be improved.
         let error = DateTime::from_str("2017-05-27T12:11+01:00").unwrap_err();
-        let message = match error {
-            Error::ChronoParseError(string) => string,
-            _ => panic!(),
-        };
-        assert_eq!(message.to_string(), "input contains invalid characters");
+        assert_eq!(error.to_string(), "input contains invalid characters");
 
         // TODO: maybe we’ll want to support this one, as per XEP-0082 §4.
         let error = DateTime::from_str("20170527T12:11:02+01:00").unwrap_err();
-        let message = match error {
-            Error::ChronoParseError(string) => string,
-            _ => panic!(),
-        };
-        assert_eq!(message.to_string(), "input contains invalid characters");
+        assert_eq!(error.to_string(), "input contains invalid characters");
 
         // No timezone.
         let error = DateTime::from_str("2017-05-27T12:11:02").unwrap_err();
-        let message = match error {
-            Error::ChronoParseError(string) => string,
-            _ => panic!(),
-        };
-        assert_eq!(message.to_string(), "premature end of input");
+        assert_eq!(error.to_string(), "premature end of input");
     }
 
     #[test]

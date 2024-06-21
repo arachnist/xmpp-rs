@@ -55,7 +55,7 @@ enum IntoEventsInner {
 // NOTE to developers: The limitations are not fully trivial to overcome:
 // the attributes use a BTreeMap internally, which does not offer a `drain`
 // iterator.
-fn make_start_ev_parts(el: &Element) -> Result<(rxml::QName, AttrMap), Error> {
+pub fn make_start_ev_parts(el: &Element) -> Result<(rxml::QName, AttrMap), Error> {
     let name = NcName::try_from(el.name())?;
     let namespace = Namespace::from(el.ns());
 

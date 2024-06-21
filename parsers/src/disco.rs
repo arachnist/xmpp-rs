@@ -8,9 +8,9 @@ use crate::data_forms::{DataForm, DataFormType};
 use crate::iq::{IqGetPayload, IqResultPayload};
 use crate::ns;
 use crate::rsm::{SetQuery, SetResult};
-use crate::util::error::Error;
 use crate::Element;
 use jid::Jid;
+use xso::error::{Error, FromElementError};
 
 generate_element!(
 /// Structure representing a `<query xmlns='http://jabber.org/protocol/disco#info'/>` element.
@@ -115,9 +115,9 @@ pub struct DiscoInfoResult {
 impl IqResultPayload for DiscoInfoResult {}
 
 impl TryFrom<Element> for DiscoInfoResult {
-    type Error = Error;
+    type Error = FromElementError;
 
-    fn try_from(elem: Element) -> Result<DiscoInfoResult, Error> {
+    fn try_from(elem: Element) -> Result<DiscoInfoResult, FromElementError> {
         check_self!(elem, "query", DISCO_INFO, "disco#info result");
         check_no_unknown_attributes!(elem, "disco#info result", ["node"]);
 
@@ -138,30 +138,30 @@ impl TryFrom<Element> for DiscoInfoResult {
             } else if child.is("x", ns::DATA_FORMS) {
                 let data_form = DataForm::try_from(child.clone())?;
                 if data_form.type_ != DataFormType::Result_ {
-                    return Err(Error::ParseError(
-                        "Data form must have a 'result' type in disco#info.",
-                    ));
+                    return Err(
+                        Error::Other("Data form must have a 'result' type in disco#info.").into(),
+                    );
                 }
                 if data_form.form_type.is_none() {
-                    return Err(Error::ParseError("Data form found without a FORM_TYPE."));
+                    return Err(Error::Other("Data form found without a FORM_TYPE.").into());
                 }
                 result.extensions.push(data_form);
             } else {
-                return Err(Error::ParseError("Unknown element in disco#info."));
+                return Err(Error::Other("Unknown element in disco#info.").into());
             }
         }
 
         #[cfg(not(feature = "disable-validation"))]
         {
             if result.identities.is_empty() {
-                return Err(Error::ParseError(
-                    "There must be at least one identity in disco#info.",
-                ));
+                return Err(
+                    Error::Other("There must be at least one identity in disco#info.").into(),
+                );
             }
             if result.features.is_empty() {
-                return Err(Error::ParseError(
-                    "There must be at least one feature in disco#info.",
-                ));
+                return Err(
+                    Error::Other("There must be at least one feature in disco#info.").into(),
+                );
             }
         }
 
@@ -313,7 +313,7 @@ mod tests {
                 .unwrap();
         let error = DiscoInfoResult::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Unknown element in disco#info.");
@@ -327,7 +327,7 @@ mod tests {
                 .unwrap();
         let error = DiscoInfoResult::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Required attribute 'category' missing.");
@@ -338,7 +338,7 @@ mod tests {
                 .unwrap();
         let error = DiscoInfoResult::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Required attribute 'category' must not be empty.");
@@ -346,7 +346,7 @@ mod tests {
         let elem: Element = "<query xmlns='http://jabber.org/protocol/disco#info'><identity category='coucou'/></query>".parse().unwrap();
         let error = DiscoInfoResult::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Required attribute 'type' missing.");
@@ -354,7 +354,7 @@ mod tests {
         let elem: Element = "<query xmlns='http://jabber.org/protocol/disco#info'><identity category='coucou' type=''/></query>".parse().unwrap();
         let error = DiscoInfoResult::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Required attribute 'type' must not be empty.");
@@ -368,7 +368,7 @@ mod tests {
                 .unwrap();
         let error = DiscoInfoResult::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Required attribute 'var' missing.");
@@ -381,7 +381,7 @@ mod tests {
             .unwrap();
         let error = DiscoInfoResult::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(
@@ -392,7 +392,7 @@ mod tests {
         let elem: Element = "<query xmlns='http://jabber.org/protocol/disco#info'><identity category='client' type='pc'/></query>".parse().unwrap();
         let error = DiscoInfoResult::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "There must be at least one feature in disco#info.");

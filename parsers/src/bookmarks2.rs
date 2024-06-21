@@ -15,8 +15,8 @@
 //! This module exposes the [`Autojoin`][crate::bookmarks2::Autojoin] boolean flag, the [`Conference`][crate::bookmarks2::Conference] chatroom element, and the [BOOKMARKS2][crate::ns::BOOKMARKS2] XML namespace.
 
 use crate::ns;
-use crate::util::error::Error;
 use crate::Element;
+use xso::error::{Error, FromElementError};
 
 generate_attribute!(
     /// Whether a conference bookmark should be joined automatically.
@@ -52,9 +52,9 @@ impl Conference {
 }
 
 impl TryFrom<Element> for Conference {
-    type Error = Error;
+    type Error = FromElementError;
 
-    fn try_from(root: Element) -> Result<Conference, Error> {
+    fn try_from(root: Element) -> Result<Conference, FromElementError> {
         check_self!(root, "conference", BOOKMARKS2, "Conference");
         check_no_unknown_attributes!(root, "Conference", ["autojoin", "name"]);
 
@@ -69,33 +69,30 @@ impl TryFrom<Element> for Conference {
         for child in root.children() {
             if child.is("nick", ns::BOOKMARKS2) {
                 if conference.nick.is_some() {
-                    return Err(Error::ParseError(
-                        "Conference must not have more than one nick.",
-                    ));
+                    return Err(Error::Other("Conference must not have more than one nick.").into());
                 }
                 check_no_children!(child, "nick");
                 check_no_attributes!(child, "nick");
                 conference.nick = Some(child.text());
             } else if child.is("password", ns::BOOKMARKS2) {
                 if conference.password.is_some() {
-                    return Err(Error::ParseError(
-                        "Conference must not have more than one password.",
-                    ));
+                    return Err(
+                        Error::Other("Conference must not have more than one password.").into(),
+                    );
                 }
                 check_no_children!(child, "password");
                 check_no_attributes!(child, "password");
                 conference.password = Some(child.text());
             } else if child.is("extensions", ns::BOOKMARKS2) {
                 if !conference.extensions.is_empty() {
-                    return Err(Error::ParseError(
+                    return Err(Error::Other(
                         "Conference must not have more than one extensions element.",
-                    ));
+                    )
+                    .into());
                 }
                 conference.extensions.extend(child.children().cloned());
             } else {
-                return Err(Error::ParseError(
-                    "Unknown element in bookmarks2 conference",
-                ));
+                return Err(Error::Other("Unknown element in bookmarks2 conference").into());
             }
         }
 

@@ -5,10 +5,10 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 use crate::ns;
-use crate::util::error::Error;
 use crate::util::text_node_codecs::{Base64, Codec};
 use crate::Element;
 use std::collections::BTreeMap;
+use xso::error::{Error, FromElementError};
 
 generate_attribute!(
     /// The list of available SASL mechanisms.
@@ -150,9 +150,9 @@ pub struct Failure {
 }
 
 impl TryFrom<Element> for Failure {
-    type Error = Error;
+    type Error = FromElementError;
 
-    fn try_from(root: Element) -> Result<Failure, Error> {
+    fn try_from(root: Element) -> Result<Failure, FromElementError> {
         check_self!(root, "failure", SASL);
         check_no_attributes!(root, "failure");
 
@@ -165,15 +165,17 @@ impl TryFrom<Element> for Failure {
                 check_no_children!(child, "text");
                 let lang = get_attr!(child, "xml:lang", Default);
                 if texts.insert(lang, child.text()).is_some() {
-                    return Err(Error::ParseError(
+                    return Err(Error::Other(
                         "Text element present twice for the same xml:lang in failure element.",
-                    ));
+                    )
+                    .into());
                 }
             } else if child.has_ns(ns::SASL) {
                 if defined_condition.is_some() {
-                    return Err(Error::ParseError(
+                    return Err(Error::Other(
                         "Failure must not have more than one defined-condition.",
-                    ));
+                    )
+                    .into());
                 }
                 check_no_attributes!(child, "defined-condition");
                 check_no_children!(child, "defined-condition");
@@ -184,11 +186,11 @@ impl TryFrom<Element> for Failure {
                 };
                 defined_condition = Some(condition);
             } else {
-                return Err(Error::ParseError("Unknown element in Failure."));
+                return Err(Error::Other("Unknown element in Failure.").into());
             }
         }
         let defined_condition =
-            defined_condition.ok_or(Error::ParseError("Failure must have a defined-condition."))?;
+            defined_condition.ok_or(Error::Other("Failure must have a defined-condition."))?;
 
         Ok(Failure {
             defined_condition,

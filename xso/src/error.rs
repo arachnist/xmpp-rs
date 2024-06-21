@@ -23,7 +23,7 @@ pub enum Error {
     TextParseError(Box<dyn std::error::Error + Send + Sync + 'static>),
 
     /// Generic, unspecified other error.
-    Other(Box<str>),
+    Other(&'static str),
 
     /// An element header did not match an expected element.
     ///
@@ -31,6 +31,16 @@ pub enum Error {
     /// types is reported as either an unexpected or a missing child element,
     /// errors which are generally more specific.
     TypeMismatch,
+}
+
+impl Error {
+    /// Convenience function to create a [`Self::TextParseError`] variant.
+    ///
+    /// This includes the `Box::new(.)` call, making it directly usable as
+    /// argument to [`Result::map_err`].
+    pub fn text_parse_error<T: std::error::Error + Send + Sync + 'static>(e: T) -> Self {
+        Self::TextParseError(Box::new(e))
+    }
 }
 
 impl fmt::Display for Error {
@@ -119,5 +129,77 @@ impl std::error::Error for FromEventsError {
             Self::Mismatch { .. } => None,
             Self::Invalid(ref e) => Some(e),
         }
+    }
+}
+
+impl From<Error> for Result<minidom::Element, Error> {
+    fn from(other: Error) -> Self {
+        Self::Err(other)
+    }
+}
+
+/// Error returned by the `TryFrom<Element>` implementations.
+#[derive(Debug)]
+pub enum FromElementError {
+    /// The XML element header did not match the expectations of the type
+    /// implementing `TryFrom`.
+    ///
+    /// Contains the original `Element` unmodified.
+    Mismatch(minidom::Element),
+
+    /// During processing of the element, an (unrecoverable) error occured.
+    Invalid(Error),
+}
+
+impl fmt::Display for FromElementError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::Mismatch(ref el) => write!(
+                f,
+                "expected different XML element (got {} in namespace {})",
+                el.name(),
+                el.ns()
+            ),
+            Self::Invalid(ref e) => fmt::Display::fmt(e, f),
+        }
+    }
+}
+
+impl std::error::Error for FromElementError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Mismatch(_) => None,
+            Self::Invalid(ref e) => Some(e),
+        }
+    }
+}
+
+impl From<Result<minidom::Element, Error>> for FromElementError {
+    fn from(other: Result<minidom::Element, Error>) -> Self {
+        match other {
+            Ok(v) => Self::Mismatch(v),
+            Err(e) => Self::Invalid(e),
+        }
+    }
+}
+
+impl From<Error> for FromElementError {
+    fn from(other: Error) -> Self {
+        Self::Invalid(other)
+    }
+}
+
+impl From<FromElementError> for Error {
+    fn from(other: FromElementError) -> Self {
+        match other {
+            FromElementError::Invalid(e) => e,
+            FromElementError::Mismatch(..) => Self::TypeMismatch,
+        }
+    }
+}
+
+impl From<core::convert::Infallible> for FromElementError {
+    fn from(other: core::convert::Infallible) -> Self {
+        match other {}
     }
 }

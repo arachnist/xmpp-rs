@@ -94,9 +94,9 @@ impl Muc {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::util::error::Error;
     use crate::Element;
     use std::str::FromStr;
+    use xso::error::{Error, FromElementError};
 
     #[test]
     fn test_muc_simple() {
@@ -113,7 +113,7 @@ mod tests {
             .unwrap();
         let error = Muc::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Unknown child in x element.");
@@ -140,7 +140,7 @@ mod tests {
             .unwrap();
         let error = Muc::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Unknown attribute in x element.");

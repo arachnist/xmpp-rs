@@ -9,12 +9,12 @@ use crate::disco::{DiscoInfoQuery, DiscoInfoResult, Feature, Identity};
 use crate::hashes::{Algo, Hash};
 use crate::ns;
 use crate::presence::PresencePayload;
-use crate::util::error::Error;
 use base64::{engine::general_purpose::STANDARD as Base64, Engine};
 use blake2::Blake2bVar;
 use digest::{Digest, Update, VariableOutput};
 use sha2::{Sha256, Sha512};
 use sha3::{Sha3_256, Sha3_512};
+use xso::error::Error;
 
 generate_element!(
     /// Represents a set of capability hashes, all of them must correspond to
@@ -80,7 +80,7 @@ fn compute_identities(identities: &[Identity]) -> Vec<u8> {
 fn compute_extensions(extensions: &[DataForm]) -> Result<Vec<u8>, Error> {
     for extension in extensions {
         if extension.form_type.is_none() {
-            return Err(Error::ParseError("Missing FORM_TYPE in extension."));
+            return Err(Error::Other("Missing FORM_TYPE in extension."));
         }
     }
     Ok(compute_items(extensions, 0x1c, |extension| {
@@ -163,8 +163,8 @@ pub fn hash_ecaps2(data: &[u8], algo: Algo) -> Result<Hash, Error> {
                 hasher.finalize_variable(&mut vec).unwrap();
                 vec
             }
-            Algo::Sha_1 => return Err(Error::ParseError("Disabled algorithm sha-1: unsafe.")),
-            Algo::Unknown(_algo) => return Err(Error::ParseError("Unknown algorithm in ecaps2.")),
+            Algo::Sha_1 => return Err(Error::Other("Disabled algorithm sha-1: unsafe.").into()),
+            Algo::Unknown(_algo) => return Err(Error::Other("Unknown algorithm in ecaps2.").into()),
         },
         algo,
     })
@@ -187,6 +187,7 @@ pub fn query_ecaps2(hash: Hash) -> DiscoInfoQuery {
 mod tests {
     use super::*;
     use crate::Element;
+    use xso::error::FromElementError;
 
     #[cfg(target_pointer_width = "32")]
     #[test]
@@ -226,7 +227,7 @@ mod tests {
         let elem: Element = "<c xmlns='urn:xmpp:caps'><hash xmlns='urn:xmpp:hashes:2' algo='sha-256'>K1Njy3HZBThlo4moOD5gBGhn0U0oK7/CbfLlIUDi6o4=</hash><hash xmlns='urn:xmpp:hashes:1' algo='sha3-256'>+sDTQqBmX6iG/X3zjt06fjZMBBqL/723knFIyRf0sg8=</hash></c>".parse().unwrap();
         let error = ECaps2::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Unknown child in c element.");

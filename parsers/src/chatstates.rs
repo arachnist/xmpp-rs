@@ -33,8 +33,8 @@ impl MessagePayload for ChatState {}
 mod tests {
     use super::*;
     use crate::ns;
-    use crate::util::error::Error;
     use crate::Element;
+    use xso::error::{Error, FromElementError};
 
     #[test]
     fn test_size() {
@@ -56,7 +56,7 @@ mod tests {
             .unwrap();
         let error = ChatState::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "This is not a chatstate element.");
@@ -70,7 +70,7 @@ mod tests {
             .unwrap();
         let error = ChatState::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Unknown child in chatstate element.");
@@ -84,7 +84,7 @@ mod tests {
             .unwrap();
         let error = ChatState::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Unknown attribute in chatstate element.");

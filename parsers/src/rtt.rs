@@ -5,9 +5,9 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 use crate::ns;
-use crate::util::error::Error;
 use crate::util::text_node_codecs::{Codec, OptionalCodec, Text};
 use crate::Element;
+use xso::error::{Error, FromElementError};
 
 generate_attribute!(
     /// Events for real-time text.
@@ -49,7 +49,7 @@ impl TryFrom<Action> for Insert {
     fn try_from(action: Action) -> Result<Insert, Error> {
         match action {
             Action::Insert(insert) => Ok(insert),
-            _ => Err(Error::ParseError("This is not an insert action.")),
+            _ => Err(Error::Other("This is not an insert action.")),
         }
     }
 }
@@ -79,8 +79,8 @@ pub struct Erase {
 }
 
 impl TryFrom<Element> for Erase {
-    type Error = Error;
-    fn try_from(elem: Element) -> Result<Erase, Error> {
+    type Error = FromElementError;
+    fn try_from(elem: Element) -> Result<Erase, FromElementError> {
         check_self!(elem, "e", RTT);
         check_no_unknown_attributes!(elem, "e", ["p", "n"]);
         let pos = get_attr!(elem, "p", Option);
@@ -105,7 +105,7 @@ impl TryFrom<Action> for Erase {
     fn try_from(action: Action) -> Result<Erase, Error> {
         match action {
             Action::Erase(erase) => Ok(erase),
-            _ => Err(Error::ParseError("This is not an erase action.")),
+            _ => Err(Error::Other("This is not an erase action.")),
         }
     }
 }
@@ -127,7 +127,7 @@ impl TryFrom<Action> for Wait {
     fn try_from(action: Action) -> Result<Wait, Error> {
         match action {
             Action::Wait(wait) => Ok(wait),
-            _ => Err(Error::ParseError("This is not a wait action.")),
+            _ => Err(Error::Other("This is not a wait action.")),
         }
     }
 }
@@ -146,14 +146,14 @@ pub enum Action {
 }
 
 impl TryFrom<Element> for Action {
-    type Error = Error;
+    type Error = FromElementError;
 
-    fn try_from(elem: Element) -> Result<Action, Error> {
+    fn try_from(elem: Element) -> Result<Action, FromElementError> {
         match elem.name() {
             "t" => Insert::try_from(elem).map(Action::Insert),
             "e" => Erase::try_from(elem).map(Action::Erase),
             "w" => Wait::try_from(elem).map(Action::Wait),
-            _ => Err(Error::ParseError("This is not a rtt action element.")),
+            _ => Err(FromElementError::Mismatch(elem)),
         }
     }
 }
@@ -204,8 +204,8 @@ pub struct Rtt {
 }
 
 impl TryFrom<Element> for Rtt {
-    type Error = Error;
-    fn try_from(elem: Element) -> Result<Rtt, Error> {
+    type Error = FromElementError;
+    fn try_from(elem: Element) -> Result<Rtt, FromElementError> {
         check_self!(elem, "rtt", RTT);
 
         check_no_unknown_attributes!(elem, "rtt", ["seq", "event", "id"]);
@@ -216,7 +216,7 @@ impl TryFrom<Element> for Rtt {
         let mut actions = Vec::new();
         for child in elem.children() {
             if child.ns() != ns::RTT {
-                return Err(Error::ParseError("Unknown child in rtt element."));
+                return Err(Error::Other("Unknown child in rtt element.").into());
             }
             actions.push(Action::try_from(child.clone())?);
         }

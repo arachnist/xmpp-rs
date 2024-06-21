@@ -5,10 +5,10 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 use crate::hashes::{Algo, Hash};
-use crate::util::error::Error;
 use crate::util::text_node_codecs::{Base64, Codec};
 use minidom::IntoAttributeValue;
 use std::str::FromStr;
+use xso::error::Error;
 
 /// A Content-ID, as defined in RFC2111.
 ///
@@ -27,11 +27,11 @@ impl FromStr for ContentId {
         let temp: Vec<_> = match temp[..] {
             [lhs, rhs] => {
                 if rhs != "bob.xmpp.org" {
-                    return Err(Error::ParseError("Wrong domain for cid URI."));
+                    return Err(Error::Other("Wrong domain for cid URI."));
                 }
                 lhs.splitn(2, '+').collect()
             }
-            _ => return Err(Error::ParseError("Missing @ in cid URI.")),
+            _ => return Err(Error::Other("Missing @ in cid URI.")),
         };
         let (algo, hex) = match temp[..] {
             [lhs, rhs] => {
@@ -42,9 +42,9 @@ impl FromStr for ContentId {
                 };
                 (algo, rhs)
             }
-            _ => return Err(Error::ParseError("Missing + in cid URI.")),
+            _ => return Err(Error::Other("Missing + in cid URI.")),
         };
-        let hash = Hash::from_hex(algo, hex)?;
+        let hash = Hash::from_hex(algo, hex).map_err(Error::text_parse_error)?;
         Ok(ContentId { hash })
     }
 }
@@ -89,6 +89,7 @@ generate_element!(
 mod tests {
     use super::*;
     use crate::Element;
+    use xso::error::FromElementError;
 
     #[cfg(target_pointer_width = "32")]
     #[test]
@@ -135,14 +136,14 @@ mod tests {
     fn invalid_cid() {
         let error = "Hello world!".parse::<ContentId>().unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            Error::Other(string) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Missing @ in cid URI.");
 
         let error = "Hello world@bob.xmpp.org".parse::<ContentId>().unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            Error::Other(string) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Missing + in cid URI.");
@@ -151,7 +152,7 @@ mod tests {
             .parse::<ContentId>()
             .unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            Error::Other(string) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Wrong domain for cid URI.");
@@ -160,7 +161,7 @@ mod tests {
             .parse::<ContentId>()
             .unwrap_err();
         let message = match error {
-            Error::ParseIntError(error) => error,
+            Error::TextParseError(error) if error.is::<std::num::ParseIntError>() => error,
             _ => panic!(),
         };
         assert_eq!(message.to_string(), "invalid digit found in string");
@@ -173,7 +174,7 @@ mod tests {
             .unwrap();
         let error = Data::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Unknown child in data element.");

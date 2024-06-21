@@ -7,9 +7,9 @@
 use crate::data_forms::DataForm;
 use crate::iq::{IqGetPayload, IqResultPayload, IqSetPayload};
 use crate::ns;
-use crate::util::error::Error;
 use crate::Element;
 use std::collections::HashMap;
+use xso::error::{Error, FromElementError};
 
 /// Query for registering against a service.
 #[derive(Debug, Clone)]
@@ -35,9 +35,9 @@ impl IqSetPayload for Query {}
 impl IqResultPayload for Query {}
 
 impl TryFrom<Element> for Query {
-    type Error = Error;
+    type Error = FromElementError;
 
-    fn try_from(elem: Element) -> Result<Query, Error> {
+    fn try_from(elem: Element) -> Result<Query, FromElementError> {
         check_self!(elem, "query", REGISTER, "IBR query");
         let mut query = Query {
             registered: false,
@@ -76,12 +76,12 @@ impl TryFrom<Element> for Query {
                 } else if name == "remove" {
                     query.remove = true;
                 } else {
-                    return Err(Error::ParseError("Wrong field in ibr element."));
+                    return Err(Error::Other("Wrong field in ibr element.").into());
                 }
             } else if child.is("x", ns::DATA_FORMS) {
                 query.form = Some(DataForm::try_from(child.clone())?);
             } else {
-                return Err(Error::ParseError("Unknown child in ibr element."));
+                return Err(Error::Other("Unknown child in ibr element.").into());
             }
         }
         Ok(query)

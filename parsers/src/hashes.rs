@@ -4,13 +4,13 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use crate::util::error::Error;
 use crate::util::text_node_codecs::{Base64, Codec};
 use base64::{engine::general_purpose::STANDARD as Base64Engine, Engine};
 use minidom::IntoAttributeValue;
 use std::num::ParseIntError;
 use std::ops::{Deref, DerefMut};
 use std::str::FromStr;
+use xso::error::Error;
 
 /// List of the algorithms we support, or Unknown.
 #[allow(non_camel_case_types)]
@@ -60,7 +60,7 @@ impl FromStr for Algo {
 
     fn from_str(s: &str) -> Result<Algo, Error> {
         Ok(match s {
-            "" => return Err(Error::ParseError("'algo' argument can’t be empty.")),
+            "" => return Err(Error::Other("'algo' argument can’t be empty.")),
 
             "sha-1" => Algo::Sha_1,
             "sha-256" => Algo::Sha_256,
@@ -118,7 +118,10 @@ impl Hash {
     /// Like [new](#method.new) but takes base64-encoded data before decoding
     /// it.
     pub fn from_base64(algo: Algo, hash: &str) -> Result<Hash, Error> {
-        Ok(Hash::new(algo, Base64Engine.decode(hash)?))
+        Ok(Hash::new(
+            algo,
+            Base64Engine.decode(hash).map_err(Error::text_parse_error)?,
+        ))
     }
 
     /// Like [new](#method.new) but takes hex-encoded data before decoding it.
@@ -205,6 +208,7 @@ impl Deref for Sha1HexAttribute {
 mod tests {
     use super::*;
     use crate::Element;
+    use xso::error::FromElementError;
 
     #[cfg(target_pointer_width = "32")]
     #[test]
@@ -255,7 +259,7 @@ mod tests {
             .unwrap();
         let error = Hash::try_from(elem.clone()).unwrap_err();
         let returned_elem = match error {
-            Error::TypeMismatch(_, _, elem) => elem,
+            FromElementError::Mismatch(elem) => elem,
             _ => panic!(),
         };
         assert_eq!(elem, returned_elem);
@@ -268,7 +272,7 @@ mod tests {
             .unwrap();
         let error = Hash::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Unknown child in hash element.");

@@ -6,8 +6,8 @@
 
 use crate::media_element::MediaElement;
 use crate::ns;
-use crate::util::error::Error;
 use crate::Element;
+use xso::error::{Error, FromElementError};
 
 generate_element!(
     /// Represents one of the possible values for a list- field.
@@ -168,9 +168,9 @@ impl Field {
 }
 
 impl TryFrom<Element> for Field {
-    type Error = Error;
+    type Error = FromElementError;
 
-    fn try_from(elem: Element) -> Result<Field, Error> {
+    fn try_from(elem: Element) -> Result<Field, FromElementError> {
         check_self!(elem, "field", DATA_FORMS);
         check_no_unknown_attributes!(elem, "field", ["label", "type", "var"]);
         let mut field = Field {
@@ -185,7 +185,7 @@ impl TryFrom<Element> for Field {
         };
 
         if field.type_ != FieldType::Fixed && field.var.is_none() {
-            return Err(Error::ParseError("Required attribute 'var' missing."));
+            return Err(Error::Other("Required attribute 'var' missing.").into());
         }
 
         for element in elem.children() {
@@ -195,14 +195,14 @@ impl TryFrom<Element> for Field {
                 field.values.push(element.text());
             } else if element.is("required", ns::DATA_FORMS) {
                 if field.required {
-                    return Err(Error::ParseError("More than one required element."));
+                    return Err(Error::Other("More than one required element.").into());
                 }
                 check_no_children!(element, "required");
                 check_no_attributes!(element, "required");
                 field.required = true;
             } else if element.is("option", ns::DATA_FORMS) {
                 if !field.is_list() {
-                    return Err(Error::ParseError("Option element found in non-list field."));
+                    return Err(Error::Other("Option element found in non-list field.").into());
                 }
                 let option = Option_::try_from(element.clone())?;
                 field.options.push(option);
@@ -214,9 +214,9 @@ impl TryFrom<Element> for Field {
                 check_no_attributes!(element, "desc");
                 field.desc = Some(element.text());
             } else {
-                return Err(Error::ParseError(
-                    "Field child isn’t a value, option or media element.",
-                ));
+                return Err(
+                    Error::Other("Field child isn’t a value, option or media element.").into(),
+                );
             }
         }
         Ok(field)
@@ -299,9 +299,9 @@ impl DataForm {
 }
 
 impl TryFrom<Element> for DataForm {
-    type Error = Error;
+    type Error = FromElementError;
 
-    fn try_from(elem: Element) -> Result<DataForm, Error> {
+    fn try_from(elem: Element) -> Result<DataForm, FromElementError> {
         check_self!(elem, "x", DATA_FORMS);
         check_no_unknown_attributes!(elem, "x", ["type"]);
         let type_ = get_attr!(elem, "type", Required);
@@ -315,16 +315,14 @@ impl TryFrom<Element> for DataForm {
         for child in elem.children() {
             if child.is("title", ns::DATA_FORMS) {
                 if form.title.is_some() {
-                    return Err(Error::ParseError("More than one title in form element."));
+                    return Err(Error::Other("More than one title in form element.").into());
                 }
                 check_no_children!(child, "title");
                 check_no_attributes!(child, "title");
                 form.title = Some(child.text());
             } else if child.is("instructions", ns::DATA_FORMS) {
                 if form.instructions.is_some() {
-                    return Err(Error::ParseError(
-                        "More than one instructions in form element.",
-                    ));
+                    return Err(Error::Other("More than one instructions in form element.").into());
                 }
                 check_no_children!(child, "instructions");
                 check_no_attributes!(child, "instructions");
@@ -334,17 +332,17 @@ impl TryFrom<Element> for DataForm {
                 if field.is_form_type(&form.type_) {
                     let mut field = field;
                     if form.form_type.is_some() {
-                        return Err(Error::ParseError("More than one FORM_TYPE in a data form."));
+                        return Err(Error::Other("More than one FORM_TYPE in a data form.").into());
                     }
                     if field.values.len() != 1 {
-                        return Err(Error::ParseError("Wrong number of values in FORM_TYPE."));
+                        return Err(Error::Other("Wrong number of values in FORM_TYPE.").into());
                     }
                     form.form_type = field.values.pop();
                 } else {
                     form.fields.push(field);
                 }
             } else {
-                return Err(Error::ParseError("Unknown child in data form element."));
+                return Err(Error::Other("Unknown child in data form element.").into());
             }
         }
         Ok(form)
@@ -415,7 +413,7 @@ mod tests {
                 .unwrap();
         let error = DataForm::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Required attribute 'var' missing.");
@@ -474,7 +472,7 @@ mod tests {
         let elem: Element = "<x xmlns='jabber:x:data'/>".parse().unwrap();
         let error = DataForm::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Required attribute 'type' missing.");
@@ -482,10 +480,10 @@ mod tests {
         let elem: Element = "<x xmlns='jabber:x:data' type='coucou'/>".parse().unwrap();
         let error = DataForm::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
-            _ => panic!(),
+            FromElementError::Invalid(Error::TextParseError(string)) => string,
+            other => panic!("unexpected result: {:?}", other),
         };
-        assert_eq!(message, "Unknown value for 'type' attribute.");
+        assert_eq!(message.to_string(), "Unknown value for 'type' attribute.");
     }
 
     #[test]
@@ -495,7 +493,7 @@ mod tests {
             .unwrap();
         let error = DataForm::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Unknown child in data form element.");
@@ -516,7 +514,7 @@ mod tests {
             .unwrap();
         let error = Option_::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Missing child value in option element.");
@@ -524,7 +522,7 @@ mod tests {
         let elem: Element = "<option xmlns='jabber:x:data' label='Coucou !'><value>coucou</value><value>error</value></option>".parse().unwrap();
         let error = Option_::try_from(elem).unwrap_err();
         let message = match error {
-            Error::ParseError(string) => string,
+            FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(
