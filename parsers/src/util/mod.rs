@@ -10,3 +10,6 @@ pub(crate) mod text_node_codecs;
 /// Helper macros to parse and serialise more easily.
 #[macro_use]
 mod macros;
+
+#[cfg(test)]
+mod macro_tests;

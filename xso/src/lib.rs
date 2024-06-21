@@ -20,12 +20,31 @@ use of this library in parsing XML streams like specified in RFC 6120.
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 pub mod error;
+#[cfg(feature = "minidom")]
 pub mod minidom_compat;
 
 #[doc(hidden)]
 pub mod exports {
+    #[cfg(feature = "minidom")]
+    pub use minidom;
     pub use rxml;
 }
+
+#[doc = include_str!("from_xml_doc.md")]
+#[doc(inline)]
+#[cfg(feature = "macros")]
+pub use xso_proc::FromXml;
+
+/// # Make a struct or enum serialisable to XML
+///
+/// This derives the [`IntoXml`] trait on a struct or enum. It is the
+/// counterpart to [`macro@FromXml`].
+///
+/// The attributes necessary and available for the derivation to work are
+/// documented on [`macro@FromXml`].
+#[doc(inline)]
+#[cfg(feature = "macros")]
+pub use xso_proc::IntoXml;
 
 /// Trait allowing to consume a struct and iterate its contents as
 /// serialisable [`rxml::Event`] items.
@@ -145,6 +164,7 @@ pub fn transform<T: FromXml, F: IntoXml>(from: F) -> Result<T, self::error::Erro
 /// Unlike [`transform`] (which can also be used with an element), this
 /// function will return the element unharmed if its element header does not
 /// match the expectations of `T`.
+#[cfg(feature = "minidom")]
 pub fn try_from_element<T: FromXml>(
     from: minidom::Element,
 ) -> Result<T, self::error::FromElementError> {

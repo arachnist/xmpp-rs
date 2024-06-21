@@ -1,0 +1,24 @@
+[package]
+name = "xso_proc"
+version = "0.0.2"
+authors = [
+  "Jonas Schäfer <jonas@zombofant.net>",
+]
+description = "Macro implementation of #[derive(FromXml, IntoXml)]"
+homepage = "https://xmpp.rs"
+repository = "https://gitlab.com/xmpp-rs/xmpp-rs"
+keywords = ["xso", "derive", "serialization"]
+license = "MPL-2.0"
+edition = "2021"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+quote = "^1"
+syn = { version = "^2", features = ["full", "extra-traits"] }
+proc-macro2 = "^1"
+
+[features]
+panicking-into-impl = ["minidom"]
+minidom = []

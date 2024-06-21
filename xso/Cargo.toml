@@ -12,3 +12,9 @@ license = "MPL-2.0"
 [dependencies]
 rxml = { version = "0.11.0", default-features = false }
 minidom = { version = "^0.15" }
+xso_proc = { version = "0.0.2", optional = true }
+
+[features]
+macros = [ "dep:xso_proc" ]
+minidom = [ "xso_proc/minidom"]
+panicking-into-impl = ["xso_proc/panicking-into-impl"]

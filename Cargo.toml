@@ -7,6 +7,7 @@ members = [  # alphabetically sorted
   "tokio-xmpp",
   "xmpp",
   "xso",
+  "xso-proc",
 ]
 resolver = "2"
 
@@ -18,3 +19,4 @@ tokio-xmpp = { path = "tokio-xmpp" }
 xmpp-parsers = { path = "parsers" }
 xmpp = { path = "xmpp" }
 xso = { path = "xso" }
+xso_proc = { path = "xso-proc" }
