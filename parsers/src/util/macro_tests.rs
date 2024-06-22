@@ -148,3 +148,24 @@ fn empty_qname_check_has_precedence_over_attr_check() {
         other => panic!("unexpected result: {:?}", other),
     }
 }
+
+static SOME_NAME: &::xso::exports::rxml::strings::NcNameStr = {
+    #[allow(unsafe_code)]
+    unsafe {
+        ::xso::exports::rxml::strings::NcNameStr::from_str_unchecked("bar")
+    }
+};
+
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = NS1, name = SOME_NAME)]
+struct NamePath;
+
+#[test]
+fn name_path_roundtrip() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<NamePath>("<bar xmlns='urn:example:ns1'/>");
+}

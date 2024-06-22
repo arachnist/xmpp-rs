@@ -9,6 +9,8 @@
 //! This module is concerned with parsing attributes from the Rust "meta"
 //! annotations on structs, enums, enum variants and fields.
 
+use std::borrow::Cow;
+
 use proc_macro2::{Span, TokenStream};
 use quote::{quote, quote_spanned};
 use syn::{spanned::Spanned, *};
@@ -23,47 +25,73 @@ pub(crate) type NamespaceRef = Path;
 
 /// Value for the `#[xml(name = .. )]` attribute.
 #[derive(Debug)]
-pub(crate) struct NameRef {
-    value: NcName,
-    span: Span,
+pub(crate) enum NameRef {
+    /// The XML name is specified as a string literal.
+    Literal {
+        /// The validated XML name.
+        value: NcName,
+
+        /// The span of the original [`syn::LitStr`].
+        span: Span,
+    },
+
+    /// The XML name is specified as a path.
+    Path(Path),
 }
 
 impl NameRef {
-    /// Access the XML name as str.
+    /// Access a representation of the XML name as str.
     ///
-    /// *Note*: This function may vanish in the future if we ever support
-    /// non-literal XML names.
-    pub(crate) fn as_str(&self) -> &str {
-        self.value.as_str()
+    /// If this name reference is a [`Self::Path`], this will return the name
+    /// of the rightmost identifier in the path.
+    ///
+    /// If this name reference is a [`Self::Literal`], this will return the
+    /// contents of the literal.
+    pub(crate) fn repr_to_string(&self) -> Cow<'_, str> {
+        match self {
+            Self::Literal { ref value, .. } => Cow::Borrowed(value.as_str()),
+            Self::Path(ref path) => path.segments.last().unwrap().ident.to_string().into(),
+        }
     }
 }
 
 impl syn::parse::Parse for NameRef {
     fn parse(input: syn::parse::ParseStream<'_>) -> Result<Self> {
-        let s: LitStr = input.parse()?;
-        let span = s.span();
-        match NcName::try_from(s.value()) {
-            Ok(value) => Ok(Self { value, span }),
-            Err(e) => Err(Error::new(
-                span,
-                format!("not a valid XML element name: {}", e),
-            )),
+        if input.peek(syn::LitStr) {
+            let s: LitStr = input.parse()?;
+            let span = s.span();
+            match NcName::try_from(s.value()) {
+                Ok(value) => Ok(Self::Literal { value, span }),
+                Err(e) => Err(Error::new(
+                    span,
+                    format!("not a valid XML element name: {}", e),
+                )),
+            }
+        } else {
+            let p: Path = input.parse()?;
+            Ok(Self::Path(p))
         }
     }
 }
 
 impl quote::ToTokens for NameRef {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        let value = self.value.as_str();
-        let value = quote_spanned! { self.span=> #value };
-        // SAFETY: self.0 is a known-good NcName, so converting it to an
-        // NcNameStr is known to be safe.
-        // NOTE: we cannot use `quote_spanned! { self.span=> }` for the unsafe
-        // block as that would then in fact trip a `#[deny(unsafe_code)]` lint
-        // at the use site of the macro.
-        tokens.extend(quote! {
-            unsafe { ::xso::exports::rxml::NcNameStr::from_str_unchecked(#value) }
-        })
+        match self {
+            Self::Literal { ref value, span } => {
+                let span = *span;
+                let value = value.as_str();
+                let value = quote_spanned! { span=> #value };
+                // SAFETY: self.0 is a known-good NcName, so converting it to an
+                // NcNameStr is known to be safe.
+                // NOTE: we cannot use `quote_spanned! { self.span=> }` for the unsafe
+                // block as that would then in fact trip a `#[deny(unsafe_code)]` lint
+                // at the use site of the macro.
+                tokens.extend(quote! {
+                    unsafe { ::xso::exports::rxml::NcNameStr::from_str_unchecked(#value) }
+                })
+            }
+            Self::Path(ref path) => path.to_tokens(tokens),
+        }
     }
 }
 

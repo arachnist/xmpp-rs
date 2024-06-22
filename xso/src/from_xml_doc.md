@@ -32,7 +32,7 @@ All key-value pairs interpreted by these derive macros must be wrapped in a
 | Key | Value type | Description |
 | --- | --- | --- |
 | `namespace` | *path* | The path to a `&'static str` which holds the XML namespace to match. |
-| `name` | *string literal* | The XML element name to match. |
+| `name` | *string literal* or *path* | The XML element name to match. If it is a *path*, it must point at a `&'static NcNameStr`. |
 
 Note that the `name` value must be a valid XML element name, without colons.
 The namespace prefix, if any, is assigned automatically at serialisation time

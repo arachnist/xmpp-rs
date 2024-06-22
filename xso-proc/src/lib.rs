@@ -77,8 +77,11 @@ fn from_xml_impl(input: Item) -> Result<TokenStream> {
     let from_events_builder_ty_name = quote::format_ident!("{}FromEvents", ident);
     let state_ty_name = quote::format_ident!("{}FromEventsState", ident);
 
-    let unknown_attr_err = format!("Unknown attribute in {} element.", xml_name.as_str());
-    let unknown_child_err = format!("Unknown child in {} element.", xml_name.as_str());
+    let unknown_attr_err = format!(
+        "Unknown attribute in {} element.",
+        xml_name.repr_to_string()
+    );
+    let unknown_child_err = format!("Unknown child in {} element.", xml_name.repr_to_string());
     let docstr = format!("Build a [`{}`] from XML events", ident);
 
     #[cfg_attr(not(feature = "minidom"), allow(unused_mut))]
@@ -215,7 +218,7 @@ fn into_xml_impl(input: Item) -> Result<TokenStream> {
                             ::xso::exports::rxml::parser::EventMetrics::zero(),
                             (
                                 ::xso::exports::rxml::Namespace::from_str(#xml_namespace),
-                                ::xso::exports::rxml::NcName::from(#xml_name),
+                                #xml_name.to_owned(),
                             ),
                             ::xso::exports::rxml::AttrMap::new(),
                         )))
