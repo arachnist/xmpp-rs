@@ -17,11 +17,34 @@ use syn::{spanned::Spanned, *};
 
 use rxml_validation::NcName;
 
-/// Type alias for a `#[xml(namespace = ..)]` attribute.
-///
-/// This may, in the future, be replaced by an enum supporting multiple
-/// ways to specify a namespace.
-pub(crate) type NamespaceRef = Path;
+/// Value for the `#[xml(namespace = ..)]` attribute.
+#[derive(Debug)]
+pub(crate) enum NamespaceRef {
+    /// The XML namespace is specified as a string literal.
+    LitStr(LitStr),
+
+    /// The XML namespace is specified as a path.
+    Path(Path),
+}
+
+impl syn::parse::Parse for NamespaceRef {
+    fn parse(input: syn::parse::ParseStream<'_>) -> Result<Self> {
+        if input.peek(syn::LitStr) {
+            Ok(Self::LitStr(input.parse()?))
+        } else {
+            Ok(Self::Path(input.parse()?))
+        }
+    }
+}
+
+impl quote::ToTokens for NamespaceRef {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        match self {
+            Self::LitStr(ref lit) => lit.to_tokens(tokens),
+            Self::Path(ref path) => path.to_tokens(tokens),
+        }
+    }
+}
 
 /// Value for the `#[xml(name = .. )]` attribute.
 #[derive(Debug)]

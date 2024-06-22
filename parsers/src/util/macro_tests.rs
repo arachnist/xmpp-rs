@@ -169,3 +169,17 @@ fn name_path_roundtrip() {
     };
     roundtrip_full::<NamePath>("<bar xmlns='urn:example:ns1'/>");
 }
+
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = "urn:example:ns2", name = "baz")]
+struct NamespaceLit;
+
+#[test]
+fn namespace_lit_roundtrip() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<NamespaceLit>("<baz xmlns='urn:example:ns2'/>");
+}

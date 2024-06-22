@@ -7,10 +7,8 @@ to [`macro@IntoXml`].
 
 ```rust
 # use xso::FromXml;
-static MY_NAMESPACE: &str = "urn:example";
-
 #[derive(FromXml, Debug, PartialEq)]
-#[xml(namespace = MY_NAMESPACE, name = "foo")]
+#[xml(namespace = "urn:example", name = "foo")]
 struct Foo;
 
 let foo: Foo = xso::from_bytes(b"<foo xmlns='urn:example'/>").unwrap();
@@ -31,7 +29,7 @@ All key-value pairs interpreted by these derive macros must be wrapped in a
 
 | Key | Value type | Description |
 | --- | --- | --- |
-| `namespace` | *path* | The path to a `&'static str` which holds the XML namespace to match. |
+| `namespace` | *string literal* or *path* | The XML element namespace to match. If it is a *path*, it must point at a `&'static str`. |
 | `name` | *string literal* or *path* | The XML element name to match. If it is a *path*, it must point at a `&'static NcNameStr`. |
 
 Note that the `name` value must be a valid XML element name, without colons.
@@ -40,9 +38,8 @@ and cannot be overridden. The following will thus not compile:
 
 ```compile_fail
 # use xso::FromXml;
-# static MY_NAMESPACE: &'static str = "urn:example";
 #[derive(FromXml, Debug, PartialEq)]
-#[xml(namespace = MY_NAMESPACE, name = "fnord:foo")]  // colon not allowed
+#[xml(namespace = "urn:example", name = "fnord:foo")]  // colon not allowed
 struct Foo;
 ```
 
@@ -53,9 +50,8 @@ work:
 
 ```compile_fail
 # use xso::FromXml;
-# static MY_NAMESPACE: &str = "urn:example";
 #[derive(FromXml, Debug, PartialEq)]
-#[xml(namespace = MY_NAMESPACE, name = "foo")]
+#[xml(namespace = "urn:example", name = "foo")]
 struct Foo {
     some_field: String,
 }
