@@ -34,6 +34,18 @@ All key-value pairs interpreted by these derive macros must be wrapped in a
 | `namespace` | *path* | The path to a `&'static str` which holds the XML namespace to match. |
 | `name` | *string literal* | The XML element name to match. |
 
+Note that the `name` value must be a valid XML element name, without colons.
+The namespace prefix, if any, is assigned automatically at serialisation time
+and cannot be overridden. The following will thus not compile:
+
+```compile_fail
+# use xso::FromXml;
+# static MY_NAMESPACE: &'static str = "urn:example";
+#[derive(FromXml, Debug, PartialEq)]
+#[xml(namespace = MY_NAMESPACE, name = "fnord:foo")]  // colon not allowed
+struct Foo;
+```
+
 ## Limitations
 
 Supports only empty structs currently. For example, the following will not

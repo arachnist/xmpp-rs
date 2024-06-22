@@ -9,8 +9,11 @@
 //! This module is concerned with parsing attributes from the Rust "meta"
 //! annotations on structs, enums, enum variants and fields.
 
-use proc_macro2::Span;
+use proc_macro2::{Span, TokenStream};
+use quote::{quote, quote_spanned};
 use syn::{spanned::Spanned, *};
+
+use rxml_validation::NcName;
 
 /// Type alias for a `#[xml(namespace = ..)]` attribute.
 ///
@@ -18,11 +21,51 @@ use syn::{spanned::Spanned, *};
 /// ways to specify a namespace.
 pub(crate) type NamespaceRef = Path;
 
-/// Type alias for a `#[xml(name = ..)]` attribute.
-///
-/// This may, in the future, be replaced by an enum supporting both `Path` and
-/// `LitStr`.
-pub(crate) type NameRef = LitStr;
+/// Value for the `#[xml(name = .. )]` attribute.
+#[derive(Debug)]
+pub(crate) struct NameRef {
+    value: NcName,
+    span: Span,
+}
+
+impl NameRef {
+    /// Access the XML name as str.
+    ///
+    /// *Note*: This function may vanish in the future if we ever support
+    /// non-literal XML names.
+    pub(crate) fn as_str(&self) -> &str {
+        self.value.as_str()
+    }
+}
+
+impl syn::parse::Parse for NameRef {
+    fn parse(input: syn::parse::ParseStream<'_>) -> Result<Self> {
+        let s: LitStr = input.parse()?;
+        let span = s.span();
+        match NcName::try_from(s.value()) {
+            Ok(value) => Ok(Self { value, span }),
+            Err(e) => Err(Error::new(
+                span,
+                format!("not a valid XML element name: {}", e),
+            )),
+        }
+    }
+}
+
+impl quote::ToTokens for NameRef {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let value = self.value.as_str();
+        let value = quote_spanned! { self.span=> #value };
+        // SAFETY: self.0 is a known-good NcName, so converting it to an
+        // NcNameStr is known to be safe.
+        // NOTE: we cannot use `quote_spanned! { self.span=> }` for the unsafe
+        // block as that would then in fact trip a `#[deny(unsafe_code)]` lint
+        // at the use site of the macro.
+        tokens.extend(quote! {
+            unsafe { ::xso::exports::rxml::NcNameStr::from_str_unchecked(#value) }
+        })
+    }
+}
 
 /// Contents of an `#[xml(..)]` attribute on a struct, enum variant, or enum.
 #[derive(Debug)]
