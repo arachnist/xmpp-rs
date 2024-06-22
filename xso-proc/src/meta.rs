@@ -9,8 +9,6 @@
 //! This module is concerned with parsing attributes from the Rust "meta"
 //! annotations on structs, enums, enum variants and fields.
 
-use std::borrow::Cow;
-
 use proc_macro2::{Span, TokenStream};
 use quote::{quote, quote_spanned};
 use syn::{spanned::Spanned, *};
@@ -60,22 +58,6 @@ pub(crate) enum NameRef {
 
     /// The XML name is specified as a path.
     Path(Path),
-}
-
-impl NameRef {
-    /// Access a representation of the XML name as str.
-    ///
-    /// If this name reference is a [`Self::Path`], this will return the name
-    /// of the rightmost identifier in the path.
-    ///
-    /// If this name reference is a [`Self::Literal`], this will return the
-    /// contents of the literal.
-    pub(crate) fn repr_to_string(&self) -> Cow<'_, str> {
-        match self {
-            Self::Literal { ref value, .. } => Cow::Borrowed(value.as_str()),
-            Self::Path(ref path) => path.segments.last().unwrap().ident.to_string().into(),
-        }
-    }
 }
 
 impl syn::parse::Parse for NameRef {

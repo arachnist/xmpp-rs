@@ -54,7 +54,7 @@ mod tests {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Unknown child in ping element.");
+        assert_eq!(message, "Unknown child in Ping element.");
     }
 
     #[cfg(not(feature = "disable-validation"))]
@@ -66,6 +66,6 @@ mod tests {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Unknown attribute in ping element.");
+        assert_eq!(message, "Unknown attribute in Ping element.");
     }
 }

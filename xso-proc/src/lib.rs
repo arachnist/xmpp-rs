@@ -25,8 +25,11 @@ use proc_macro2::{Span, TokenStream};
 use quote::quote;
 use syn::*;
 
+mod compound;
 mod meta;
+mod state;
 mod structs;
+mod types;
 
 /// Convert an [`syn::Item`] into the parts relevant for us.
 ///

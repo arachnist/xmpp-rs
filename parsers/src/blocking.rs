@@ -168,7 +168,7 @@ mod tests {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Unknown attribute in blocklist element.");
+        assert_eq!(message, "Unknown attribute in BlocklistRequest element.");
 
         let result_elem = elem.clone();
         let error = BlocklistResult::try_from(result_elem).unwrap_err();
@@ -208,6 +208,6 @@ mod tests {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Unknown child in blocklist element.");
+        assert_eq!(message, "Unknown child in BlocklistRequest element.");
     }
 }

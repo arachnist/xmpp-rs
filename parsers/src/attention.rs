@@ -44,7 +44,7 @@ mod tests {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Unknown child in attention element.");
+        assert_eq!(message, "Unknown child in Attention element.");
     }
 
     #[cfg(not(feature = "disable-validation"))]
@@ -58,7 +58,7 @@ mod tests {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Unknown attribute in attention element.");
+        assert_eq!(message, "Unknown attribute in Attention element.");
     }
 
     #[test]

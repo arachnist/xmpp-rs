@@ -115,7 +115,7 @@ fn empty_unexpected_attribute() {
     };
     match parse_str::<Empty>("<foo xmlns='urn:example:ns1' fnord='bar'/>") {
         Err(xso::error::FromElementError::Invalid(xso::error::Error::Other(e))) => {
-            assert_eq!(e, "Unknown attribute in foo element.");
+            assert_eq!(e, "Unknown attribute in Empty element.");
         }
         other => panic!("unexpected result: {:?}", other),
     }
@@ -130,7 +130,7 @@ fn empty_unexpected_child() {
     };
     match parse_str::<Empty>("<foo xmlns='urn:example:ns1'><coucou/></foo>") {
         Err(xso::error::FromElementError::Invalid(xso::error::Error::Other(e))) => {
-            assert_eq!(e, "Unknown child in foo element.");
+            assert_eq!(e, "Unknown child in Empty element.");
         }
         other => panic!("unexpected result: {:?}", other),
     }

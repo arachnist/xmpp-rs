@@ -10,6 +10,7 @@ use proc_macro2::TokenStream;
 use quote::quote;
 use syn::*;
 
+use crate::compound::Compound;
 use crate::meta::{NameRef, NamespaceRef, XmlCompoundMeta};
 
 /// Parts necessary to construct a `::xso::FromXml` implementation.
@@ -44,6 +45,9 @@ pub(crate) struct StructDef {
     /// The XML name of the element to map the struct to.
     name: NameRef,
 
+    /// The field(s) of this struct.
+    inner: Compound,
+
     /// Name of the target type.
     target_ty_ident: Ident,
 
@@ -65,19 +69,10 @@ impl StructDef {
             return Err(Error::new(meta.span, "`name` is required on structs"));
         };
 
-        match fields {
-            Fields::Unit => (),
-            other => {
-                return Err(Error::new_spanned(
-                    other,
-                    "cannot derive on non-unit struct (yet!)",
-                ))
-            }
-        }
-
         Ok(Self {
             namespace,
             name,
+            inner: Compound::from_fields(fields)?,
             target_ty_ident: ident.clone(),
             builder_ty_ident: quote::format_ident!("{}FromXmlBuilder", ident),
             event_iter_ty_ident: quote::format_ident!("{}IntoXmlIterator", ident),
@@ -95,68 +90,43 @@ impl StructDef {
 
         let target_ty_ident = &self.target_ty_ident;
         let builder_ty_ident = &self.builder_ty_ident;
-        let state_ty_name = quote::format_ident!("{}State", builder_ty_ident);
+        let state_ty_ident = quote::format_ident!("{}State", builder_ty_ident);
 
-        let unknown_attr_err = format!(
-            "Unknown attribute in {} element.",
-            xml_name.repr_to_string()
-        );
-        let unknown_child_err = format!("Unknown child in {} element.", xml_name.repr_to_string());
-
-        let docstr = format!("Build a [`{}`] from XML events", target_ty_ident);
-
-        Ok(FromXmlParts {
-            defs: quote! {
-                enum #state_ty_name {
-                    Default,
-                }
-
-                #[doc = #docstr]
-                #vis struct #builder_ty_ident(::core::option::Option<#state_ty_name>);
-
-                impl ::xso::FromEventsBuilder for #builder_ty_ident {
-                    type Output = #target_ty_ident;
-
-                    fn feed(
-                        &mut self,
-                        ev: ::xso::exports::rxml::Event
-                    ) -> ::core::result::Result<::core::option::Option<Self::Output>, ::xso::error::Error> {
-                        match self.0 {
-                            ::core::option::Option::None => panic!("feed() called after it returned a non-None value"),
-                            ::core::option::Option::Some(#state_ty_name::Default) => match ev {
-                                ::xso::exports::rxml::Event::StartElement(..) => {
-                                    ::core::result::Result::Err(::xso::error::Error::Other(#unknown_child_err))
-                                }
-                                ::xso::exports::rxml::Event::EndElement(..) => {
-                                    self.0 = ::core::option::Option::None;
-                                    ::core::result::Result::Ok(::core::option::Option::Some(#target_ty_ident))
-                                }
-                                ::xso::exports::rxml::Event::Text(..) => {
-                                    ::core::result::Result::Err(::xso::error::Error::Other("Unexpected text content".into()))
-                                }
-                                // we ignore these: a correct parser only generates
-                                // them at document start, and there we want to indeed
-                                // not worry about them being in front of the first
-                                // element.
-                                ::xso::exports::rxml::Event::XmlDeclaration(_, ::xso::exports::rxml::XmlVersion::V1_0) => ::core::result::Result::Ok(::core::option::Option::None)
-                            }
-                        }
+        let defs = self
+            .inner
+            .make_from_events_statemachine(
+                &state_ty_ident,
+                &target_ty_ident.clone().into(),
+                "Struct",
+            )?
+            .with_augmented_init(|init| {
+                quote! {
+                    if name.0 != #xml_namespace || name.1 != #xml_name {
+                        ::core::result::Result::Err(::xso::error::FromEventsError::Mismatch {
+                            name,
+                            attrs,
+                        })
+                    } else {
+                        #init
                     }
                 }
-            },
+            })
+            .compile()
+            .render(
+                vis,
+                &builder_ty_ident,
+                &state_ty_ident,
+                &TypePath {
+                    qself: None,
+                    path: target_ty_ident.clone().into(),
+                }
+                .into(),
+            )?;
+
+        Ok(FromXmlParts {
+            defs,
             from_events_body: quote! {
-                if #name_ident.0 != #xml_namespace || #name_ident.1 != #xml_name {
-                    return ::core::result::Result::Err(::xso::error::FromEventsError::Mismatch {
-                        name: #name_ident,
-                        attrs: #attrs_ident,
-                    });
-                }
-                if attrs.len() > 0 {
-                    return ::core::result::Result::Err(::xso::error::Error::Other(
-                        #unknown_attr_err,
-                    ).into());
-                }
-                ::core::result::Result::Ok(#builder_ty_ident(::core::option::Option::Some(#state_ty_name::Default)))
+                #builder_ty_ident::new(#name_ident, #attrs_ident)
             },
             builder_ty_ident: builder_ty_ident.clone(),
         })
@@ -168,49 +138,36 @@ impl StructDef {
 
         let target_ty_ident = &self.target_ty_ident;
         let event_iter_ty_ident = &self.event_iter_ty_ident;
-        let state_ty_name = quote::format_ident!("{}State", event_iter_ty_ident);
+        let state_ty_ident = quote::format_ident!("{}State", event_iter_ty_ident);
 
-        let docstr = format!("Decompose a [`{}`] into XML events", target_ty_ident);
+        let defs = self
+            .inner
+            .make_into_event_iter_statemachine(&target_ty_ident.clone().into(), "Struct")?
+            .with_augmented_init(|init| {
+                quote! {
+                    let name = (
+                        ::xso::exports::rxml::Namespace::from(#xml_namespace),
+                        #xml_name.into(),
+                    );
+                    #init
+                }
+            })
+            .compile()
+            .render(
+                vis,
+                &TypePath {
+                    qself: None,
+                    path: target_ty_ident.clone().into(),
+                }
+                .into(),
+                &state_ty_ident,
+                &event_iter_ty_ident,
+            )?;
 
         Ok(IntoXmlParts {
-            defs: quote! {
-                enum #state_ty_name {
-                    Header,
-                    Footer,
-                }
-
-                #[doc = #docstr]
-                #vis struct #event_iter_ty_ident(::core::option::Option<#state_ty_name>);
-
-                impl ::std::iter::Iterator for #event_iter_ty_ident {
-                    type Item = ::core::result::Result<::xso::exports::rxml::Event, ::xso::error::Error>;
-
-                    fn next(&mut self) -> ::core::option::Option<Self::Item> {
-                        match self.0 {
-                            ::core::option::Option::Some(#state_ty_name::Header) => {
-                                self.0 = ::core::option::Option::Some(#state_ty_name::Footer);
-                                ::core::option::Option::Some(::core::result::Result::Ok(::xso::exports::rxml::Event::StartElement(
-                                    ::xso::exports::rxml::parser::EventMetrics::zero(),
-                                    (
-                                        ::xso::exports::rxml::Namespace::from_str(#xml_namespace),
-                                        #xml_name.to_owned(),
-                                    ),
-                                    ::xso::exports::rxml::AttrMap::new(),
-                                )))
-                            }
-                            ::core::option::Option::Some(#state_ty_name::Footer) => {
-                                self.0 = ::core::option::Option::None;
-                                ::core::option::Option::Some(::core::result::Result::Ok(::xso::exports::rxml::Event::EndElement(
-                                    ::xso::exports::rxml::parser::EventMetrics::zero(),
-                                )))
-                            }
-                            ::core::option::Option::None => ::core::option::Option::None,
-                        }
-                    }
-                }
-            },
+            defs,
             into_event_iter_body: quote! {
-                ::core::result::Result::Ok(#event_iter_ty_ident(::core::option::Option::Some(#state_ty_name::Header)))
+                #event_iter_ty_ident::new(self)
             },
             event_iter_ty_ident: event_iter_ty_ident.clone(),
         })
