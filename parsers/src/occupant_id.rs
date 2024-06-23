@@ -4,21 +4,23 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use xso::{FromXml, IntoXml};
+
 use crate::message::MessagePayload;
+use crate::ns;
 use crate::presence::PresencePayload;
 
-generate_element!(
-    /// Unique identifier given to a MUC participant.
-    ///
-    /// It allows clients to identify a MUC participant across reconnects and
-    /// renames. It thus prevents impersonification of anonymous users.
-    OccupantId, "occupant-id", OID,
-
-    attributes: [
-        /// The id associated to the sending user by the MUC service.
-        id: Required<String> = "id",
-    ]
-);
+/// Unique identifier given to a MUC participant.
+///
+/// It allows clients to identify a MUC participant across reconnects and
+/// renames. It thus prevents impersonification of anonymous users.
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::OID, name = "occupant-id")]
+pub struct OccupantId {
+    /// The id associated to the sending user by the MUC service.
+    #[xml(attribute)]
+    pub id: String,
+}
 
 impl MessagePayload for OccupantId {}
 impl PresencePayload for OccupantId {}
@@ -52,15 +54,16 @@ mod tests {
 
     #[test]
     fn test_invalid_child() {
-        let elem: Element = "<occupant-id xmlns='urn:xmpp:occupant-id:0'><coucou/></occupant-id>"
-            .parse()
-            .unwrap();
+        let elem: Element =
+            "<occupant-id xmlns='urn:xmpp:occupant-id:0' id='foo'><coucou/></occupant-id>"
+                .parse()
+                .unwrap();
         let error = OccupantId::try_from(elem).unwrap_err();
         let message = match error {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Unknown child in occupant-id element.");
+        assert_eq!(message, "Unknown child in OccupantId element.");
     }
 
     #[test]
@@ -73,7 +76,10 @@ mod tests {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Required attribute 'id' missing.");
+        assert_eq!(
+            message,
+            "Required attribute field 'id' on OccupantId element missing."
+        );
     }
 
     #[test]

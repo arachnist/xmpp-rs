@@ -4,7 +4,10 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use xso::{FromXml, IntoXml};
+
 use crate::message::MessagePayload;
+use crate::ns;
 use jid::Jid;
 
 generate_element!(
@@ -22,15 +25,15 @@ generate_element!(
 
 impl MessagePayload for StanzaId {}
 
-generate_element!(
-    /// A hack for MUC before version 1.31 to track a message which may have
-    /// its 'id' attribute changed.
-    OriginId, "origin-id", SID,
-    attributes: [
-        /// The id this client set for this stanza.
-        id: Required<String> = "id",
-    ]
-);
+/// A hack for MUC before version 1.31 to track a message which may have
+/// its 'id' attribute changed.
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::SID, name = "origin-id")]
+pub struct OriginId {
+    /// The id this client set for this stanza.
+    #[xml(attribute)]
+    pub id: String,
+}
 
 impl MessagePayload for OriginId {}
 

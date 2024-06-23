@@ -4,6 +4,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use xso::{FromXml, IntoXml};
+
 use crate::iq::{IqGetPayload, IqResultPayload};
 use crate::ns;
 use crate::Element;
@@ -90,14 +92,14 @@ generate_element!(
     ]
 );
 
-generate_element!(
-    /// Get URL
-    Get, "get", HTTP_UPLOAD,
-    attributes: [
-        /// URL
-        url: Required<String> = "url",
-    ]
-);
+/// Get URL
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::HTTP_UPLOAD, name = "get")]
+pub struct Get {
+    /// URL
+    #[xml(attribute)]
+    pub url: String,
+}
 
 generate_element!(
     /// Requesting a slot

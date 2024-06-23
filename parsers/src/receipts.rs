@@ -17,15 +17,15 @@ pub struct Request;
 
 impl MessagePayload for Request {}
 
-generate_element!(
-    /// Notes that a previous message has correctly been received, it is
-    /// referenced by its 'id' attribute.
-    Received, "received", RECEIPTS,
-    attributes: [
-        /// The 'id' attribute of the received message.
-        id: Required<String> = "id",
-    ]
-);
+/// Notes that a previous message has correctly been received, it is
+/// referenced by its 'id' attribute.
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::RECEIPTS, name = "received")]
+pub struct Received {
+    /// The 'id' attribute of the received message.
+    #[xml(attribute)]
+    pub id: String,
+}
 
 impl MessagePayload for Received {}
 
@@ -69,7 +69,10 @@ mod tests {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Required attribute 'id' missing.");
+        assert_eq!(
+            message,
+            "Required attribute field 'id' on Received element missing."
+        );
     }
 
     #[test]

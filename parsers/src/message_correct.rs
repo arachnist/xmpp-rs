@@ -4,17 +4,20 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use crate::message::MessagePayload;
+use xso::{FromXml, IntoXml};
 
-generate_element!(
-    /// Defines that the message containing this payload should replace a
-    /// previous message, identified by the id.
-    Replace, "replace", MESSAGE_CORRECT,
-    attributes: [
-        /// The 'id' attribute of the message getting corrected.
-        id: Required<String> = "id",
-    ]
-);
+use crate::message::MessagePayload;
+use crate::ns;
+
+/// Defines that the message containing this payload should replace a
+/// previous message, identified by the id.
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::MESSAGE_CORRECT, name = "replace")]
+pub struct Replace {
+    /// The 'id' attribute of the message getting corrected.
+    #[xml(attribute)]
+    pub id: String,
+}
 
 impl MessagePayload for Replace {}
 
@@ -47,7 +50,7 @@ mod tests {
     #[cfg(not(feature = "disable-validation"))]
     #[test]
     fn test_invalid_attribute() {
-        let elem: Element = "<replace xmlns='urn:xmpp:message-correct:0' coucou=''/>"
+        let elem: Element = "<replace xmlns='urn:xmpp:message-correct:0' id='coucou' coucou=''/>"
             .parse()
             .unwrap();
         let error = Replace::try_from(elem).unwrap_err();
@@ -55,20 +58,21 @@ mod tests {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Unknown attribute in replace element.");
+        assert_eq!(message, "Unknown attribute in Replace element.");
     }
 
     #[test]
     fn test_invalid_child() {
-        let elem: Element = "<replace xmlns='urn:xmpp:message-correct:0'><coucou/></replace>"
-            .parse()
-            .unwrap();
+        let elem: Element =
+            "<replace xmlns='urn:xmpp:message-correct:0' id='coucou'><coucou/></replace>"
+                .parse()
+                .unwrap();
         let error = Replace::try_from(elem).unwrap_err();
         let message = match error {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Unknown child in replace element.");
+        assert_eq!(message, "Unknown child in Replace element.");
     }
 
     #[test]
@@ -81,7 +85,10 @@ mod tests {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Required attribute 'id' missing.");
+        assert_eq!(
+            message,
+            "Required attribute field 'id' on Replace element missing."
+        );
     }
 
     #[test]

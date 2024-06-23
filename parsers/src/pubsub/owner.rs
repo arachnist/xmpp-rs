@@ -5,6 +5,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use xso::{FromXml, IntoXml};
+
 use crate::data_forms::DataForm;
 use crate::iq::{IqGetPayload, IqResultPayload, IqSetPayload};
 use crate::ns;
@@ -73,14 +75,14 @@ generate_element!(
     ]
 );
 
-generate_element!(
-    /// A redirect element.
-    Redirect, "redirect", PUBSUB_OWNER,
-    attributes: [
-        /// The node this node will be redirected to.
-        uri: Required<String> = "uri",
-    ]
-);
+/// A redirect element.
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::PUBSUB_OWNER, name = "redirect")]
+pub struct Redirect {
+    /// The node this node will be redirected to.
+    #[xml(attribute)]
+    pub uri: String,
+}
 
 generate_element!(
     /// Request to delete a node.
