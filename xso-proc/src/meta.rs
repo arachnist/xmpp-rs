@@ -203,15 +203,51 @@ pub(crate) enum XmlFieldMeta {
         ///
         /// This is useful for error messages.
         span: Span,
+
+        /// The XML name supplied.
+        name: Option<NameRef>,
     },
 }
 
 impl XmlFieldMeta {
     /// Parse a `#[xml(attribute(..))]` meta.
+    ///
+    /// That meta can have three distinct syntax styles:
+    /// - argument-less: `#[xml(attribute)]`
+    /// - shorthand: `#[xml(attribute = ..)]`
+    /// - full: `#[xml(attribute(..))]`
     fn attribute_from_meta(meta: ParseNestedMeta<'_>) -> Result<Self> {
-        Ok(Self::Attribute {
-            span: meta.path.span(),
-        })
+        if meta.input.peek(Token![=]) {
+            // shorthand syntax
+            Ok(Self::Attribute {
+                span: meta.path.span(),
+                name: Some(meta.value()?.parse()?),
+            })
+        } else if meta.input.peek(syn::token::Paren) {
+            // full syntax
+            let mut name: Option<NameRef> = None;
+            meta.parse_nested_meta(|meta| {
+                if meta.path.is_ident("name") {
+                    if name.is_some() {
+                        return Err(Error::new_spanned(meta.path, "duplicate `name` key"));
+                    }
+                    name = Some(meta.value()?.parse()?);
+                    Ok(())
+                } else {
+                    Err(Error::new_spanned(meta.path, "unsupported key"))
+                }
+            })?;
+            Ok(Self::Attribute {
+                span: meta.path.span(),
+                name,
+            })
+        } else {
+            // argument-less syntax
+            Ok(Self::Attribute {
+                span: meta.path.span(),
+                name: None,
+            })
+        }
     }
 
     /// Parse [`Self`] from a nestd meta, switching on the identifier

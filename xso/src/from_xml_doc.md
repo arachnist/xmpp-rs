@@ -62,6 +62,38 @@ The following mapping types are defined:
 
 #### `attribute` meta
 
-The `attribute` meta does not support additional parameters. The field it is
-used on is mapped to an XML attribute of the same name and must be of type
-[`String`].
+The `attribute` meta causes the field to be mapped to an XML attribute of the
+same name. The field must be of type [`String`].
+
+The following keys can be used inside the `#[xml(attribute(..))]` meta:
+
+| Key | Value type | Description |
+| --- | --- | --- |
+| `name` | *string literal* or *path* | The name of the XML attribute to match. If it is a *path*, it must point at a `&'static NcNameStr`. |
+
+The `attribute` meta also supports a shorthand syntax,
+`#[xml(attribute = ..)]`, where the value is treated as the value for the
+`name` key.
+
+##### Example
+
+```rust
+# use xso::FromXml;
+#[derive(FromXml, Debug, PartialEq)]
+#[xml(namespace = "urn:example", name = "foo")]
+struct Foo {
+    #[xml(attribute)]
+    a: String,
+    #[xml(attribute = "bar")]
+    b: String,
+    #[xml(attribute(name = "baz"))]
+    c: String,
+};
+
+let foo: Foo = xso::from_bytes(b"<foo xmlns='urn:example' a='1' bar='2' baz='3'/>").unwrap();
+assert_eq!(foo, Foo {
+    a: "1".to_string(),
+    b: "2".to_string(),
+    c: "3".to_string(),
+});
+```

@@ -73,30 +73,30 @@ impl FieldKind {
     /// it is not specified explicitly.
     fn from_meta(meta: XmlFieldMeta, field_ident: Option<&Ident>) -> Result<Self> {
         match meta {
-            XmlFieldMeta::Attribute { span } => {
-                let Some(field_ident) = field_ident else {
-                    return Err(Error::new(
-                        span,
-                        "attribute extraction not supported on unnamed fields",
-                    ));
-                };
-
-                let xml_name = match NcName::try_from(field_ident.to_string()) {
-                    Ok(v) => v,
-                    Err(e) => {
-                        return Err(Error::new(
-                            field_ident.span(),
-                            format!("invalid XML attribute name: {}", e),
-                        ))
+            XmlFieldMeta::Attribute { span, name } => {
+                let xml_name = match name {
+                    Some(v) => v,
+                    None => match field_ident {
+                        None => return Err(Error::new(
+                            span,
+                            "attribute name must be explicitly specified using `#[xml(attribute = ..)] on unnamed fields",
+                        )),
+                        Some(field_ident) => match NcName::try_from(field_ident.to_string()) {
+                            Ok(value) => NameRef::Literal {
+                                span: field_ident.span(),
+                                value,
+                            },
+                            Err(e) => {
+                                return Err(Error::new(
+                                    field_ident.span(),
+                                    format!("invalid XML attribute name: {}", e),
+                                ))
+                            }
+                        },
                     }
                 };
 
-                Ok(Self::Attribute {
-                    xml_name: NameRef::Literal {
-                        span: field_ident.span(),
-                        value: xml_name,
-                    },
-                })
+                Ok(Self::Attribute { xml_name })
             }
         }
     }

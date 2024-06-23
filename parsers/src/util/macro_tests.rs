@@ -228,3 +228,20 @@ fn required_attribute_missing() {
         other => panic!("unexpected result: {:?}", other),
     }
 }
+
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = NS1, name = "attr")]
+struct RenamedAttribute {
+    #[xml(attribute = "a1")]
+    foo: String,
+}
+
+#[test]
+fn renamed_attribute_roundtrip() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<RenamedAttribute>("<attr xmlns='urn:example:ns1' a1='bar'/>");
+}
