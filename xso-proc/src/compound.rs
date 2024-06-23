@@ -7,29 +7,41 @@
 //! Handling of the insides of compound structures (structs and enum variants)
 
 use proc_macro2::{Span, TokenStream};
-use quote::{quote, ToTokens};
+use quote::quote;
 use syn::*;
 
+use crate::error_message::ParentRef;
+use crate::field::{FieldBuilderPart, FieldDef, FieldIteratorPart, FieldTempInit};
+use crate::scope::{mangle_member, FromEventsScope, IntoEventsScope};
 use crate::state::{FromEventsSubmachine, IntoEventsSubmachine, State};
 use crate::types::qname_ty;
 
 /// A struct or enum variant's contents.
-pub(crate) struct Compound;
+pub(crate) struct Compound {
+    /// The fields of this compound.
+    fields: Vec<FieldDef>,
+}
 
 impl Compound {
     /// Construct a compound from fields.
     pub(crate) fn from_fields(compound_fields: &Fields) -> Result<Self> {
-        match compound_fields {
-            Fields::Unit => (),
-            other => {
-                return Err(Error::new_spanned(
-                    other,
-                    "cannot derive on non-unit struct (yet!)",
-                ))
-            }
+        let mut fields = Vec::with_capacity(compound_fields.len());
+        for (i, field) in compound_fields.iter().enumerate() {
+            let index = match i.try_into() {
+                Ok(v) => v,
+                // we are converting to u32, are you crazy?!
+                // (u32, because syn::Member::Index needs that.)
+                Err(_) => {
+                    return Err(Error::new_spanned(
+                        field,
+                        "okay, mate, that are way too many fields. get your life together.",
+                    ))
+                }
+            };
+            fields.push(FieldDef::from_field(field, index)?);
         }
 
-        Ok(Self)
+        Ok(Self { fields })
     }
 
     /// Make and return a set of states which is used to construct the target
@@ -40,9 +52,12 @@ impl Compound {
     pub(crate) fn make_from_events_statemachine(
         &self,
         state_ty_ident: &Ident,
-        output_cons: &Path,
+        output_name: &ParentRef,
         state_prefix: &str,
     ) -> Result<FromEventsSubmachine> {
+        let scope = FromEventsScope::new();
+        let FromEventsScope { ref attrs, .. } = scope;
+
         let default_state_ident = quote::format_ident!("{}Default", state_prefix);
         let builder_data_ident = quote::format_ident!("__data");
         let builder_data_ty: Type = TypePath {
@@ -52,9 +67,44 @@ impl Compound {
         .into();
         let mut states = Vec::new();
 
-        let readable_name = output_cons.to_token_stream().to_string();
-        let unknown_attr_err = format!("Unknown attribute in {} element.", readable_name);
-        let unknown_child_err = format!("Unknown child in {} element.", readable_name);
+        let mut builder_data_def = TokenStream::default();
+        let mut builder_data_init = TokenStream::default();
+        let mut output_cons = TokenStream::default();
+
+        for field in self.fields.iter() {
+            let member = field.member();
+            let builder_field_name = mangle_member(member);
+            let part = field.make_builder_part(&scope, &output_name)?;
+
+            match part {
+                FieldBuilderPart::Init {
+                    value: FieldTempInit { ty, init },
+                } => {
+                    builder_data_def.extend(quote! {
+                        #builder_field_name: #ty,
+                    });
+
+                    builder_data_init.extend(quote! {
+                        #builder_field_name: #init,
+                    });
+
+                    output_cons.extend(quote! {
+                        #member: #builder_data_ident.#builder_field_name,
+                    });
+                }
+            }
+        }
+
+        let unknown_attr_err = format!("Unknown attribute in {}.", output_name);
+        let unknown_child_err = format!("Unknown child in {}.", output_name);
+
+        let output_cons = match output_name {
+            ParentRef::Named(ref path) => {
+                quote! {
+                    #path { #output_cons }
+                }
+            }
+        };
 
         states.push(State::new_with_builder(
             default_state_ident.clone(),
@@ -86,18 +136,21 @@ impl Compound {
 
         Ok(FromEventsSubmachine {
             defs: quote! {
-                struct #builder_data_ty;
+                struct #builder_data_ty {
+                    #builder_data_def
+                }
             },
             states,
             init: quote! {
-                if attrs.len() > 0 {
+                let #builder_data_ident = #builder_data_ty {
+                    #builder_data_init
+                };
+                if #attrs.len() > 0 {
                     return ::core::result::Result::Err(::xso::error::Error::Other(
                         #unknown_attr_err,
                     ).into());
                 }
-                ::core::result::Result::Ok(#state_ty_ident::#default_state_ident {
-                    #builder_data_ident: #builder_data_ty,
-                })
+                ::core::result::Result::Ok(#state_ty_ident::#default_state_ident { #builder_data_ident })
             },
         })
     }
@@ -116,22 +169,53 @@ impl Compound {
         input_name: &Path,
         state_prefix: &str,
     ) -> Result<IntoEventsSubmachine> {
+        let scope = IntoEventsScope::new();
+        let IntoEventsScope { ref attrs, .. } = scope;
+
         let start_element_state_ident = quote::format_ident!("{}StartElement", state_prefix);
         let end_element_state_ident = quote::format_ident!("{}EndElement", state_prefix);
         let name_ident = quote::format_ident!("name");
         let mut states = Vec::new();
 
+        let mut init_body = TokenStream::default();
+        let mut destructure = TokenStream::default();
+        let mut start_init = TokenStream::default();
+
         states.push(
             State::new(start_element_state_ident.clone())
-                .with_field(&name_ident, &qname_ty(Span::call_site()))
-                .with_impl(quote! {
-                    ::core::option::Option::Some(::xso::exports::rxml::Event::StartElement(
-                        ::xso::exports::rxml::parser::EventMetrics::zero(),
-                        #name_ident,
-                        ::xso::exports::rxml::AttrMap::new(),
-                    ))
-                }),
+                .with_field(&name_ident, &qname_ty(Span::call_site())),
         );
+
+        for field in self.fields.iter() {
+            let member = field.member();
+            let bound_name = mangle_member(member);
+            let part = field.make_iterator_part(&scope, &bound_name)?;
+
+            match part {
+                FieldIteratorPart::Header { setter } => {
+                    destructure.extend(quote! {
+                        #member: #bound_name,
+                    });
+                    init_body.extend(setter);
+                    start_init.extend(quote! {
+                        #bound_name,
+                    });
+                    states[0].add_field(&bound_name, field.ty());
+                }
+            }
+        }
+
+        states[0].set_impl(quote! {
+            {
+                let mut #attrs = ::xso::exports::rxml::AttrMap::new();
+                #init_body
+                ::core::option::Option::Some(::xso::exports::rxml::Event::StartElement(
+                    ::xso::exports::rxml::parser::EventMetrics::zero(),
+                    #name_ident,
+                    #attrs,
+                ))
+            }
+        });
 
         states.push(
             State::new(end_element_state_ident.clone()).with_impl(quote! {
@@ -145,10 +229,10 @@ impl Compound {
             defs: TokenStream::default(),
             states,
             destructure: quote! {
-                #input_name
+                #input_name { #destructure }
             },
             init: quote! {
-                Self::#start_element_state_ident { #name_ident }
+                Self::#start_element_state_ident { #name_ident, #start_init }
             },
         })
     }

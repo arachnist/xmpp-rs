@@ -17,15 +17,20 @@ assert_eq!(foo, Foo);
 
 ## Attributes
 
-The derive macros need to know which XML namespace and name the elements it
-is supposed have. This must be specified via key-value pairs on the type the
-derive macro is invoked on. These are specified as Rust attributes. In order
-to disambiguate between XML attributes and Rust attributes, we are going to
-refer to Rust attributes using the term *meta* instead, which is consistent
-with the Rust language reference calling that syntax construct *meta*.
+The derive macros need additional information, such as XML namespaces and
+names to match. This must be specified via key-value pairs on the type or
+fields the derive macro is invoked on. These key-value pairs are specified as
+Rust attributes. In order to disambiguate between XML attributes and Rust
+attributes, we are going to refer to Rust attributes using the term *meta*
+instead, which is consistent with the Rust language reference calling that
+syntax construct *meta*.
 
 All key-value pairs interpreted by these derive macros must be wrapped in a
-`#[xml( ... )]` *meta*. The following keys are defined on structs:
+`#[xml( ... )]` *meta*.
+
+### Struct meta
+
+The following keys are defined on structs:
 
 | Key | Value type | Description |
 | --- | --- | --- |
@@ -43,16 +48,20 @@ and cannot be overridden. The following will thus not compile:
 struct Foo;
 ```
 
-## Limitations
+### Field meta
 
-Supports only empty structs currently. For example, the following will not
-work:
+For fields, the *meta* consists of a nested meta inside the `#[xml(..)]` meta,
+the identifier of which controls *how* the field is mapped to XML, while the
+contents control the parameters of that mapping.
 
-```compile_fail
-# use xso::FromXml;
-#[derive(FromXml, Debug, PartialEq)]
-#[xml(namespace = "urn:example", name = "foo")]
-struct Foo {
-    some_field: String,
-}
-```
+The following mapping types are defined:
+
+| Type | Description |
+| --- | --- |
+| [`attribute`](#attribute-meta) | Map the field to an XML attribute on the struct's element |
+
+#### `attribute` meta
+
+The `attribute` meta does not support additional parameters. The field it is
+used on is mapped to an XML attribute of the same name and must be of type
+[`String`].

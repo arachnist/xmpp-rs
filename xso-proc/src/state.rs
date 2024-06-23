@@ -88,6 +88,13 @@ impl State {
         self.advance_body = body;
         self
     }
+
+    /// Override the current `advance` implementation of this state.
+    ///
+    /// This is an in-place version of [`Self::with_impl`].
+    pub(crate) fn set_impl(&mut self, body: TokenStream) {
+        self.advance_body = body;
+    }
 }
 
 /// A partial [`FromEventsStateMachine`] which only covers the builder for a

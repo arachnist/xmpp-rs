@@ -11,7 +11,7 @@
 
 use proc_macro2::{Span, TokenStream};
 use quote::{quote, quote_spanned};
-use syn::{spanned::Spanned, *};
+use syn::{meta::ParseNestedMeta, spanned::Spanned, *};
 
 use rxml_validation::NcName;
 
@@ -191,6 +191,104 @@ impl XmlCompoundMeta {
                 Span::call_site(),
                 "#[xml(..)] attribute required on struct or enum variant",
             )),
+        }
+    }
+}
+
+/// Contents of an `#[xml(..)]` attribute on a struct or enum variant member.
+#[derive(Debug)]
+pub(crate) enum XmlFieldMeta {
+    Attribute {
+        /// The span of the `#[xml(attribute)]` meta from which this was parsed.
+        ///
+        /// This is useful for error messages.
+        span: Span,
+    },
+}
+
+impl XmlFieldMeta {
+    /// Parse a `#[xml(attribute(..))]` meta.
+    fn attribute_from_meta(meta: ParseNestedMeta<'_>) -> Result<Self> {
+        Ok(Self::Attribute {
+            span: meta.path.span(),
+        })
+    }
+
+    /// Parse [`Self`] from a nestd meta, switching on the identifier
+    /// of that nested meta.
+    fn parse_from_meta(meta: ParseNestedMeta<'_>) -> Result<Self> {
+        if meta.path.is_ident("attribute") {
+            Self::attribute_from_meta(meta)
+        } else {
+            Err(Error::new_spanned(meta.path, "unsupported field meta"))
+        }
+    }
+
+    /// Parse an `#[xml(..)]` meta on a field.
+    ///
+    /// This switches based on the first identifier within the `#[xml(..)]`
+    /// meta and generates an enum variant accordingly.
+    ///
+    /// Only a single nested meta is allowed; more than one will be
+    /// rejected with an appropriate compile-time error.
+    ///
+    /// If no meta is contained at all, a compile-time error is generated.
+    ///
+    /// Undefined options or options with incompatible values are rejected
+    /// with an appropriate compile-time error.
+    pub(crate) fn parse_from_attribute(attr: &Attribute) -> Result<Self> {
+        let mut result: Option<Self> = None;
+
+        attr.parse_nested_meta(|meta| {
+            if result.is_some() {
+                return Err(Error::new_spanned(
+                    meta.path,
+                    "multiple field type specifiers are not supported",
+                ));
+            }
+
+            result = Some(Self::parse_from_meta(meta)?);
+            Ok(())
+        })?;
+
+        if let Some(result) = result {
+            Ok(result)
+        } else {
+            Err(Error::new_spanned(
+                attr,
+                "missing field type specifier within `#[xml(..)]`",
+            ))
+        }
+    }
+
+    /// Find and parse a `#[xml(..)]` meta on a field.
+    ///
+    /// This invokes [`Self::parse_from_attribute`] internally on the first
+    /// encountered `#[xml(..)]` meta.
+    ///
+    /// If not exactly one `#[xml(..)]` meta is encountered, an error is
+    /// returned. The error is spanned to `err_span`.
+    pub(crate) fn parse_from_attributes(attrs: &[Attribute], err_span: &Span) -> Result<Self> {
+        let mut result: Option<Self> = None;
+        for attr in attrs {
+            if !attr.path().is_ident("xml") {
+                continue;
+            }
+
+            if result.is_some() {
+                return Err(Error::new_spanned(
+                    attr,
+                    "only one #[xml(..)] attribute per field allowed.",
+                ));
+            }
+
+            result = Some(Self::parse_from_attribute(attr)?);
+        }
+
+        if let Some(result) = result {
+            Ok(result)
+        } else {
+            Err(Error::new(*err_span, "missing #[xml(..)] meta on field"))
         }
     }
 }

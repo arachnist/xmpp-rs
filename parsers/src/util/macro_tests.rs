@@ -183,3 +183,48 @@ fn namespace_lit_roundtrip() {
     };
     roundtrip_full::<NamespaceLit>("<baz xmlns='urn:example:ns2'/>");
 }
+
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = NS1, name = "attr")]
+struct RequiredAttribute {
+    #[xml(attribute)]
+    foo: String,
+}
+
+#[test]
+fn required_attribute_roundtrip() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<RequiredAttribute>("<attr xmlns='urn:example:ns1' foo='bar'/>");
+}
+
+#[test]
+fn required_attribute_positive() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    let data = parse_str::<RequiredAttribute>("<attr xmlns='urn:example:ns1' foo='bar'/>").unwrap();
+    assert_eq!(data.foo, "bar");
+}
+
+#[test]
+fn required_attribute_missing() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    match parse_str::<RequiredAttribute>("<attr xmlns='urn:example:ns1'/>") {
+        Err(::xso::error::FromElementError::Invalid(::xso::error::Error::Other(e)))
+            if e.contains("Required attribute field") && e.contains("missing") =>
+        {
+            ()
+        }
+        other => panic!("unexpected result: {:?}", other),
+    }
+}

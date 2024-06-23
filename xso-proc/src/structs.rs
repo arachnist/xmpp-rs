@@ -96,7 +96,7 @@ impl StructDef {
             .inner
             .make_from_events_statemachine(
                 &state_ty_ident,
-                &target_ty_ident.clone().into(),
+                &Path::from(target_ty_ident.clone()).into(),
                 "Struct",
             )?
             .with_augmented_init(|init| {

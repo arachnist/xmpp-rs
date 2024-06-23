@@ -26,7 +26,10 @@ use quote::quote;
 use syn::*;
 
 mod compound;
+mod error_message;
+mod field;
 mod meta;
+mod scope;
 mod state;
 mod structs;
 mod types;
