@@ -65,8 +65,16 @@ type Option = ((),);
 type Result = ((),);
 
 static NS1: &str = "urn:example:ns1";
+static NS2: &str = "urn:example:ns2";
 
-static SOME_NAME: &::xso::exports::rxml::strings::NcNameStr = {
+static FOO_NAME: &::xso::exports::rxml::strings::NcNameStr = {
+    #[allow(unsafe_code)]
+    unsafe {
+        ::xso::exports::rxml::strings::NcNameStr::from_str_unchecked("foo")
+    }
+};
+
+static BAR_NAME: &::xso::exports::rxml::strings::NcNameStr = {
     #[allow(unsafe_code)]
     unsafe {
         ::xso::exports::rxml::strings::NcNameStr::from_str_unchecked("bar")
@@ -157,7 +165,7 @@ fn empty_qname_check_has_precedence_over_attr_check() {
 }
 
 #[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
-#[xml(namespace = NS1, name = SOME_NAME)]
+#[xml(namespace = NS1, name = BAR_NAME)]
 struct NamePath;
 
 #[test]
@@ -234,7 +242,7 @@ fn required_attribute_missing() {
 struct RenamedAttribute {
     #[xml(attribute = "a1")]
     foo: String,
-    #[xml(attribute = SOME_NAME)]
+    #[xml(attribute = BAR_NAME)]
     bar: String,
 }
 
@@ -251,10 +259,14 @@ fn renamed_attribute_roundtrip() {
 #[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
 #[xml(namespace = NS1, name = "attr")]
 struct NamespacedAttribute {
-    #[xml(attribute(namespace = "urn:example:ns1", name = "foo"))]
-    foo: String,
-    #[xml(attribute(namespace = "urn:example:ns2", name = "foo"))]
-    bar: String,
+    #[xml(attribute(namespace = "urn:example:ns1", name = FOO_NAME))]
+    foo_1: String,
+    #[xml(attribute(namespace = NS2, name = "foo"))]
+    foo_2: String,
+    #[xml(attribute(namespace = NS1, name = BAR_NAME))]
+    bar_1: String,
+    #[xml(attribute(namespace = "urn:example:ns2", name = "bar"))]
+    bar_2: String,
 }
 
 #[test]
@@ -266,8 +278,8 @@ fn namespaced_attribute_roundtrip_a() {
     };
     roundtrip_full::<NamespacedAttribute>(
         "<attr xmlns='urn:example:ns1'
-          xmlns:tns0='urn:example:ns1' tns0:foo='a1'
-          xmlns:tns1='urn:example:ns2' tns1:foo='a2'/>",
+          xmlns:tns0='urn:example:ns1' tns0:foo='a1' tns0:bar='a3'
+          xmlns:tns1='urn:example:ns2' tns1:foo='a2' tns1:bar='a4'/>",
     );
 }
 
@@ -280,8 +292,8 @@ fn namespaced_attribute_roundtrip_b() {
     };
     roundtrip_full::<NamespacedAttribute>(
         "<tns0:attr
-          xmlns:tns0='urn:example:ns1' tns0:foo='bar'
-          xmlns:tns1='urn:example:ns2' tns1:foo='a2'/>",
+          xmlns:tns0='urn:example:ns1' tns0:foo='a1' tns0:bar='a3'
+          xmlns:tns1='urn:example:ns2' tns1:foo='a2' tns1:bar='a4'/>",
     );
 }
 
