@@ -80,6 +80,46 @@ generate_element!(
     ]
 );
 
+/// Enum representing errors that can occur while parsing a `Datatype`.
+#[derive(Debug, Clone, PartialEq)]
+pub enum DatatypeError {
+    /// Error indicating that a prefix is missing in the validation datatype.
+    MissingPrefix {
+        /// The invalid string that caused this error.
+        input: String,
+    },
+
+    /// Error indicating that the validation datatype is invalid.
+    InvalidType {
+        /// The invalid string that caused this error.
+        input: String,
+    },
+
+    /// Error indicating that the validation datatype is unknown.
+    UnknownType {
+        /// The invalid string that caused this error.
+        input: String,
+    },
+}
+
+impl std::error::Error for DatatypeError {}
+
+impl Display for DatatypeError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            DatatypeError::MissingPrefix { input } => {
+                write!(f, "Missing prefix in validation datatype '{input}'.")
+            }
+            DatatypeError::InvalidType { input } => {
+                write!(f, "Invalid validation datatype '{input}'.")
+            }
+            DatatypeError::UnknownType { input } => {
+                write!(f, "Unknown validation datatype '{input}'.")
+            }
+        }
+    }
+}
+
 /// Data Forms Validation Datatypes
 ///
 /// https://xmpp.org/registrar/xdv-datatypes.html
@@ -186,7 +226,11 @@ impl TryFrom<Element> for Validate {
         check_no_unknown_attributes!(elem, "item", ["datatype"]);
 
         let mut validate = Validate {
-            datatype: elem.attr("datatype").map(Datatype::from_str).transpose()?,
+            datatype: elem
+                .attr("datatype")
+                .map(Datatype::from_str)
+                .transpose()
+                .map_err(|err| FromElementError::Invalid(Error::TextParseError(err.into())))?,
             method: None,
             list_range: None,
         };
@@ -274,16 +318,15 @@ impl From<Method> for Element {
 }
 
 impl FromStr for Datatype {
-    type Err = Error;
+    type Err = DatatypeError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut parts = s.splitn(2, ":");
 
         let Some(prefix) = parts.next() else {
-            return Err(Error::Other(
-                "Encountered invalid validation datatype which is missing a prefix.",
-            )
-            .into());
+            return Err(DatatypeError::MissingPrefix {
+                input: s.to_string(),
+            });
         };
 
         match prefix {
@@ -302,7 +345,9 @@ impl FromStr for Datatype {
         }
 
         let Some(datatype) = parts.next() else {
-            return Err(Error::Other("Encountered invalid validation datatype.").into());
+            return Err(DatatypeError::InvalidType {
+                input: s.to_string(),
+            });
         };
 
         let parsed_datatype = match datatype {
@@ -319,7 +364,11 @@ impl FromStr for Datatype {
             "short" => Datatype::Short,
             "string" => Datatype::String,
             "time" => Datatype::Time,
-            _ => return Err(Error::Other("Encountered invalid validation datatype.").into()),
+            _ => {
+                return Err(DatatypeError::UnknownType {
+                    input: s.to_string(),
+                })
+            }
         };
 
         Ok(parsed_datatype)
@@ -360,10 +409,20 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_parse_datatype() -> Result<(), Error> {
+    fn test_parse_datatype() -> Result<(), DatatypeError> {
         assert_eq!(Datatype::AnyUri, "xs:anyURI".parse()?);
-        assert!("xs:anyuri".parse::<Datatype>().is_err());
-        assert!("xs:".parse::<Datatype>().is_err());
+        assert_eq!(
+            Err(DatatypeError::UnknownType {
+                input: "xs:anyuri".to_string()
+            }),
+            "xs:anyuri".parse::<Datatype>(),
+        );
+        assert_eq!(
+            "xs:".parse::<Datatype>(),
+            Err(DatatypeError::UnknownType {
+                input: "xs:".to_string()
+            })
+        );
         assert_eq!(
             Datatype::AnyUri.into_attribute_value(),
             Some("xs:anyURI".to_string())
