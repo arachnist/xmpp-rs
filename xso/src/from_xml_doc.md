@@ -72,9 +72,16 @@ The following keys can be used inside the `#[xml(attribute(..))]` meta:
 | `namespace` | *string literal* or *path* | The optional namespace of the XML attribute to match. If it is a *path*, it must point at a `&'static str`. Note that attributes, unlike elements, are unnamespaced by default. |
 | `name` | *string literal* or *path* | The name of the XML attribute to match. If it is a *path*, it must point at a `&'static NcNameStr`. |
 
+If the `name` key contains a namespace prefix, it must be one of the prefixes
+defined as built-in in the XML specifications. That prefix will then be
+expanded to the corresponding namespace URI and the value for the `namespace`
+key is implied. Mixing a prefixed name with an explicit `namespace` key is
+not allowed.
+
 The `attribute` meta also supports a shorthand syntax,
 `#[xml(attribute = ..)]`, where the value is treated as the value for the
-`name` key and the `namespace` is unset.
+`name` key (with optional prefix as described above, and unnamespaced
+otherwise).
 
 ##### Example
 
@@ -91,17 +98,21 @@ struct Foo {
     c: String,
     #[xml(attribute(namespace = "urn:example", name = "fnord"))]
     d: String,
+    #[xml(attribute = "xml:lang")]
+    e: String,
 };
 
 let foo: Foo = xso::from_bytes(b"<foo
     xmlns='urn:example'
     a='1' bar='2' baz='3'
     xmlns:tns0='urn:example' tns0:fnord='4'
+    xml:lang='5'
 />").unwrap();
 assert_eq!(foo, Foo {
     a: "1".to_string(),
     b: "2".to_string(),
     c: "3".to_string(),
     d: "4".to_string(),
+    e: "5".to_string(),
 });
 ```

@@ -15,6 +15,11 @@ use syn::{meta::ParseNestedMeta, spanned::Spanned, *};
 
 use rxml_validation::NcName;
 
+/// XML core namespace URI (for the `xml:` prefix)
+pub const XMLNS_XML: &'static str = "http://www.w3.org/XML/1998/namespace";
+/// XML namespace URI (for the `xmlns:` prefix)
+pub const XMLNS_XMLNS: &'static str = "http://www.w3.org/2000/xmlns/";
+
 /// Value for the `#[xml(namespace = ..)]` attribute.
 #[derive(Debug)]
 pub(crate) enum NamespaceRef {
@@ -23,6 +28,12 @@ pub(crate) enum NamespaceRef {
 
     /// The XML namespace is specified as a path.
     Path(Path),
+}
+
+impl NamespaceRef {
+    fn fudge(value: &str, span: Span) -> Self {
+        Self::LitStr(LitStr::new(value, span))
+    }
 }
 
 impl syn::parse::Parse for NamespaceRef {
@@ -67,10 +78,7 @@ impl syn::parse::Parse for NameRef {
             let span = s.span();
             match NcName::try_from(s.value()) {
                 Ok(value) => Ok(Self::Literal { value, span }),
-                Err(e) => Err(Error::new(
-                    span,
-                    format!("not a valid XML element name: {}", e),
-                )),
+                Err(e) => Err(Error::new(span, format!("not a valid XML name: {}", e))),
             }
         } else {
             let p: Path = input.parse()?;
@@ -195,6 +203,44 @@ impl XmlCompoundMeta {
     }
 }
 
+/// Parse an XML name while resolving built-in namespace prefixes.
+fn parse_prefixed_name(
+    value: syn::parse::ParseStream<'_>,
+) -> Result<(Option<NamespaceRef>, NameRef)> {
+    let name: LitStr = value.parse()?;
+    let name_span = name.span();
+    let (prefix, name) = match name
+        .value()
+        .try_into()
+        .and_then(|name: rxml_validation::Name| name.split_name())
+    {
+        Ok(v) => v,
+        Err(e) => {
+            return Err(Error::new(
+                name_span,
+                format!("not a valid XML name: {}", e),
+            ))
+        }
+    };
+    let name = NameRef::Literal {
+        value: name,
+        span: name_span,
+    };
+    if let Some(prefix) = prefix {
+        let namespace_uri = match prefix.as_str() {
+            "xml" => XMLNS_XML,
+            "xmlns" => XMLNS_XMLNS,
+            other => return Err(Error::new(
+                name_span,
+                format!("prefix `{}` is not a built-in prefix and cannot be used. specify the desired namespace using the `namespace` key instead.", other)
+            )),
+        };
+        Ok((Some(NamespaceRef::fudge(namespace_uri, name_span)), name))
+    } else {
+        Ok((None, name))
+    }
+}
+
 /// Contents of an `#[xml(..)]` attribute on a struct or enum variant member.
 #[derive(Debug)]
 pub(crate) enum XmlFieldMeta {
@@ -222,10 +268,11 @@ impl XmlFieldMeta {
     fn attribute_from_meta(meta: ParseNestedMeta<'_>) -> Result<Self> {
         if meta.input.peek(Token![=]) {
             // shorthand syntax
+            let (namespace, name) = parse_prefixed_name(meta.value()?)?;
             Ok(Self::Attribute {
                 span: meta.path.span(),
-                name: Some(meta.value()?.parse()?),
-                namespace: None,
+                name: Some(name),
+                namespace,
             })
         } else if meta.input.peek(syn::token::Paren) {
             // full syntax
@@ -236,11 +283,31 @@ impl XmlFieldMeta {
                     if name.is_some() {
                         return Err(Error::new_spanned(meta.path, "duplicate `name` key"));
                     }
-                    name = Some(meta.value()?.parse()?);
+                    let value = meta.value()?;
+                    name = if value.peek(LitStr) {
+                        let name_span = value.span();
+                        let (new_namespace, name) = parse_prefixed_name(value)?;
+                        if let Some(new_namespace) = new_namespace {
+                            if namespace.is_some() {
+                                return Err(Error::new(
+                                    name_span,
+                                    "cannot combine `namespace` key with prefixed `name`",
+                                ));
+                            }
+                            namespace = Some(new_namespace);
+                        }
+                        Some(name)
+                    } else {
+                        // just use the normal parser
+                        Some(value.parse()?)
+                    };
                     Ok(())
                 } else if meta.path.is_ident("namespace") {
                     if namespace.is_some() {
-                        return Err(Error::new_spanned(meta.path, "duplicate `namespace` key"));
+                        return Err(Error::new_spanned(
+                            meta.path,
+                            "duplicate `namespace` key or `name` key has prefix",
+                        ));
                     }
                     namespace = Some(meta.value()?.parse()?);
                     Ok(())

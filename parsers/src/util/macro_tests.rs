@@ -282,3 +282,20 @@ fn namespaced_attribute_roundtrip_b() {
           xmlns:tns1='urn:example:ns2' tns1:foo='a2'/>",
     );
 }
+
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = NS1, name = "attr")]
+struct PrefixedAttribute {
+    #[xml(attribute = "xml:lang")]
+    lang: String,
+}
+
+#[test]
+fn prefixed_attribute_roundtrip() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<PrefixedAttribute>("<attr xmlns='urn:example:ns1' xml:lang='foo'/>");
+}
