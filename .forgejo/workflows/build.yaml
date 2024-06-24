@@ -33,7 +33,7 @@ jobs:
       - name: Print versions
         run: rustc --version; cargo --version
       - name: Run tests
-        run: cargo test --verbose --release -- --include-ignored
+        run: cargo test --verbose
       - name: Run tests without default features
         run: cargo test --verbose --no-default-features
     env:
@@ -50,7 +50,7 @@ jobs:
       - name: Print versions
         run: rustc --version; cargo --version
       - name: Run tests
-        run: cargo test --verbose --release -- --include-ignored
+        run: cargo test --verbose
       - name: Run tests without default features
         run: cargo test --verbose --no-default-features
     env:
