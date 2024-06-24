@@ -66,6 +66,13 @@ type Result = ((),);
 
 static NS1: &str = "urn:example:ns1";
 
+static SOME_NAME: &::xso::exports::rxml::strings::NcNameStr = {
+    #[allow(unsafe_code)]
+    unsafe {
+        ::xso::exports::rxml::strings::NcNameStr::from_str_unchecked("bar")
+    }
+};
+
 #[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
 #[xml(namespace = NS1, name = "foo")]
 struct Empty;
@@ -149,13 +156,6 @@ fn empty_qname_check_has_precedence_over_attr_check() {
     }
 }
 
-static SOME_NAME: &::xso::exports::rxml::strings::NcNameStr = {
-    #[allow(unsafe_code)]
-    unsafe {
-        ::xso::exports::rxml::strings::NcNameStr::from_str_unchecked("bar")
-    }
-};
-
 #[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
 #[xml(namespace = NS1, name = SOME_NAME)]
 struct NamePath;
@@ -234,6 +234,8 @@ fn required_attribute_missing() {
 struct RenamedAttribute {
     #[xml(attribute = "a1")]
     foo: String,
+    #[xml(attribute = SOME_NAME)]
+    bar: String,
 }
 
 #[test]
@@ -243,7 +245,7 @@ fn renamed_attribute_roundtrip() {
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
-    roundtrip_full::<RenamedAttribute>("<attr xmlns='urn:example:ns1' a1='bar'/>");
+    roundtrip_full::<RenamedAttribute>("<attr xmlns='urn:example:ns1' a1='bar' bar='baz'/>");
 }
 
 #[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]

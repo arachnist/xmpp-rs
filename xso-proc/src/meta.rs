@@ -207,6 +207,12 @@ impl XmlCompoundMeta {
 fn parse_prefixed_name(
     value: syn::parse::ParseStream<'_>,
 ) -> Result<(Option<NamespaceRef>, NameRef)> {
+    if !value.peek(LitStr) {
+        // if we don't have a string literal next, we delegate to the default
+        // `NameRef` parser.
+        return Ok((None, value.parse()?));
+    }
+
     let name: LitStr = value.parse()?;
     let name_span = name.span();
     let (prefix, name) = match name
@@ -284,23 +290,18 @@ impl XmlFieldMeta {
                         return Err(Error::new_spanned(meta.path, "duplicate `name` key"));
                     }
                     let value = meta.value()?;
-                    name = if value.peek(LitStr) {
-                        let name_span = value.span();
-                        let (new_namespace, name) = parse_prefixed_name(value)?;
-                        if let Some(new_namespace) = new_namespace {
-                            if namespace.is_some() {
-                                return Err(Error::new(
-                                    name_span,
-                                    "cannot combine `namespace` key with prefixed `name`",
-                                ));
-                            }
-                            namespace = Some(new_namespace);
+                    let name_span = value.span();
+                    let (new_namespace, new_name) = parse_prefixed_name(value)?;
+                    if let Some(new_namespace) = new_namespace {
+                        if namespace.is_some() {
+                            return Err(Error::new(
+                                name_span,
+                                "cannot combine `namespace` key with prefixed `name`",
+                            ));
                         }
-                        Some(name)
-                    } else {
-                        // just use the normal parser
-                        Some(value.parse()?)
-                    };
+                        namespace = Some(new_namespace);
+                    }
+                    name = Some(new_name);
                     Ok(())
                 } else if meta.path.is_ident("namespace") {
                     if namespace.is_some() {
