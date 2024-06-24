@@ -10,5 +10,4 @@ pub use validate::*;
 /// XEP-0004: Data Forms
 pub mod data_form;
 
-/// XEP-0122: Data Forms Validation
 pub mod validate;
