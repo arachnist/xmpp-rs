@@ -204,6 +204,9 @@ pub(crate) enum XmlFieldMeta {
         /// This is useful for error messages.
         span: Span,
 
+        /// The XML namespace supplied.
+        namespace: Option<NamespaceRef>,
+
         /// The XML name supplied.
         name: Option<NameRef>,
     },
@@ -222,16 +225,24 @@ impl XmlFieldMeta {
             Ok(Self::Attribute {
                 span: meta.path.span(),
                 name: Some(meta.value()?.parse()?),
+                namespace: None,
             })
         } else if meta.input.peek(syn::token::Paren) {
             // full syntax
             let mut name: Option<NameRef> = None;
+            let mut namespace: Option<NamespaceRef> = None;
             meta.parse_nested_meta(|meta| {
                 if meta.path.is_ident("name") {
                     if name.is_some() {
                         return Err(Error::new_spanned(meta.path, "duplicate `name` key"));
                     }
                     name = Some(meta.value()?.parse()?);
+                    Ok(())
+                } else if meta.path.is_ident("namespace") {
+                    if namespace.is_some() {
+                        return Err(Error::new_spanned(meta.path, "duplicate `namespace` key"));
+                    }
+                    namespace = Some(meta.value()?.parse()?);
                     Ok(())
                 } else {
                     Err(Error::new_spanned(meta.path, "unsupported key"))
@@ -240,12 +251,14 @@ impl XmlFieldMeta {
             Ok(Self::Attribute {
                 span: meta.path.span(),
                 name,
+                namespace,
             })
         } else {
             // argument-less syntax
             Ok(Self::Attribute {
                 span: meta.path.span(),
                 name: None,
+                namespace: None,
             })
         }
     }

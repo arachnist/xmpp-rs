@@ -69,11 +69,12 @@ The following keys can be used inside the `#[xml(attribute(..))]` meta:
 
 | Key | Value type | Description |
 | --- | --- | --- |
+| `namespace` | *string literal* or *path* | The optional namespace of the XML attribute to match. If it is a *path*, it must point at a `&'static str`. Note that attributes, unlike elements, are unnamespaced by default. |
 | `name` | *string literal* or *path* | The name of the XML attribute to match. If it is a *path*, it must point at a `&'static NcNameStr`. |
 
 The `attribute` meta also supports a shorthand syntax,
 `#[xml(attribute = ..)]`, where the value is treated as the value for the
-`name` key.
+`name` key and the `namespace` is unset.
 
 ##### Example
 
@@ -88,12 +89,19 @@ struct Foo {
     b: String,
     #[xml(attribute(name = "baz"))]
     c: String,
+    #[xml(attribute(namespace = "urn:example", name = "fnord"))]
+    d: String,
 };
 
-let foo: Foo = xso::from_bytes(b"<foo xmlns='urn:example' a='1' bar='2' baz='3'/>").unwrap();
+let foo: Foo = xso::from_bytes(b"<foo
+    xmlns='urn:example'
+    a='1' bar='2' baz='3'
+    xmlns:tns0='urn:example' tns0:fnord='4'
+/>").unwrap();
 assert_eq!(foo, Foo {
     a: "1".to_string(),
     b: "2".to_string(),
     c: "3".to_string(),
+    d: "4".to_string(),
 });
 ```

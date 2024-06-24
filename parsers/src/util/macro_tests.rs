@@ -245,3 +245,40 @@ fn renamed_attribute_roundtrip() {
     };
     roundtrip_full::<RenamedAttribute>("<attr xmlns='urn:example:ns1' a1='bar'/>");
 }
+
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = NS1, name = "attr")]
+struct NamespacedAttribute {
+    #[xml(attribute(namespace = "urn:example:ns1", name = "foo"))]
+    foo: String,
+    #[xml(attribute(namespace = "urn:example:ns2", name = "foo"))]
+    bar: String,
+}
+
+#[test]
+fn namespaced_attribute_roundtrip_a() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<NamespacedAttribute>(
+        "<attr xmlns='urn:example:ns1'
+          xmlns:tns0='urn:example:ns1' tns0:foo='a1'
+          xmlns:tns1='urn:example:ns2' tns1:foo='a2'/>",
+    );
+}
+
+#[test]
+fn namespaced_attribute_roundtrip_b() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<NamespacedAttribute>(
+        "<tns0:attr
+          xmlns:tns0='urn:example:ns1' tns0:foo='bar'
+          xmlns:tns1='urn:example:ns2' tns1:foo='a2'/>",
+    );
+}

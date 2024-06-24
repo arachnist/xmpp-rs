@@ -7,13 +7,13 @@
 //! Compound (struct or enum variant) field types
 
 use proc_macro2::TokenStream;
-use quote::quote;
+use quote::{quote, ToTokens};
 use syn::{spanned::Spanned, *};
 
 use rxml_validation::NcName;
 
 use crate::error_message::{self, ParentRef};
-use crate::meta::{NameRef, XmlFieldMeta};
+use crate::meta::{NameRef, NamespaceRef, XmlFieldMeta};
 use crate::scope::{FromEventsScope, IntoEventsScope};
 
 /// Code slices necessary for declaring and initializing a temporary variable
@@ -61,6 +61,9 @@ pub(crate) enum FieldIteratorPart {
 enum FieldKind {
     /// The field maps to an attribute.
     Attribute {
+        /// The optional XML namespace of the attribute.
+        xml_namespace: Option<NamespaceRef>,
+
         /// The XML name of the attribute.
         xml_name: NameRef,
     },
@@ -73,7 +76,11 @@ impl FieldKind {
     /// it is not specified explicitly.
     fn from_meta(meta: XmlFieldMeta, field_ident: Option<&Ident>) -> Result<Self> {
         match meta {
-            XmlFieldMeta::Attribute { span, name } => {
+            XmlFieldMeta::Attribute {
+                span,
+                namespace,
+                name,
+            } => {
                 let xml_name = match name {
                     Some(v) => v,
                     None => match field_ident {
@@ -96,7 +103,10 @@ impl FieldKind {
                     }
                 };
 
-                Ok(Self::Attribute { xml_name })
+                Ok(Self::Attribute {
+                    xml_name,
+                    xml_namespace: namespace,
+                })
             }
         }
     }
@@ -167,16 +177,26 @@ impl FieldDef {
         container_name: &ParentRef,
     ) -> Result<FieldBuilderPart> {
         match self.kind {
-            FieldKind::Attribute { ref xml_name } => {
+            FieldKind::Attribute {
+                ref xml_name,
+                ref xml_namespace,
+            } => {
                 let FromEventsScope { ref attrs, .. } = scope;
 
                 let missing_msg = error_message::on_missing_attribute(container_name, &self.member);
+
+                let xml_namespace = match xml_namespace {
+                    Some(v) => v.to_token_stream(),
+                    None => quote! {
+                        ::xso::exports::rxml::Namespace::none()
+                    },
+                };
 
                 return Ok(FieldBuilderPart::Init {
                     value: FieldTempInit {
                         ty: self.ty.clone(),
                         init: quote! {
-                            match #attrs.remove(::xso::exports::rxml::Namespace::none(), #xml_name) {
+                            match #attrs.remove(#xml_namespace, #xml_name) {
                                 ::core::option::Option::Some(v) => v,
                                 ::core::option::Option::None => return ::core::result::Result::Err(::xso::error::Error::Other(#missing_msg).into()),
                             }
@@ -197,13 +217,23 @@ impl FieldDef {
         bound_name: &Ident,
     ) -> Result<FieldIteratorPart> {
         match self.kind {
-            FieldKind::Attribute { ref xml_name } => {
+            FieldKind::Attribute {
+                ref xml_name,
+                ref xml_namespace,
+            } => {
                 let IntoEventsScope { ref attrs, .. } = scope;
+
+                let xml_namespace = match xml_namespace {
+                    Some(v) => quote! { ::xso::exports::rxml::Namespace::from(#v) },
+                    None => quote! {
+                        ::xso::exports::rxml::Namespace::NONE
+                    },
+                };
 
                 return Ok(FieldIteratorPart::Header {
                     setter: quote! {
                         #attrs.insert(
-                            ::xso::exports::rxml::Namespace::NONE,
+                            #xml_namespace,
                             #xml_name.to_owned(),
                             #bound_name,
                         );
