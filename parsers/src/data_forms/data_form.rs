@@ -221,9 +221,7 @@ impl TryFrom<Element> for Field {
                 field.desc = Some(element.text());
             } else if element.is("validate", ns::XDATA_VALIDATE) {
                 if field.validate.is_some() {
-                    return Err(Error::ParseError(
-                        "More than one validate element in field.",
-                    ));
+                    return Err(Error::Other("More than one validate element in field.").into());
                 }
                 field.validate = Some(Validate::try_from(element.clone())?);
             } else {

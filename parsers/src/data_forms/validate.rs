@@ -11,6 +11,7 @@ use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
 use minidom::{Element, IntoAttributeValue};
+use xso::error::FromElementError;
 
 use crate::ns::XDATA_VALIDATE;
 use crate::Error;
@@ -178,7 +179,7 @@ pub struct Validate {
 }
 
 impl TryFrom<Element> for Validate {
-    type Error = Error;
+    type Error = FromElementError;
 
     fn try_from(elem: Element) -> Result<Self, Self::Error> {
         check_self!(elem, "validate", XDATA_VALIDATE);
@@ -195,18 +196,18 @@ impl TryFrom<Element> for Validate {
                 _ if child.is("list-range", XDATA_VALIDATE) => {
                     let list_range = ListRange::try_from(child.clone())?;
                     if validate.list_range.is_some() {
-                        return Err(Error::ParseError(
+                        return Err(Error::Other(
                             "Encountered unsupported number (n > 1) of list-range in validate element.",
-                        ));
+                        ).into());
                     }
                     validate.list_range = Some(list_range);
                 }
                 _ => {
                     let method = Method::try_from(child.clone())?;
                     if validate.method.is_some() {
-                        return Err(Error::ParseError(
+                        return Err(Error::Other(
                             "Encountered unsupported number (n > 1) of validation methods in validate element.",
-                        ));
+                        ).into());
                     }
                     validate.method = Some(method);
                 }
@@ -252,7 +253,7 @@ impl TryFrom<Element> for Method {
                 check_no_children!(elem, "regex");
                 Method::Regex(elem.text())
             }
-            _ => return Err(Error::ParseError("Encountered invalid validation method.")),
+            _ => return Err(Error::Other("Encountered invalid validation method.").into()),
         };
         Ok(method)
     }
@@ -279,9 +280,10 @@ impl FromStr for Datatype {
         let mut parts = s.splitn(2, ":");
 
         let Some(prefix) = parts.next() else {
-            return Err(Error::ParseError(
+            return Err(Error::Other(
                 "Encountered invalid validation datatype which is missing a prefix.",
-            ));
+            )
+            .into());
         };
 
         match prefix {
@@ -300,9 +302,7 @@ impl FromStr for Datatype {
         }
 
         let Some(datatype) = parts.next() else {
-            return Err(Error::ParseError(
-                "Encountered invalid validation datatype.",
-            ));
+            return Err(Error::Other("Encountered invalid validation datatype.").into());
         };
 
         let parsed_datatype = match datatype.to_ascii_lowercase().as_str() {
@@ -319,11 +319,7 @@ impl FromStr for Datatype {
             "short" => Datatype::Short,
             "string" => Datatype::String,
             "time" => Datatype::Time,
-            _ => {
-                return Err(Error::ParseError(
-                    "Encountered invalid validation datatype.",
-                ))
-            }
+            _ => return Err(Error::Other("Encountered invalid validation datatype.").into()),
         };
 
         Ok(parsed_datatype)
