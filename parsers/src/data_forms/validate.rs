@@ -305,11 +305,11 @@ impl FromStr for Datatype {
             return Err(Error::Other("Encountered invalid validation datatype.").into());
         };
 
-        let parsed_datatype = match datatype.to_ascii_lowercase().as_str() {
-            "anyuri" => Datatype::AnyUri,
+        let parsed_datatype = match datatype {
+            "anyURI" => Datatype::AnyUri,
             "byte" => Datatype::Byte,
             "date" => Datatype::Date,
-            "datetime" => Datatype::DateTime,
+            "dateTime" => Datatype::DateTime,
             "decimal" => Datatype::Decimal,
             "double" => Datatype::Double,
             "int" => Datatype::Int,
@@ -362,7 +362,7 @@ mod tests {
     #[test]
     fn test_parse_datatype() -> Result<(), Error> {
         assert_eq!(Datatype::AnyUri, "xs:anyURI".parse()?);
-        assert_eq!(Datatype::AnyUri, "xs:anyuri".parse()?);
+        assert!("xs:anyuri".parse::<Datatype>().is_err());
         assert!("xs:".parse::<Datatype>().is_err());
         assert_eq!(
             Datatype::AnyUri.into_attribute_value(),
