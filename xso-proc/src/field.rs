@@ -15,6 +15,7 @@ use rxml_validation::NcName;
 use crate::error_message::{self, ParentRef};
 use crate::meta::{NameRef, NamespaceRef, XmlFieldMeta};
 use crate::scope::{FromEventsScope, IntoEventsScope};
+use crate::types::{from_xml_text_fn, into_optional_xml_text_fn};
 
 /// Code slices necessary for declaring and initializing a temporary variable
 /// for parsing purposes.
@@ -182,6 +183,7 @@ impl FieldDef {
                 ref xml_namespace,
             } => {
                 let FromEventsScope { ref attrs, .. } = scope;
+                let ty = self.ty.clone();
 
                 let missing_msg = error_message::on_missing_attribute(container_name, &self.member);
 
@@ -192,15 +194,17 @@ impl FieldDef {
                     },
                 };
 
+                let from_xml_text = from_xml_text_fn(ty.clone());
+
                 return Ok(FieldBuilderPart::Init {
                     value: FieldTempInit {
-                        ty: self.ty.clone(),
                         init: quote! {
-                            match #attrs.remove(#xml_namespace, #xml_name) {
+                            match #attrs.remove(#xml_namespace, #xml_name).map(#from_xml_text).transpose()? {
                                 ::core::option::Option::Some(v) => v,
                                 ::core::option::Option::None => return ::core::result::Result::Err(::xso::error::Error::Other(#missing_msg).into()),
                             }
                         },
+                        ty: self.ty.clone(),
                     },
                 });
             }
@@ -230,13 +234,15 @@ impl FieldDef {
                     },
                 };
 
+                let into_optional_xml_text = into_optional_xml_text_fn(self.ty.clone());
+
                 return Ok(FieldIteratorPart::Header {
                     setter: quote! {
-                        #attrs.insert(
+                        #into_optional_xml_text(#bound_name)?.and_then(|#bound_name| #attrs.insert(
                             #xml_namespace,
                             #xml_name.to_owned(),
                             #bound_name,
-                        );
+                        ));
                     },
                 });
             }

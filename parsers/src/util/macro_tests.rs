@@ -313,3 +313,20 @@ fn prefixed_attribute_roundtrip() {
     };
     roundtrip_full::<PrefixedAttribute>("<attr xmlns='urn:example:ns1' xml:lang='foo'/>");
 }
+
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = NS1, name = "attr")]
+struct RequiredNonStringAttribute {
+    #[xml(attribute)]
+    foo: i32,
+}
+
+#[test]
+fn required_non_string_attribute_roundtrip() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<RequiredNonStringAttribute>("<attr xmlns='urn:example:ns1' foo='-16'/>");
+}

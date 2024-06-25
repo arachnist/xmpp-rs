@@ -63,7 +63,8 @@ The following mapping types are defined:
 #### `attribute` meta
 
 The `attribute` meta causes the field to be mapped to an XML attribute of the
-same name. The field must be of type [`String`].
+same name. For `FromXml`, the field's type must implement [`FromXmlText`] and
+for `IntoXml`, the field's type must implement [`IntoOptionalXmlText`].
 
 The following keys can be used inside the `#[xml(attribute(..))]` meta:
 
