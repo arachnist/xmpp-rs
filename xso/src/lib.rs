@@ -1,3 +1,4 @@
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 /*!
@@ -22,6 +23,7 @@ use of this library in parsing XML streams like specified in RFC 6120.
 pub mod error;
 #[cfg(feature = "minidom")]
 pub mod minidom_compat;
+mod text;
 
 #[doc(hidden)]
 pub mod exports {
@@ -29,6 +31,8 @@ pub mod exports {
     pub use minidom;
     pub use rxml;
 }
+
+use std::borrow::Cow;
 
 #[doc = include_str!("from_xml_doc.md")]
 #[doc(inline)]
@@ -128,6 +132,126 @@ pub trait FromXml {
         name: rxml::QName,
         attrs: rxml::AttrMap,
     ) -> Result<Self::Builder, self::error::FromEventsError>;
+}
+
+/// Trait allowing to convert XML text to a value.
+///
+/// This trait is similar to [`std::str::FromStr`], however, due to
+/// restrictions imposed by the orphan rule, a separate trait is needed.
+/// Implementations for many standard library types are available. In
+/// addition, the following feature flags can enable more implementations:
+///
+/// - `jid`: `jid::Jid`, `jid::BareJid`, `jid::FullJid`
+/// - `uuid`: `uuid::Uuid`
+///
+/// Because of this unfortunate situation, we are **extremely liberal** with
+/// accepting optional dependencies for this purpose. You are very welcome to
+/// make merge requests against this crate adding support for parsing
+/// third-party crates.
+pub trait FromXmlText: Sized {
+    /// Convert the given XML text to a value.
+    fn from_xml_text(data: String) -> Result<Self, self::error::Error>;
+}
+
+impl FromXmlText for String {
+    fn from_xml_text(data: String) -> Result<Self, self::error::Error> {
+        Ok(data)
+    }
+}
+
+impl<T: FromXmlText, B: ToOwned<Owned = T>> FromXmlText for Cow<'_, B> {
+    fn from_xml_text(data: String) -> Result<Self, self::error::Error> {
+        Ok(Cow::Owned(T::from_xml_text(data)?))
+    }
+}
+
+impl<T: FromXmlText> FromXmlText for Option<T> {
+    fn from_xml_text(data: String) -> Result<Self, self::error::Error> {
+        Ok(Some(T::from_xml_text(data)?))
+    }
+}
+
+impl<T: FromXmlText> FromXmlText for Box<T> {
+    fn from_xml_text(data: String) -> Result<Self, self::error::Error> {
+        Ok(Box::new(T::from_xml_text(data)?))
+    }
+}
+
+/// Trait to convert a value to an XML text string.
+///
+/// This trait is implemented for many standard library types implementing
+/// [`std::fmt::Display`]. In addition, the following feature flags can enable
+/// more implementations:
+///
+/// - `jid`: `jid::Jid`, `jid::BareJid`, `jid::FullJid`
+/// - `uuid`: `uuid::Uuid`
+///
+/// Because of the unfortunate situation as described in [`FromXmlText`], we
+/// are **extremely liberal** with accepting optional dependencies for this
+/// purpose. You are very welcome to make merge requests against this crate
+/// adding support for parsing third-party crates.
+pub trait IntoXmlText: Sized {
+    /// Convert the value to an XML string in a context where an absent value
+    /// cannot be represented.
+    fn into_xml_text(self) -> Result<String, self::error::Error>;
+
+    /// Convert the value to an XML string in a context where an absent value
+    /// can be represented.
+    ///
+    /// The provided implementation will always return the result of
+    /// [`Self::into_xml_text`] wrapped into `Some(.)`. By re-implementing
+    /// this method, implementors can customize the behaviour for certain
+    /// values.
+    fn into_optional_xml_text(self) -> Result<Option<String>, self::error::Error> {
+        Ok(Some(self.into_xml_text()?))
+    }
+}
+
+impl IntoXmlText for String {
+    fn into_xml_text(self) -> Result<String, self::error::Error> {
+        Ok(self)
+    }
+}
+
+impl<T: IntoXmlText> IntoXmlText for Box<T> {
+    fn into_xml_text(self) -> Result<String, self::error::Error> {
+        T::into_xml_text(*self)
+    }
+}
+
+impl<T: IntoXmlText, B: ToOwned<Owned = T>> IntoXmlText for Cow<'_, B> {
+    fn into_xml_text(self) -> Result<String, self::error::Error> {
+        T::into_xml_text(self.into_owned())
+    }
+}
+
+/// Specialized variant of [`IntoXmlText`].
+///
+/// Do **not** implement this unless you cannot implement [`IntoXmlText`]:
+/// implementing [`IntoXmlText`] is more versatile and an
+/// [`IntoOptionalXmlText`] implementation is automatically provided.
+///
+/// If you need to customize the behaviour of the [`IntoOptionalXmlText`]
+/// blanket implementation, implement a custom
+/// [`IntoXmlText::into_optional_xml_text`] instead.
+pub trait IntoOptionalXmlText {
+    /// Convert the value to an XML string in a context where an absent value
+    /// can be represented.
+    fn into_optional_xml_text(self) -> Result<Option<String>, self::error::Error>;
+}
+
+impl<T: IntoXmlText> IntoOptionalXmlText for T {
+    fn into_optional_xml_text(self) -> Result<Option<String>, self::error::Error> {
+        <Self as IntoXmlText>::into_optional_xml_text(self)
+    }
+}
+
+impl<T: IntoOptionalXmlText> IntoOptionalXmlText for Option<T> {
+    fn into_optional_xml_text(self) -> Result<Option<String>, self::error::Error> {
+        self.map(T::into_optional_xml_text)
+            .transpose()
+            .map(Option::flatten)
+    }
 }
 
 /// Attempt to transform a type implementing [`IntoXml`] into another
