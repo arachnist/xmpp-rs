@@ -180,7 +180,7 @@
 //!
 //! You can use this in your crate by adding this under `dependencies` in your `Cargo.toml`:
 //!
-//! ```toml,ignore
+//! ```toml
 //! sasl = "*"
 //! ```
 
