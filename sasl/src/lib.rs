@@ -25,7 +25,8 @@
 //!
 //! ## More complex usage
 //!
-//! ```rust,ignore
+#![cfg_attr(feature = "scram", doc = "```rust\n")]
+#![cfg_attr(not(feature = "scram"), doc = "```rust,ignore\n")]
 //! #[macro_use] extern crate sasl;
 //!
 //! use sasl::server::{Validator, Provider, Mechanism as ServerMechanism, Response};
