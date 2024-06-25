@@ -391,10 +391,10 @@ impl Display for Datatype {
             Datatype::Short => "xs:short",
             Datatype::String => "xs:string",
             Datatype::Time => "xs:time",
-            Datatype::UserDefined(value) => &format!("x:{value}"),
-            Datatype::Other { prefix, value } => &format!("{prefix}:{value}"),
+            Datatype::UserDefined(value) => return write!(f, "x:{value}"),
+            Datatype::Other { prefix, value } => return write!(f, "{prefix}:{value}"),
         };
-        write!(f, "{value}")
+        f.write_str(value)
     }
 }
 
