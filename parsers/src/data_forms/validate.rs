@@ -108,13 +108,13 @@ impl Display for DatatypeError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             DatatypeError::MissingPrefix { input } => {
-                write!(f, "Missing prefix in validation datatype '{input}'.")
+                write!(f, "Missing prefix in validation datatype {input:?}.")
             }
             DatatypeError::InvalidType { input } => {
-                write!(f, "Invalid validation datatype '{input}'.")
+                write!(f, "Invalid validation datatype {input:?}.")
             }
             DatatypeError::UnknownType { input } => {
-                write!(f, "Unknown validation datatype '{input}'.")
+                write!(f, "Unknown validation datatype {input:?}.")
             }
         }
     }
