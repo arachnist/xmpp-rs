@@ -154,6 +154,9 @@ pub(crate) struct XmlCompoundMeta {
 
     /// The value assigned to `name` inside `#[xml(..)]`, if any.
     pub(crate) name: Option<NameRef>,
+
+    /// The debug flag.
+    pub(crate) debug: Flag,
 }
 
 impl XmlCompoundMeta {
@@ -164,6 +167,7 @@ impl XmlCompoundMeta {
     fn parse_from_attribute(attr: &Attribute) -> Result<Self> {
         let mut namespace = None;
         let mut name = None;
+        let mut debug = Flag::Absent;
 
         attr.parse_nested_meta(|meta| {
             if meta.path.is_ident("name") {
@@ -178,6 +182,12 @@ impl XmlCompoundMeta {
                 }
                 namespace = Some(meta.value()?.parse()?);
                 Ok(())
+            } else if meta.path.is_ident("debug") {
+                if debug.is_set() {
+                    return Err(Error::new_spanned(meta.path, "duplicate `debug` key"));
+                }
+                debug = (&meta.path).into();
+                Ok(())
             } else {
                 Err(Error::new_spanned(meta.path, "unsupported key"))
             }
@@ -187,6 +197,7 @@ impl XmlCompoundMeta {
             span: attr.span(),
             namespace,
             name,
+            debug,
         })
     }
 

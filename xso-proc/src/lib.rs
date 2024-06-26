@@ -90,6 +90,10 @@ fn from_xml_impl(input: Item) -> Result<TokenStream> {
         }
     });
 
+    if def.debug() {
+        println!("{}", result);
+    }
+
     Ok(result)
 }
 
@@ -150,6 +154,10 @@ fn into_xml_impl(input: Item) -> Result<TokenStream> {
             }
         }
     });
+
+    if def.debug() {
+        println!("{}", result);
+    }
 
     Ok(result)
 }

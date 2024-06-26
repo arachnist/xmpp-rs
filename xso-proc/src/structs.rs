@@ -56,6 +56,9 @@ pub(crate) struct StructDef {
 
     /// Name of the iterator type.
     event_iter_ty_ident: Ident,
+
+    /// Flag whether debug mode is enabled.
+    debug: bool,
 }
 
 impl StructDef {
@@ -76,6 +79,7 @@ impl StructDef {
             target_ty_ident: ident.clone(),
             builder_ty_ident: quote::format_ident!("{}FromXmlBuilder", ident),
             event_iter_ty_ident: quote::format_ident!("{}IntoXmlIterator", ident),
+            debug: meta.debug.is_set(),
         })
     }
 
@@ -171,5 +175,9 @@ impl StructDef {
             },
             event_iter_ty_ident: event_iter_ty_ident.clone(),
         })
+    }
+
+    pub(crate) fn debug(&self) -> bool {
+        self.debug
     }
 }
