@@ -4,8 +4,10 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use xso::{FromXml, IntoXml};
+
 use crate::message::MessagePayload;
-use crate::util::text_node_codecs::{Codec, Text};
+use crate::ns;
 
 generate_element!(
     /// Container for a set of reactions.
@@ -22,14 +24,14 @@ generate_element!(
 
 impl MessagePayload for Reactions {}
 
-generate_element!(
-    /// One emoji reaction.
-    Reaction, "reaction", REACTIONS,
-    text: (
-        /// The text of this reaction.
-        emoji: Text
-    )
-);
+/// One emoji reaction.
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::REACTIONS, name = "reaction")]
+pub struct Reaction {
+    /// The text of this reaction.
+    #[xml(text)]
+    pub emoji: String,
+}
 
 #[cfg(test)]
 mod tests {

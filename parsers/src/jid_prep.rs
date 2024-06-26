@@ -4,17 +4,21 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use crate::iq::{IqGetPayload, IqResultPayload};
-use crate::util::text_node_codecs::{Codec, JidCodec, Text};
+use xso::{FromXml, IntoXml};
 
-generate_element!(
-    /// Request from a client to stringprep/PRECIS a string into a JID.
-    JidPrepQuery, "jid", JID_PREP,
-    text: (
-        /// The potential JID.
-        data: Text
-    )
-);
+use jid::Jid;
+
+use crate::iq::{IqGetPayload, IqResultPayload};
+use crate::ns;
+
+/// Request from a client to stringprep/PRECIS a string into a JID.
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::JID_PREP, name = "jid")]
+pub struct JidPrepQuery {
+    /// The potential JID.
+    #[xml(text)]
+    pub data: String,
+}
 
 impl IqGetPayload for JidPrepQuery {}
 
@@ -25,14 +29,14 @@ impl JidPrepQuery {
     }
 }
 
-generate_element!(
-    /// Response from the server with the stringprep’d/PRECIS’d JID.
-    JidPrepResponse, "jid", JID_PREP,
-    text: (
-        /// The JID.
-        jid: JidCodec
-    )
-);
+/// Response from the server with the stringprep’d/PRECIS’d JID.
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::JID_PREP, name = "jid")]
+pub struct JidPrepResponse {
+    /// The JID.
+    #[xml(text)]
+    pub jid: Jid,
+}
 
 impl IqResultPayload for JidPrepResponse {}
 
