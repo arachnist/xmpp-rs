@@ -17,6 +17,7 @@ use crate::meta::{Flag, NameRef, NamespaceRef, XmlFieldMeta};
 use crate::scope::{FromEventsScope, IntoEventsScope};
 use crate::types::{
     default_fn, from_xml_text_fn, into_optional_xml_text_fn, into_xml_text_fn, string_ty,
+    text_codec_decode_fn, text_codec_encode_fn,
 };
 
 /// Code slices necessary for declaring and initializing a temporary variable
@@ -98,7 +99,10 @@ enum FieldKind {
     },
 
     /// The field maps to the character data of the element.
-    Text,
+    Text {
+        /// Optional codec to use
+        codec: Option<Type>,
+    },
 }
 
 impl FieldKind {
@@ -143,7 +147,7 @@ impl FieldKind {
                 })
             }
 
-            XmlFieldMeta::Text => Ok(Self::Text),
+            XmlFieldMeta::Text { codec } => Ok(Self::Text { codec }),
         }
     }
 }
@@ -257,10 +261,21 @@ impl FieldDef {
                 })
             }
 
-            FieldKind::Text => {
+            FieldKind::Text { ref codec } => {
                 let FromEventsScope { ref text, .. } = scope;
                 let field_access = scope.access_field(&self.member);
-                let from_xml_text = from_xml_text_fn(self.ty.clone());
+                let finalize = match codec {
+                    Some(codec_ty) => {
+                        let decode = text_codec_decode_fn(codec_ty.clone(), self.ty.clone());
+                        quote! {
+                            #decode(#field_access)?
+                        }
+                    }
+                    None => {
+                        let from_xml_text = from_xml_text_fn(self.ty.clone());
+                        quote! { #from_xml_text(#field_access)? }
+                    }
+                };
 
                 Ok(FieldBuilderPart::Text {
                     value: FieldTempInit {
@@ -270,9 +285,7 @@ impl FieldDef {
                     collect: quote! {
                         #field_access.push_str(#text.as_str());
                     },
-                    finalize: quote! {
-                        #from_xml_text(#field_access)?
-                    },
+                    finalize,
                 })
             }
         }
@@ -318,14 +331,19 @@ impl FieldDef {
                 })
             }
 
-            FieldKind::Text => {
-                let into_xml_text = into_xml_text_fn(self.ty.clone());
+            FieldKind::Text { ref codec } => {
+                let generator = match codec {
+                    Some(codec_ty) => {
+                        let encode = text_codec_encode_fn(codec_ty.clone(), self.ty.clone());
+                        quote! { #encode(#bound_name)? }
+                    }
+                    None => {
+                        let into_xml_text = into_xml_text_fn(self.ty.clone());
+                        quote! { ::core::option::Option::Some(#into_xml_text(#bound_name)?) }
+                    }
+                };
 
-                Ok(FieldIteratorPart::Text {
-                    generator: quote! {
-                        #into_xml_text(#bound_name)?
-                    },
-                })
+                Ok(FieldIteratorPart::Text { generator })
             }
         }
     }

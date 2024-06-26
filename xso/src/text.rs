@@ -103,3 +103,60 @@ convert_via_fromstr_and_display! {
     #[cfg(feature = "jid")]
     jid::BareJid,
 }
+
+/// Represent a way to encode/decode text data into a Rust type.
+///
+/// This trait can be used in scenarios where implementing [`FromXmlText`]
+/// and/or [`IntoXmlText`] on a type is not feasible or sensible, such as the
+/// following:
+///
+/// 1. The type originates in a foreign crate, preventing the implementation
+///    of foreign traits.
+///
+/// 2. There is more than one way to convert a value to/from XML.
+///
+/// The codec to use for a text can be specified in the attributes understood
+/// by `FromXml` and `IntoXml` derive macros. See the documentation of the
+/// [`FromXml`][`macro@crate::FromXml`] derive macro for details.
+pub trait TextCodec<T> {
+    /// Decode a string value into the type.
+    fn decode(s: String) -> Result<T, Error>;
+
+    /// Encode the type as string value.
+    ///
+    /// If this returns `None`, the string value is not emitted at all.
+    fn encode(value: T) -> Result<Option<String>, Error>;
+}
+
+/// Text codec which does no transform.
+pub struct Plain;
+
+impl TextCodec<String> for Plain {
+    fn decode(s: String) -> Result<String, Error> {
+        Ok(s)
+    }
+
+    fn encode(value: String) -> Result<Option<String>, Error> {
+        Ok(Some(value))
+    }
+}
+
+/// Text codec which returns None instead of the empty string.
+pub struct EmptyAsNone;
+
+impl TextCodec<Option<String>> for EmptyAsNone {
+    fn decode(s: String) -> Result<Option<String>, Error> {
+        if s.len() == 0 {
+            Ok(None)
+        } else {
+            Ok(Some(s))
+        }
+    }
+
+    fn encode(value: Option<String>) -> Result<Option<String>, Error> {
+        Ok(match value {
+            Some(v) if v.len() > 0 => Some(v),
+            Some(_) | None => None,
+        })
+    }
+}

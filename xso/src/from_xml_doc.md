@@ -34,6 +34,7 @@ such:
 - *path*: A Rust path, like `some_crate::foo::Bar`. Note that `foo` on its own
   is also a path.
 - *string literal*: A string literal, like `"hello world!"`.
+- *type*: A Rust type.
 - flag: Has no value. The key's mere presence has relevance and it must not be
   followed by a `=` sign.
 
@@ -137,14 +138,27 @@ assert_eq!(foo, Foo {
 #### `text` meta
 
 The `text` meta causes the field to be mapped to the text content of the
-element. For `FromXml`, the field's type must implement [`FromXmlText`] and
-for `IntoXml`, the field's type must implement [`IntoXmlText`].
+element.
 
-The `text` meta supports no options or value. Only a single field per struct
-may be annotated with `#[xml(text)]` at a time, to avoid parsing ambiguities.
-This is also true if only `IntoXml` is derived on a field, for consistency.
+| Key | Value type | Description |
+| --- | --- | --- |
+| `codec` | *type* | Optional [`TextCodec`] implementation which is used to encode or decode the field. |
 
-##### Example
+If `codec` is given, the given `codec` must implement
+[`TextCodec<T>`][`TextCodec`] where `T` is the type of the field.
+
+If `codec` is *not* given, the field's type must implement [`FromXmlText`] for
+`FromXml` and for `IntoXml`, the field's type must implement [`IntoXmlText`].
+
+The `text` meta also supports a shorthand syntax, `#[xml(text = ..)]`, where
+the value is treated as the value for the `codec` key (with optional prefix as
+described above, and unnamespaced otherwise).
+
+Only a single field per struct may be annotated with `#[xml(text)]` at a time,
+to avoid parsing ambiguities. This is also true if only `IntoXml` is derived on
+a field, for consistency.
+
+##### Example without codec
 
 ```rust
 # use xso::FromXml;
@@ -158,5 +172,22 @@ struct Foo {
 let foo: Foo = xso::from_bytes(b"<foo xmlns='urn:example'>hello</foo>").unwrap();
 assert_eq!(foo, Foo {
     a: "hello".to_string(),
+});
+```
+
+##### Example with codec
+
+```rust
+# use xso::FromXml;
+#[derive(FromXml, Debug, PartialEq)]
+#[xml(namespace = "urn:example", name = "foo")]
+struct Foo {
+    #[xml(text = xso::text::EmptyAsNone)]
+    a: Option<String>,
+};
+
+let foo: Foo = xso::from_bytes(b"<foo xmlns='urn:example'/>").unwrap();
+assert_eq!(foo, Foo {
+    a: None,
 });
 ```

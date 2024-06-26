@@ -24,7 +24,7 @@ pub mod error;
 #[cfg(feature = "minidom")]
 #[cfg_attr(docsrs, doc(cfg(feature = "minidom")))]
 pub mod minidom_compat;
-mod text;
+pub mod text;
 
 #[doc(hidden)]
 pub mod exports {
@@ -34,6 +34,9 @@ pub mod exports {
 }
 
 use std::borrow::Cow;
+
+#[doc(inline)]
+pub use text::TextCodec;
 
 #[doc = include_str!("from_xml_doc.md")]
 #[doc(inline)]

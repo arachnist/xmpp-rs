@@ -280,9 +280,9 @@ impl Compound {
                         State::new(state_name)
                             .with_field(&bound_name, field.ty())
                             .with_impl(quote! {
-                                ::core::option::Option::Some(::xso::exports::rxml::Event::Text(
+                                #generator.map(|value| ::xso::exports::rxml::Event::Text(
                                     ::xso::exports::rxml::parser::EventMetrics::zero(),
-                                    #generator,
+                                    value,
                                 ))
                             }),
                     );

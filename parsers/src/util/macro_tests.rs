@@ -464,3 +464,30 @@ fn fails_text_without_text_consumer_positive() {
         other => panic!("unexpected result: {:?}", other),
     }
 }
+
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = NS1, name = "text")]
+struct TextWithCodec {
+    #[xml(text(codec = xso::text::EmptyAsNone))]
+    text: std::option::Option<String>,
+}
+
+#[test]
+fn text_with_codec_roundtrip_empty() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<TextWithCodec>("<text xmlns='urn:example:ns1'/>");
+}
+
+#[test]
+fn text_with_codec_roundtrip_non_empty() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<TextWithCodec>("<text xmlns='urn:example:ns1'>hello</text>");
+}

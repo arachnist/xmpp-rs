@@ -312,7 +312,10 @@ pub(crate) enum XmlFieldMeta {
     },
 
     /// `#[xml(text)]`
-    Text,
+    Text {
+        /// The path to the optional codec type.
+        codec: Option<Type>,
+    },
 }
 
 impl XmlFieldMeta {
@@ -393,8 +396,28 @@ impl XmlFieldMeta {
     }
 
     /// Parse a `#[xml(text)]` meta.
-    fn text_from_meta(_: ParseNestedMeta<'_>) -> Result<Self> {
-        Ok(Self::Text)
+    fn text_from_meta(meta: ParseNestedMeta<'_>) -> Result<Self> {
+        let mut codec: Option<Type> = None;
+        if meta.input.peek(Token![=]) {
+            Ok(Self::Text {
+                codec: Some(meta.value()?.parse()?),
+            })
+        } else if meta.input.peek(syn::token::Paren) {
+            meta.parse_nested_meta(|meta| {
+                if meta.path.is_ident("codec") {
+                    if codec.is_some() {
+                        return Err(Error::new_spanned(meta.path, "duplicate `codec` key"));
+                    }
+                    codec = Some(meta.value()?.parse()?);
+                    Ok(())
+                } else {
+                    Err(Error::new_spanned(meta.path, "unsupported key"))
+                }
+            })?;
+            Ok(Self::Text { codec })
+        } else {
+            Ok(Self::Text { codec: None })
+        }
     }
 
     /// Parse [`Self`] from a nestd meta, switching on the identifier
