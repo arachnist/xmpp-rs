@@ -6,8 +6,13 @@
 
 //! Module containing implementations for conversions to/from XML text.
 
+#[cfg(feature = "base64")]
+use core::marker::PhantomData;
+
 use crate::{error::Error, FromXmlText, IntoXmlText};
 
+#[cfg(feature = "base64")]
+use base64::engine::{general_purpose::STANDARD as StandardBase64Engine, Engine as _};
 #[cfg(feature = "jid")]
 use jid;
 #[cfg(feature = "uuid")]
@@ -158,5 +163,74 @@ impl TextCodec<Option<String>> for EmptyAsNone {
             Some(v) if v.len() > 0 => Some(v),
             Some(_) | None => None,
         })
+    }
+}
+
+/// Trait for preprocessing text data from XML.
+///
+/// This may be used by codecs to allow to customize some of their behaviour.
+pub trait TextFilter {
+    /// Process the incoming string and return the result of the processing.
+    fn preprocess(s: String) -> String;
+}
+
+/// Text preprocessor which returns the input unchanged.
+pub struct NoFilter;
+
+impl TextFilter for NoFilter {
+    fn preprocess(s: String) -> String {
+        s
+    }
+}
+
+/// Text preprocessor to remove all whitespace.
+pub struct StripWhitespace;
+
+impl TextFilter for StripWhitespace {
+    fn preprocess(s: String) -> String {
+        let s: String = s
+            .chars()
+            .filter(|ch| *ch != ' ' && *ch != '\n' && *ch != '\t')
+            .collect();
+        s
+    }
+}
+
+/// Text codec transforming text to binary using standard base64.
+///
+/// The `Filter` type argument can be used to employ additional preprocessing
+/// of incoming text data. Most interestingly, passing [`StripWhitespace`]
+/// will make the implementation ignore any whitespace within the text.
+#[cfg(feature = "base64")]
+#[cfg_attr(docsrs, doc(cfg(feature = "base64")))]
+pub struct Base64<Filter: TextFilter = NoFilter>(PhantomData<Filter>);
+
+#[cfg(feature = "base64")]
+#[cfg_attr(docsrs, doc(cfg(feature = "base64")))]
+impl<Filter: TextFilter> TextCodec<Vec<u8>> for Base64<Filter> {
+    fn decode(s: String) -> Result<Vec<u8>, Error> {
+        let value = Filter::preprocess(s);
+        Ok(StandardBase64Engine
+            .decode(value.as_str().as_bytes())
+            .map_err(Error::text_parse_error)?)
+    }
+
+    fn encode(value: Vec<u8>) -> Result<Option<String>, Error> {
+        Ok(Some(StandardBase64Engine.encode(&value)))
+    }
+}
+
+#[cfg(feature = "base64")]
+#[cfg_attr(docsrs, doc(cfg(feature = "base64")))]
+impl<Filter: TextFilter> TextCodec<Option<Vec<u8>>> for Base64<Filter> {
+    fn decode(s: String) -> Result<Option<Vec<u8>>, Error> {
+        if s.len() == 0 {
+            return Ok(None);
+        }
+        Ok(Some(Self::decode(s)?))
+    }
+
+    fn encode(decoded: Option<Vec<u8>>) -> Result<Option<String>, Error> {
+        decoded.map(Self::encode).transpose().map(Option::flatten)
     }
 }

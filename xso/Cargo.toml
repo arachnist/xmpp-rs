@@ -14,13 +14,15 @@ rxml = { version = "0.11.0", default-features = false }
 minidom = { version = "^0.15" }
 xso_proc = { version = "0.0.2", optional = true }
 
-# optional dependencies to provide text conversion to/from types from these crates
+# optional dependencies to provide text conversion to/from types from/using
+# these crates
 # NOTE: because we don't have public/private dependencies yet and cargo
 # defaults to picking the highest matching version by default, the only
 # sensible thing we can do here is to depend on the least version of the most
 # recent semver of each crate.
 jid = { version = "^0.10", optional = true }
 uuid = { version = "^1", optional = true }
+base64 = { version = "^0.22", optional = true }
 
 [features]
 macros = [ "dep:xso_proc" ]
