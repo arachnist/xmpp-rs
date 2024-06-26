@@ -4,11 +4,12 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use xso::{error::Error, text::Base64, FromXml, FromXmlText, IntoXml, IntoXmlText};
+
 use crate::hashes::{Algo, Hash};
-use crate::util::text_node_codecs::{Base64, Codec};
+use crate::ns;
 use minidom::IntoAttributeValue;
 use std::str::FromStr;
-use xso::error::Error;
 
 /// A Content-ID, as defined in RFC2111.
 ///
@@ -49,6 +50,23 @@ impl FromStr for ContentId {
     }
 }
 
+impl FromXmlText for ContentId {
+    fn from_xml_text(value: String) -> Result<Self, Error> {
+        value.parse().map_err(Error::text_parse_error)
+    }
+}
+
+impl IntoXmlText for ContentId {
+    fn into_xml_text(self) -> Result<String, Error> {
+        let algo = match self.hash.algo {
+            Algo::Sha_1 => "sha1",
+            Algo::Sha_256 => "sha256",
+            _ => unimplemented!(),
+        };
+        Ok(format!("{}+{}@bob.xmpp.org", algo, self.hash.to_hex()))
+    }
+}
+
 impl IntoAttributeValue for ContentId {
     fn into_attribute_value(self) -> Option<String> {
         let algo = match self.hash.algo {
@@ -60,30 +78,32 @@ impl IntoAttributeValue for ContentId {
     }
 }
 
-generate_element!(
-    /// Request for an uncached cid file.
-    Data, "data", BOB,
-    attributes: [
-        /// The cid in question.
-        cid: Required<ContentId> = "cid",
+/// Request for an uncached cid file.
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::BOB, name = "data")]
+pub struct Data {
+    /// The cid in question.
+    #[xml(attribute)]
+    pub cid: ContentId,
 
-        /// How long to cache it (in seconds).
-        max_age: Option<usize> = "max-age",
+    /// How long to cache it (in seconds).
+    #[xml(attribute(default, name = "max-age"))]
+    pub max_age: Option<usize>,
 
-        /// The MIME type of the data being transmitted.
-        ///
-        /// See the [IANA MIME Media Types Registry][1] for a list of
-        /// registered types, but unregistered or yet-to-be-registered are
-        /// accepted too.
-        ///
-        /// [1]: <https://www.iana.org/assignments/media-types/media-types.xhtml>
-        type_: Option<String> = "type"
-    ],
-    text: (
-        /// The actual data.
-        data: Base64
-    )
-);
+    /// The MIME type of the data being transmitted.
+    ///
+    /// See the [IANA MIME Media Types Registry][1] for a list of
+    /// registered types, but unregistered or yet-to-be-registered are
+    /// accepted too.
+    ///
+    /// [1]: <https://www.iana.org/assignments/media-types/media-types.xhtml>
+    #[xml(attribute(default, name = "type"))]
+    pub type_: Option<String>,
+
+    /// The actual data.
+    #[xml(text = Base64)]
+    pub data: Vec<u8>,
+}
 
 #[cfg(test)]
 mod tests {
@@ -169,7 +189,7 @@ mod tests {
 
     #[test]
     fn unknown_child() {
-        let elem: Element = "<data xmlns='urn:xmpp:bob'><coucou/></data>"
+        let elem: Element = "<data xmlns='urn:xmpp:bob' cid='sha1+8f35fef110ffc5df08d579a50083ff9308fb6242@bob.xmpp.org'><coucou/></data>"
             .parse()
             .unwrap();
         let error = Data::try_from(elem).unwrap_err();
@@ -177,6 +197,6 @@ mod tests {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Unknown child in data element.");
+        assert_eq!(message, "Unknown child in Data element.");
     }
 }

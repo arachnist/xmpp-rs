@@ -4,13 +4,15 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use xso::{FromXml, IntoXml};
+use xso::{
+    error::{Error, FromElementError},
+    text::Base64,
+    FromXml, IntoXml,
+};
 
 use crate::ns;
-use crate::util::text_node_codecs::{Base64, Codec};
 use crate::Element;
 use std::collections::BTreeMap;
-use xso::error::{Error, FromElementError};
 
 generate_attribute!(
     /// The list of available SASL mechanisms.
@@ -44,41 +46,41 @@ generate_attribute!(
     }
 );
 
-generate_element!(
-    /// The first step of the SASL process, selecting the mechanism and sending
-    /// the first part of the handshake.
-    Auth, "auth", SASL,
-    attributes: [
-        /// The mechanism used.
-        mechanism: Required<Mechanism> = "mechanism"
-    ],
-    text: (
-        /// The content of the handshake.
-        data: Base64
-    )
-);
+/// The first step of the SASL process, selecting the mechanism and sending
+/// the first part of the handshake.
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::SASL, name = "auth")]
+pub struct Auth {
+    /// The mechanism used.
+    #[xml(attribute)]
+    pub mechanism: Mechanism,
 
-generate_element!(
-    /// In case the mechanism selected at the [auth](struct.Auth.html) step
-    /// requires a second step, the server sends this element with additional
-    /// data.
-    Challenge, "challenge", SASL,
-    text: (
-        /// The challenge data.
-        data: Base64
-    )
-);
+    /// The content of the handshake.
+    #[xml(text = Base64)]
+    pub data: Vec<u8>,
+}
 
-generate_element!(
-    /// In case the mechanism selected at the [auth](struct.Auth.html) step
-    /// requires a second step, this contains the client’s response to the
-    /// server’s [challenge](struct.Challenge.html).
-    Response, "response", SASL,
-    text: (
-        /// The response data.
-        data: Base64
-    )
-);
+/// In case the mechanism selected at the [auth](struct.Auth.html) step
+/// requires a second step, the server sends this element with additional
+/// data.
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::SASL, name = "challenge")]
+pub struct Challenge {
+    /// The challenge data.
+    #[xml(text = Base64)]
+    pub data: Vec<u8>,
+}
+
+/// In case the mechanism selected at the [auth](struct.Auth.html) step
+/// requires a second step, this contains the client’s response to the
+/// server’s [challenge](struct.Challenge.html).
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::SASL, name = "response")]
+pub struct Response {
+    /// The response data.
+    #[xml(text = Base64)]
+    pub data: Vec<u8>,
+}
 
 /// Sent by the client at any point after [auth](struct.Auth.html) if it
 /// wants to cancel the current authentication process.
@@ -86,14 +88,14 @@ generate_element!(
 #[xml(namespace = ns::SASL, name = "abort")]
 pub struct Abort;
 
-generate_element!(
-    /// Sent by the server on SASL success.
-    Success, "success", SASL,
-    text: (
-        /// Possible data sent on success.
-        data: Base64
-    )
-);
+/// Sent by the server on SASL success.
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::SASL, name = "success")]
+pub struct Success {
+    /// Possible data sent on success.
+    #[xml(text = Base64)]
+    pub data: Vec<u8>,
+}
 
 generate_element_enum!(
     /// List of possible failure conditions for SASL.

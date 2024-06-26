@@ -4,12 +4,11 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use xso::{FromXml, IntoXml};
+use xso::{text::Base64, FromXml, IntoXml};
 
 use crate::message::MessagePayload;
 use crate::ns;
 use crate::pubsub::PubSubPayload;
-use crate::util::text_node_codecs::{Base64, Codec};
 
 /// Element of the device list
 #[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
@@ -32,38 +31,38 @@ generate_element!(
 
 impl PubSubPayload for DeviceList {}
 
-generate_element!(
-    /// SignedPreKey public key
-    /// Part of a device's bundle
-    SignedPreKeyPublic, "signedPreKeyPublic", LEGACY_OMEMO,
-    attributes: [
-        /// SignedPreKey id
-        signed_pre_key_id: Option<u32> = "signedPreKeyId"
-    ],
-    text: (
-        /// Serialized PublicKey
-        data: Base64
-    )
-);
+/// SignedPreKey public key
+/// Part of a device's bundle
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::LEGACY_OMEMO, name = "signedPreKeyPublic")]
+pub struct SignedPreKeyPublic {
+    /// SignedPreKey id
+    #[xml(attribute(default, name = "signedPreKeyId"))]
+    pub signed_pre_key_id: Option<u32>,
 
-generate_element!(
-    /// SignedPreKey signature
-    /// Part of a device's bundle
-    SignedPreKeySignature, "signedPreKeySignature", LEGACY_OMEMO,
-    text: (
-        /// Signature bytes
-        data: Base64
-    )
-);
+    /// Serialized PublicKey
+    #[xml(text = Base64)]
+    pub data: Vec<u8>,
+}
 
-generate_element!(
-    /// Part of a device's bundle
-    IdentityKey, "identityKey", LEGACY_OMEMO,
-    text: (
-        /// Serialized PublicKey
-        data: Base64
-    )
-);
+/// SignedPreKey signature
+/// Part of a device's bundle
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::LEGACY_OMEMO, name = "signedPreKeySignature")]
+pub struct SignedPreKeySignature {
+    /// Signature bytes
+    #[xml(text = Base64)]
+    pub data: Vec<u8>,
+}
+
+/// Part of a device's bundle
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::LEGACY_OMEMO, name = "identityKey")]
+pub struct IdentityKey {
+    /// Serialized PublicKey
+    #[xml(text = Base64)]
+    pub data: Vec<u8>,
+}
 
 generate_element!(
     /// List of (single use) PreKeys
@@ -75,19 +74,19 @@ generate_element!(
     ]
 );
 
-generate_element!(
-    /// PreKey public key
-    /// Part of a device's bundle
-    PreKeyPublic, "preKeyPublic", LEGACY_OMEMO,
-    attributes: [
-        /// PreKey id
-        pre_key_id: Required<u32> = "preKeyId",
-    ],
-    text: (
-        /// Serialized PublicKey
-        data: Base64
-    )
-);
+/// PreKey public key
+/// Part of a device's bundle
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::LEGACY_OMEMO, name = "preKeyPublic")]
+pub struct PreKeyPublic {
+    /// PreKey id
+    #[xml(attribute = "preKeyId")]
+    pub pre_key_id: u32,
+
+    /// Serialized PublicKey
+    #[xml(text = Base64)]
+    pub data: Vec<u8>,
+}
 
 generate_element!(
     /// A collection of publicly accessible data that can be used to build a session with a device, namely its public IdentityKey, a signed PreKey with corresponding signature, and a list of (single use) PreKeys.
@@ -123,14 +122,14 @@ generate_element!(
     ]
 );
 
-generate_element!(
-    /// IV used for payload encryption
-    IV, "iv", LEGACY_OMEMO,
-    text: (
-        /// IV bytes
-        data: Base64
-    )
-);
+/// IV used for payload encryption
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::LEGACY_OMEMO, name = "iv")]
+pub struct IV {
+    /// IV bytes
+    #[xml(text = Base64)]
+    pub data: Vec<u8>,
+}
 
 generate_attribute!(
     /// prekey attribute for the key element.
@@ -139,33 +138,34 @@ generate_attribute!(
     bool
 );
 
-generate_element!(
-    /// Part of the OMEMO element header
-    Key, "key", LEGACY_OMEMO,
-    attributes: [
-        /// The device id this key is encrypted for.
-        rid: Required<u32> = "rid",
+/// Part of the OMEMO element header
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::LEGACY_OMEMO, name = "key")]
+pub struct Key {
+    /// The device id this key is encrypted for.
+    #[xml(attribute)]
+    pub rid: u32,
 
-        /// The key element MUST be tagged with a prekey attribute set to true
-        /// if a PreKeySignalMessage is being used.
-        prekey: Default<IsPreKey> = "prekey",
-    ],
-    text: (
-        /// The 16 bytes key and the GCM authentication tag concatenated together
-        /// and encrypted using the corresponding long-standing SignalProtocol
-        /// session
-        data: Base64
-    )
-);
+    /// The key element MUST be tagged with a prekey attribute set to true
+    /// if a PreKeySignalMessage is being used.
+    #[xml(attribute(default))]
+    pub prekey: IsPreKey,
 
-generate_element!(
-    /// The encrypted message body
-    Payload, "payload", LEGACY_OMEMO,
-    text: (
-        /// Encrypted with AES-128 in Galois/Counter Mode (GCM)
-        data: Base64
-    )
-);
+    /// The 16 bytes key and the GCM authentication tag concatenated together
+    /// and encrypted using the corresponding long-standing SignalProtocol
+    /// session
+    #[xml(text = Base64)]
+    pub data: Vec<u8>,
+}
+
+/// The encrypted message body
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::LEGACY_OMEMO, name = "payload")]
+pub struct Payload {
+    /// Encrypted with AES-128 in Galois/Counter Mode (GCM)
+    #[xml(text = Base64)]
+    pub data: Vec<u8>,
+}
 
 generate_element!(
     /// An OMEMO element, which can be either a MessageElement (with payload),

@@ -4,11 +4,10 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use xso::{FromXml, IntoXml};
+use xso::{text::Base64, FromXml, IntoXml};
 
 use crate::iq::{IqGetPayload, IqResultPayload, IqSetPayload};
 use crate::ns;
-use crate::util::text_node_codecs::{Base64, Codec};
 
 generate_elem_id!(
     /// The name of a certificate.
@@ -17,14 +16,14 @@ generate_elem_id!(
     SASL_CERT
 );
 
-generate_element!(
-    /// An X.509 certificate.
-    Cert, "x509cert", SASL_CERT,
-    text: (
-        /// The BER X.509 data.
-        data: Base64
-    )
-);
+/// An X.509 certificate.
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::SASL_CERT, name = "x509cert")]
+pub struct Cert {
+    /// The BER X.509 data.
+    #[xml(text = Base64)]
+    pub data: Vec<u8>,
+}
 
 generate_element!(
     /// For the client to upload an X.509 certificate.

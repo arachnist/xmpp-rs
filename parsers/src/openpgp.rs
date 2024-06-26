@@ -4,22 +4,21 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use xso::{FromXml, IntoXml};
+use xso::{text::Base64, FromXml, IntoXml};
 
 use crate::date::DateTime;
 use crate::ns;
 use crate::pubsub::PubSubPayload;
-use crate::util::text_node_codecs::{Base64, Codec};
 
+/// Data contained in the PubKey element
 // TODO: Merge this container with the PubKey struct
-generate_element!(
-    /// Data contained in the PubKey element
-    PubKeyData, "data", OX,
-    text: (
-        /// Base64 data
-        data: Base64
-    )
-);
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::OX, name = "data")]
+pub struct PubKeyData {
+    /// Base64 data
+    #[xml(text = Base64)]
+    pub data: Vec<u8>,
+}
 
 generate_element!(
     /// Pubkey element to be used in PubSub publish payloads.

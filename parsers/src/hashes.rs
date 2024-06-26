@@ -4,15 +4,15 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use xso::{FromXmlText, IntoXmlText};
+use xso::{error::Error, text::Base64, FromXml, FromXmlText, IntoXml, IntoXmlText};
 
-use crate::util::text_node_codecs::{Base64, Codec};
 use base64::{engine::general_purpose::STANDARD as Base64Engine, Engine};
 use minidom::IntoAttributeValue;
 use std::num::ParseIntError;
 use std::ops::{Deref, DerefMut};
 use std::str::FromStr;
-use xso::error::Error;
+
+use crate::ns;
 
 /// List of the algorithms we support, or Unknown.
 #[allow(non_camel_case_types)]
@@ -91,25 +91,46 @@ impl From<Algo> for String {
     }
 }
 
+impl FromXmlText for Algo {
+    fn from_xml_text(value: String) -> Result<Self, Error> {
+        value.parse().map_err(Error::text_parse_error)
+    }
+}
+
+impl IntoXmlText for Algo {
+    fn into_xml_text(self) -> Result<String, Error> {
+        Ok(String::from(match self {
+            Algo::Sha_1 => "sha-1",
+            Algo::Sha_256 => "sha-256",
+            Algo::Sha_512 => "sha-512",
+            Algo::Sha3_256 => "sha3-256",
+            Algo::Sha3_512 => "sha3-512",
+            Algo::Blake2b_256 => "blake2b-256",
+            Algo::Blake2b_512 => "blake2b-512",
+            Algo::Unknown(text) => return Ok(text),
+        }))
+    }
+}
+
 impl IntoAttributeValue for Algo {
     fn into_attribute_value(self) -> Option<String> {
         Some(String::from(self))
     }
 }
 
-generate_element!(
-    /// This element represents a hash of some data, defined by the hash
-    /// algorithm used and the computed value.
-    Hash, "hash", HASHES,
-    attributes: [
-        /// The algorithm used to create this hash.
-        algo: Required<Algo> = "algo"
-    ],
-    text: (
-        /// The hash value, as a vector of bytes.
-        hash: Base64
-    )
-);
+/// This element represents a hash of some data, defined by the hash
+/// algorithm used and the computed value.
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::HASHES, name = "hash")]
+pub struct Hash {
+    /// The algorithm used to create this hash.
+    #[xml(attribute)]
+    pub algo: Algo,
+
+    /// The hash value, as a vector of bytes.
+    #[xml(text = Base64)]
+    pub hash: Vec<u8>,
+}
 
 impl Hash {
     /// Creates a [struct@Hash] element with the given algo and data.
@@ -281,7 +302,7 @@ mod tests {
 
     #[test]
     fn test_invalid_child() {
-        let elem: Element = "<hash xmlns='urn:xmpp:hashes:2'><coucou/></hash>"
+        let elem: Element = "<hash xmlns='urn:xmpp:hashes:2' algo='sha-1'><coucou/></hash>"
             .parse()
             .unwrap();
         let error = Hash::try_from(elem).unwrap_err();
@@ -289,6 +310,6 @@ mod tests {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Unknown child in hash element.");
+        assert_eq!(message, "Unknown child in Hash element.");
     }
 }

@@ -4,11 +4,10 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use xso::{FromXml, IntoXml};
+use xso::{text::Base64, FromXml, IntoXml};
 
 use crate::iq::IqSetPayload;
 use crate::ns;
-use crate::util::text_node_codecs::{Base64, Codec};
 
 generate_id!(
     /// An identifier matching a stream.
@@ -44,21 +43,22 @@ attributes: [
 
 impl IqSetPayload for Open {}
 
-generate_element!(
 /// Exchange a chunk of data in an open stream.
-Data, "data", IBB,
-    attributes: [
-        /// Sequence number of this chunk, must wraparound after 65535.
-        seq: Required<u16> = "seq",
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::IBB, name = "data")]
+pub struct Data {
+    /// Sequence number of this chunk, must wraparound after 65535.
+    #[xml(attribute)]
+    pub seq: u16,
 
-        /// The identifier of the stream on which data is being exchanged.
-        sid: Required<StreamId> = "sid"
-    ],
-    text: (
-        /// Vector of bytes to be exchanged.
-        data: Base64
-    )
-);
+    /// The identifier of the stream on which data is being exchanged.
+    #[xml(attribute)]
+    pub sid: StreamId,
+
+    /// Vector of bytes to be exchanged.
+    #[xml(text = Base64)]
+    pub data: Vec<u8>,
+}
 
 impl IqSetPayload for Data {}
 
