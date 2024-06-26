@@ -22,6 +22,7 @@ use of this library in parsing XML streams like specified in RFC 6120.
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 pub mod error;
 #[cfg(feature = "minidom")]
+#[cfg_attr(docsrs, doc(cfg(feature = "minidom")))]
 pub mod minidom_compat;
 mod text;
 
@@ -289,6 +290,7 @@ pub fn transform<T: FromXml, F: IntoXml>(from: F) -> Result<T, self::error::Erro
 /// function will return the element unharmed if its element header does not
 /// match the expectations of `T`.
 #[cfg(feature = "minidom")]
+#[cfg_attr(docsrs, doc(cfg(feature = "minidom")))]
 pub fn try_from_element<T: FromXml>(
     from: minidom::Element,
 ) -> Result<T, self::error::FromElementError> {
