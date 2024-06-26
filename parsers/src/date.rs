@@ -4,9 +4,12 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use std::str::FromStr;
+
+use xso::{error::Error, FromXmlText, IntoXmlText};
+
 use chrono::{DateTime as ChronoDateTime, FixedOffset};
 use minidom::{IntoAttributeValue, Node};
-use std::str::FromStr;
 
 /// Implements the DateTime profile of XEP-0082, which represents a
 /// non-recurring moment in time, with an accuracy of seconds or fraction of
@@ -36,6 +39,18 @@ impl FromStr for DateTime {
 
     fn from_str(s: &str) -> Result<DateTime, Self::Err> {
         Ok(DateTime(ChronoDateTime::parse_from_rfc3339(s)?))
+    }
+}
+
+impl FromXmlText for DateTime {
+    fn from_xml_text(s: String) -> Result<Self, Error> {
+        s.parse().map_err(Error::text_parse_error)
+    }
+}
+
+impl IntoXmlText for DateTime {
+    fn into_xml_text(self) -> Result<String, Error> {
+        Ok(self.0.to_rfc3339())
     }
 }
 

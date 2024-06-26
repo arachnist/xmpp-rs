@@ -82,11 +82,21 @@ macro_rules! generate_attribute {
                 })
             }
         }
+        impl ::xso::FromXmlText for $elem {
+            fn from_xml_text(s: String) -> Result<$elem, xso::error::Error> {
+                s.parse().map_err(xso::error::Error::text_parse_error)
+            }
+        }
         impl std::fmt::Display for $elem {
             fn fmt(&self, fmt: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
                 write!(fmt, "{}", match self {
                     $($elem::$a => $b),+
                 })
+            }
+        }
+        impl ::xso::IntoXmlText for $elem {
+            fn into_xml_text(self) -> Result<String, xso::error::Error> {
+                Ok(self.to_string())
             }
         }
         impl ::minidom::IntoAttributeValue for $elem {
@@ -375,6 +385,16 @@ macro_rules! generate_id {
             fn from_str(s: &str) -> Result<$elem, xso::error::Error> {
                 // TODO: add a way to parse that differently when needed.
                 Ok($elem(String::from(s)))
+            }
+        }
+        impl ::xso::FromXmlText for $elem {
+            fn from_xml_text(s: String) -> Result<$elem, xso::error::Error> {
+                Ok(Self(s))
+            }
+        }
+        impl ::xso::IntoXmlText for $elem {
+            fn into_xml_text(self) ->Result<String, xso::error::Error> {
+                Ok(self.0)
             }
         }
         impl ::minidom::IntoAttributeValue for $elem {
