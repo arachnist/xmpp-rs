@@ -4,18 +4,21 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use xso::{FromXml, IntoXml};
+
 use crate::message::MessagePayload;
+use crate::ns;
 use crate::pubsub::PubSubPayload;
 use crate::util::text_node_codecs::{Base64, Codec};
 
-generate_element!(
-    /// Element of the device list
-    Device, "device", LEGACY_OMEMO,
-    attributes: [
-        /// Device id
-        id: Required<u32> = "id"
-    ]
-);
+/// Element of the device list
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::LEGACY_OMEMO, name = "device")]
+pub struct Device {
+    /// Device id
+    #[xml(attribute)]
+    pub id: u32,
+}
 
 generate_element!(
     /// A user's device list contains the OMEMO device ids of all the user's

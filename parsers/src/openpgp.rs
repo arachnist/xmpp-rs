@@ -4,7 +4,10 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use xso::{FromXml, IntoXml};
+
 use crate::date::DateTime;
+use crate::ns;
 use crate::pubsub::PubSubPayload;
 use crate::util::text_node_codecs::{Base64, Codec};
 
@@ -33,16 +36,18 @@ generate_element!(
 
 impl PubSubPayload for PubKey {}
 
-generate_element!(
-    /// Public key metadata
-    PubKeyMeta, "pubkey-metadata", OX,
-    attributes: [
-        /// OpenPGP v4 fingerprint
-        v4fingerprint: Required<String> = "v4-fingerprint",
-        /// Time the key was published or updated
-        date: Required<DateTime> = "date",
-    ]
-);
+/// Public key metadata
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::OX, name = "pubkey-metadata")]
+pub struct PubKeyMeta {
+    /// OpenPGP v4 fingerprint
+    #[xml(attribute = "v4-fingerprint")]
+    pub v4fingerprint: String,
+
+    /// Time the key was published or updated
+    #[xml(attribute = "date")]
+    pub date: DateTime,
+}
 
 generate_element!(
     /// List of public key metadata

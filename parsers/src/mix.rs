@@ -58,14 +58,14 @@ impl Participant {
     }
 }
 
-generate_element!(
-    /// A node to subscribe to.
-    Subscribe, "subscribe", MIX_CORE,
-    attributes: [
-        /// The PubSub node to subscribe to.
-        node: Required<NodeName> = "node",
-    ]
-);
+/// A node to subscribe to.
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::MIX_CORE, name = "subscribe")]
+pub struct Subscribe {
+    /// The PubSub node to subscribe to.
+    #[xml(attribute)]
+    pub node: NodeName,
+}
 
 impl Subscribe {
     /// Create a new Subscribe element.
@@ -230,14 +230,14 @@ impl Create {
     }
 }
 
-generate_element!(
-    /// Destroy a given MIX channel.
-    Destroy, "destroy", MIX_CORE,
-    attributes: [
-        /// The channel identifier to be destroyed.
-        channel: Required<ChannelId> = "channel",
-    ]
-);
+/// Destroy a given MIX channel.
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::MIX_CORE, name = "destroy")]
+pub struct Destroy {
+    /// The channel identifier to be destroyed.
+    #[xml(attribute)]
+    pub channel: ChannelId,
+}
 
 // TODO: section 7.3.4, example 33, doesn’t mirror the <destroy/> in the iq result unlike every
 // other section so far.

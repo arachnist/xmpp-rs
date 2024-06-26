@@ -4,6 +4,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use xso::{FromXml, IntoXml};
+
 use crate::ns;
 use crate::util::text_node_codecs::{Codec, OptionalCodec, Text};
 use crate::Element;
@@ -110,16 +112,15 @@ impl TryFrom<Action> for Erase {
     }
 }
 
-generate_element!(
-    /// Allow for the transmission of intervals, between real-time text actions, to recreate the
-    /// pauses between key presses.
-    Wait, "w", RTT,
-
-    attributes: [
-        /// Amount of milliseconds to wait before the next action.
-        time: Required<u32> = "n",
-    ]
-);
+/// Allow for the transmission of intervals, between real-time text actions, to recreate the
+/// pauses between key presses.
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::RTT, name = "w")]
+pub struct Wait {
+    /// Amount of milliseconds to wait before the next action.
+    #[xml(attribute = "n")]
+    pub time: u32,
+}
 
 impl TryFrom<Action> for Wait {
     type Error = Error;

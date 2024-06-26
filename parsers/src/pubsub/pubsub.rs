@@ -12,7 +12,10 @@ use crate::pubsub::{
 };
 use crate::Element;
 use jid::Jid;
-use xso::error::{Error, FromElementError};
+use xso::{
+    error::{Error, FromElementError},
+    FromXml, IntoXml,
+};
 
 // TODO: a better solution would be to split this into a query and a result elements, like for
 // XEP-0030.
@@ -29,17 +32,18 @@ generate_element!(
     ]
 );
 
-generate_element!(
-    /// An affiliation element.
-    Affiliation, "affiliation", PUBSUB,
-    attributes: [
-        /// The node this affiliation pertains to.
-        node: Required<NodeName> = "node",
+/// An affiliation element.
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::PUBSUB, name = "affiliation")]
+pub struct Affiliation {
+    /// The node this affiliation pertains to.
+    #[xml(attribute)]
+    pub node: NodeName,
 
-        /// The affiliation you currently have on this node.
-        affiliation: Required<AffiliationAttribute> = "affiliation",
-    ]
-);
+    /// The affiliation you currently have on this node.
+    #[xml(attribute)]
+    pub affiliation: AffiliationAttribute,
+}
 
 generate_element!(
     /// Request to configure a new node.

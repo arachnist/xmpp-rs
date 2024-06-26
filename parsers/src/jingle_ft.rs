@@ -11,7 +11,10 @@ use crate::ns;
 use minidom::{Element, Node};
 use std::collections::BTreeMap;
 use std::str::FromStr;
-use xso::error::{Error, FromElementError};
+use xso::{
+    error::{Error, FromElementError},
+    FromXml, IntoXml,
+};
 
 generate_element!(
     /// Represents a range in a file.
@@ -319,17 +322,18 @@ impl From<Checksum> for Element {
     }
 }
 
-generate_element!(
-    /// A notice that the file transfer has been completed.
-    Received, "received", JINGLE_FT,
-    attributes: [
-        /// The content identifier of this Jingle session.
-        name: Required<ContentId> = "name",
+/// A notice that the file transfer has been completed.
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::JINGLE_FT, name = "received")]
+pub struct Received {
+    /// The content identifier of this Jingle session.
+    #[xml(attribute)]
+    pub name: ContentId,
 
-        /// The creator of this file transfer.
-        creator: Required<Creator> = "creator",
-    ]
-);
+    /// The creator of this file transfer.
+    #[xml(attribute)]
+    pub creator: Creator,
+}
 
 #[cfg(test)]
 mod tests {
@@ -479,7 +483,7 @@ mod tests {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Unknown child in received element.");
+        assert_eq!(message, "Unknown child in Received element.");
 
         let elem: Element =
             "<received xmlns='urn:xmpp:jingle:apps:file-transfer:5' creator='initiator'/>"
@@ -490,7 +494,10 @@ mod tests {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Required attribute 'name' missing.");
+        assert_eq!(
+            message,
+            "Required attribute field 'name' on Received element missing."
+        );
 
         let elem: Element = "<received xmlns='urn:xmpp:jingle:apps:file-transfer:5' name='coucou' creator='coucou'/>".parse().unwrap();
         let error = Received::try_from(elem).unwrap_err();
@@ -513,7 +520,7 @@ mod tests {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Unknown attribute in received element.");
+        assert_eq!(message, "Unknown attribute in Received element.");
     }
 
     #[test]

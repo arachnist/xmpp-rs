@@ -9,14 +9,14 @@ use xso::{FromXml, IntoXml};
 use crate::ns;
 use crate::stanza_error::DefinedCondition;
 
-generate_element!(
-    /// Acknowledgement of the currently received stanzas.
-    A, "a", SM,
-    attributes: [
-        /// The last handled stanza.
-        h: Required<u32> = "h",
-    ]
-);
+/// Acknowledgement of the currently received stanzas.
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::SM, name = "a")]
+pub struct A {
+    /// The last handled stanza.
+    #[xml(attribute)]
+    pub h: u32,
+}
 
 impl A {
     /// Generates a new `<a/>` element.

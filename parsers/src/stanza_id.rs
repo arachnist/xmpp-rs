@@ -10,18 +10,19 @@ use crate::message::MessagePayload;
 use crate::ns;
 use jid::Jid;
 
-generate_element!(
-    /// Gives the identifier a service has stamped on this stanza, often in
-    /// order to identify it inside of [an archive](../mam/index.html).
-    StanzaId, "stanza-id", SID,
-    attributes: [
-        /// The id associated to this stanza by another entity.
-        id: Required<String> = "id",
+/// Gives the identifier a service has stamped on this stanza, often in
+/// order to identify it inside of [an archive](../mam/index.html).
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::SID, name = "stanza-id")]
+pub struct StanzaId {
+    /// The id associated to this stanza by another entity.
+    #[xml(attribute)]
+    pub id: String,
 
-        /// The entity who stamped this stanza-id.
-        by: Required<Jid> = "by",
-    ]
-);
+    /// The entity who stamped this stanza-id.
+    #[xml(attribute)]
+    pub by: Jid,
+}
 
 impl MessagePayload for StanzaId {}
 
@@ -76,15 +77,16 @@ mod tests {
 
     #[test]
     fn test_invalid_child() {
-        let elem: Element = "<stanza-id xmlns='urn:xmpp:sid:0'><coucou/></stanza-id>"
-            .parse()
-            .unwrap();
+        let elem: Element =
+            "<stanza-id xmlns='urn:xmpp:sid:0' by='a@b' id='x'><coucou/></stanza-id>"
+                .parse()
+                .unwrap();
         let error = StanzaId::try_from(elem).unwrap_err();
         let message = match error {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Unknown child in stanza-id element.");
+        assert_eq!(message, "Unknown child in StanzaId element.");
     }
 
     #[test]
@@ -95,7 +97,10 @@ mod tests {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Required attribute 'id' missing.");
+        assert_eq!(
+            message,
+            "Required attribute field 'id' on StanzaId element missing."
+        );
     }
 
     #[test]
@@ -108,7 +113,10 @@ mod tests {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Required attribute 'by' missing.");
+        assert_eq!(
+            message,
+            "Required attribute field 'by' on StanzaId element missing."
+        );
     }
 
     #[test]

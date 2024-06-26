@@ -6,20 +6,30 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, you can obtain one at http://mozilla.org/MPL/2.0/.
 
-generate_element!(
-    /// A Jingle thumbnail.
-    Thumbnail, "thumbnail", JINGLE_THUMBNAILS,
-    attributes: [
-        /// The URI of the thumbnail.
-        uri: Required<String> = "uri",
-        /// The media type of the thumbnail.
-        media_type: Required<String> = "media-type",
-        /// The width of the thumbnail.
-        width: Required<u32> = "width",
-        /// The height of the thumbnail.
-        height: Required<u32> = "height",
-    ]
-);
+use xso::{FromXml, IntoXml};
+
+use crate::ns;
+
+/// A Jingle thumbnail.
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::JINGLE_THUMBNAILS, name = "thumbnail")]
+pub struct Thumbnail {
+    /// The URI of the thumbnail.
+    #[xml(attribute)]
+    pub uri: String,
+
+    /// The media type of the thumbnail.
+    #[xml(attribute = "media-type")]
+    pub media_type: String,
+
+    /// The width of the thumbnail.
+    #[xml(attribute)]
+    pub width: u32,
+
+    /// The height of the thumbnail.
+    #[xml(attribute)]
+    pub height: u32,
+}
 
 #[cfg(test)]
 mod tests {

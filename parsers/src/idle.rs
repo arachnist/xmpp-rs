@@ -4,17 +4,20 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use xso::{FromXml, IntoXml};
+
 use crate::date::DateTime;
+use crate::ns;
 use crate::presence::PresencePayload;
 
-generate_element!(
-    /// Represents the last time the user interacted with their system.
-    Idle, "idle", IDLE,
-    attributes: [
-        /// The time at which the user stopped interacting.
-        since: Required<DateTime> = "since",
-    ]
-);
+/// Represents the last time the user interacted with their system.
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::IDLE, name = "idle")]
+pub struct Idle {
+    /// The time at which the user stopped interacting.
+    #[xml(attribute)]
+    pub since: DateTime,
+}
 
 impl PresencePayload for Idle {}
 
@@ -40,15 +43,16 @@ mod tests {
 
     #[test]
     fn test_invalid_child() {
-        let elem: Element = "<idle xmlns='urn:xmpp:idle:1'><coucou/></idle>"
-            .parse()
-            .unwrap();
+        let elem: Element =
+            "<idle xmlns='urn:xmpp:idle:1' since='2017-05-21T20:19:55+01:00'><coucou/></idle>"
+                .parse()
+                .unwrap();
         let error = Idle::try_from(elem).unwrap_err();
         let message = match error {
             FromElementError::Invalid(Error::Other(string)) => string,
-            _ => panic!(),
+            other => panic!("unexpected result: {:?}", other),
         };
-        assert_eq!(message, "Unknown child in idle element.");
+        assert_eq!(message, "Unknown child in Idle element.");
     }
 
     #[test]
@@ -59,7 +63,10 @@ mod tests {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Required attribute 'since' missing.");
+        assert_eq!(
+            message,
+            "Required attribute field 'since' on Idle element missing."
+        );
     }
 
     #[test]

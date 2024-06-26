@@ -28,17 +28,18 @@ generate_element!(
     ]
 );
 
-generate_element!(
-    /// An affiliation element.
-    Affiliation, "affiliation", PUBSUB_OWNER,
-    attributes: [
-        /// The node this affiliation pertains to.
-        jid: Required<Jid> = "jid",
+/// An affiliation element.
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::PUBSUB_OWNER, name = "affiliation")]
+pub struct Affiliation {
+    /// The node this affiliation pertains to.
+    #[xml(attribute)]
+    jid: Jid,
 
-        /// The affiliation you currently have on this node.
-        affiliation: Required<AffiliationAttribute> = "affiliation",
-    ]
-);
+    /// The affiliation you currently have on this node.
+    #[xml(attribute)]
+    affiliation: AffiliationAttribute,
+}
 
 generate_element!(
     /// Request to configure a node.
@@ -84,14 +85,14 @@ pub struct Redirect {
     pub uri: String,
 }
 
-generate_element!(
-    /// Request to delete a node.
-    Purge, "purge", PUBSUB_OWNER,
-    attributes: [
-        /// The node to be configured.
-        node: Required<NodeName> = "node",
-    ]
-);
+/// Request to clear a node.
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::PUBSUB_OWNER, name = "purge")]
+pub struct Purge {
+    /// The node to be cleared.
+    #[xml(attribute)]
+    pub node: NodeName,
+}
 
 generate_element!(
     /// A request for current subscriptions.
