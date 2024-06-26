@@ -108,6 +108,39 @@ impl quote::ToTokens for NameRef {
     }
 }
 
+/// Represents a boolean flag from a `#[xml(..)]` attribute meta.
+#[derive(Clone, Copy, Debug)]
+pub(crate) enum Flag {
+    /// The flag is not set.
+    Absent,
+
+    /// The flag was set.
+    Present(
+        /// The span of the syntax element which enabled the flag.
+        ///
+        /// This is used to generate useful error messages by pointing at the
+        /// specific place the flag was activated.
+        #[allow(dead_code)]
+        Span,
+    ),
+}
+
+impl Flag {
+    /// Return true if the flag is set, false otherwise.
+    pub(crate) fn is_set(&self) -> bool {
+        match self {
+            Self::Absent => false,
+            Self::Present(_) => true,
+        }
+    }
+}
+
+impl<T: Spanned> From<T> for Flag {
+    fn from(other: T) -> Flag {
+        Flag::Present(other.span())
+    }
+}
+
 /// Contents of an `#[xml(..)]` attribute on a struct, enum variant, or enum.
 #[derive(Debug)]
 pub(crate) struct XmlCompoundMeta {
@@ -261,6 +294,9 @@ pub(crate) enum XmlFieldMeta {
 
         /// The XML name supplied.
         name: Option<NameRef>,
+
+        /// The `default` flag.
+        default_: Flag,
     },
 }
 
@@ -279,11 +315,13 @@ impl XmlFieldMeta {
                 span: meta.path.span(),
                 name: Some(name),
                 namespace,
+                default_: Flag::Absent,
             })
         } else if meta.input.peek(syn::token::Paren) {
             // full syntax
             let mut name: Option<NameRef> = None;
             let mut namespace: Option<NamespaceRef> = None;
+            let mut default_ = Flag::Absent;
             meta.parse_nested_meta(|meta| {
                 if meta.path.is_ident("name") {
                     if name.is_some() {
@@ -312,6 +350,12 @@ impl XmlFieldMeta {
                     }
                     namespace = Some(meta.value()?.parse()?);
                     Ok(())
+                } else if meta.path.is_ident("default") {
+                    if default_.is_set() {
+                        return Err(Error::new_spanned(meta.path, "duplicate `default` key"));
+                    }
+                    default_ = (&meta.path).into();
+                    Ok(())
                 } else {
                     Err(Error::new_spanned(meta.path, "unsupported key"))
                 }
@@ -320,6 +364,7 @@ impl XmlFieldMeta {
                 span: meta.path.span(),
                 name,
                 namespace,
+                default_,
             })
         } else {
             // argument-less syntax
@@ -327,6 +372,7 @@ impl XmlFieldMeta {
                 span: meta.path.span(),
                 name: None,
                 namespace: None,
+                default_: Flag::Absent,
             })
         }
     }

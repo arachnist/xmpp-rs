@@ -13,9 +13,9 @@ use syn::{spanned::Spanned, *};
 use rxml_validation::NcName;
 
 use crate::error_message::{self, ParentRef};
-use crate::meta::{NameRef, NamespaceRef, XmlFieldMeta};
+use crate::meta::{Flag, NameRef, NamespaceRef, XmlFieldMeta};
 use crate::scope::{FromEventsScope, IntoEventsScope};
-use crate::types::{from_xml_text_fn, into_optional_xml_text_fn};
+use crate::types::{default_fn, from_xml_text_fn, into_optional_xml_text_fn};
 
 /// Code slices necessary for declaring and initializing a temporary variable
 /// for parsing purposes.
@@ -67,6 +67,10 @@ enum FieldKind {
 
         /// The XML name of the attribute.
         xml_name: NameRef,
+
+        // Flag indicating whether the value should be defaulted if the
+        // attribute is absent.
+        default_: Flag,
     },
 }
 
@@ -81,6 +85,7 @@ impl FieldKind {
                 span,
                 namespace,
                 name,
+                default_,
             } => {
                 let xml_name = match name {
                     Some(v) => v,
@@ -107,6 +112,7 @@ impl FieldKind {
                 Ok(Self::Attribute {
                     xml_name,
                     xml_namespace: namespace,
+                    default_,
                 })
             }
         }
@@ -181,6 +187,7 @@ impl FieldDef {
             FieldKind::Attribute {
                 ref xml_name,
                 ref xml_namespace,
+                ref default_,
             } => {
                 let FromEventsScope { ref attrs, .. } = scope;
                 let ty = self.ty.clone();
@@ -196,12 +203,24 @@ impl FieldDef {
 
                 let from_xml_text = from_xml_text_fn(ty.clone());
 
+                let on_absent = match default_ {
+                    Flag::Absent => quote! {
+                        return ::core::result::Result::Err(::xso::error::Error::Other(#missing_msg).into())
+                    },
+                    Flag::Present(_) => {
+                        let default_ = default_fn(ty.clone());
+                        quote! {
+                            #default_()
+                        }
+                    }
+                };
+
                 return Ok(FieldBuilderPart::Init {
                     value: FieldTempInit {
                         init: quote! {
                             match #attrs.remove(#xml_namespace, #xml_name).map(#from_xml_text).transpose()? {
                                 ::core::option::Option::Some(v) => v,
-                                ::core::option::Option::None => return ::core::result::Result::Err(::xso::error::Error::Other(#missing_msg).into()),
+                                ::core::option::Option::None => #on_absent,
                             }
                         },
                         ty: self.ty.clone(),
@@ -224,6 +243,7 @@ impl FieldDef {
             FieldKind::Attribute {
                 ref xml_name,
                 ref xml_namespace,
+                ..
             } => {
                 let IntoEventsScope { ref attrs, .. } = scope;
 
@@ -237,6 +257,9 @@ impl FieldDef {
                 let into_optional_xml_text = into_optional_xml_text_fn(self.ty.clone());
 
                 return Ok(FieldIteratorPart::Header {
+                    // This is a neat little trick:
+                    // Option::from(x) converts x to an Option<T> *unless* it
+                    // already is an Option<_>.
                     setter: quote! {
                         #into_optional_xml_text(#bound_name)?.and_then(|#bound_name| #attrs.insert(
                             #xml_namespace,

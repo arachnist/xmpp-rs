@@ -28,6 +28,15 @@ syntax construct *meta*.
 All key-value pairs interpreted by these derive macros must be wrapped in a
 `#[xml( ... )]` *meta*.
 
+The values associated with the keys may be of different types, defined as
+such:
+
+- *path*: A Rust path, like `some_crate::foo::Bar`. Note that `foo` on its own
+  is also a path.
+- *string literal*: A string literal, like `"hello world!"`.
+- flag: Has no value. The key's mere presence has relevance and it must not be
+  followed by a `=` sign.
+
 ### Struct meta
 
 The following keys are defined on structs:
@@ -72,6 +81,7 @@ The following keys can be used inside the `#[xml(attribute(..))]` meta:
 | --- | --- | --- |
 | `namespace` | *string literal* or *path* | The optional namespace of the XML attribute to match. If it is a *path*, it must point at a `&'static str`. Note that attributes, unlike elements, are unnamespaced by default. |
 | `name` | *string literal* or *path* | The name of the XML attribute to match. If it is a *path*, it must point at a `&'static NcNameStr`. |
+| `default` | flag | If present, an absent attribute will substitute the default value instead of raising an error. |
 
 If the `name` key contains a namespace prefix, it must be one of the prefixes
 defined as built-in in the XML specifications. That prefix will then be
@@ -83,6 +93,11 @@ The `attribute` meta also supports a shorthand syntax,
 `#[xml(attribute = ..)]`, where the value is treated as the value for the
 `name` key (with optional prefix as described above, and unnamespaced
 otherwise).
+
+If `default` is specified and the attribute is absent in the source, the value
+is generated using [`std::default::Default`], requiring the field type to
+implement the `Default` trait for a `FromXml` derivation. `default` has no
+influence on `IntoXml`.
 
 ##### Example
 

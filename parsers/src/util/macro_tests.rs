@@ -330,3 +330,53 @@ fn required_non_string_attribute_roundtrip() {
     };
     roundtrip_full::<RequiredNonStringAttribute>("<attr xmlns='urn:example:ns1' foo='-16'/>");
 }
+
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = NS1, name = "attr")]
+struct DefaultAttribute {
+    #[xml(attribute(default))]
+    foo: std::option::Option<String>,
+
+    #[xml(attribute(default))]
+    bar: std::option::Option<u16>,
+}
+
+#[test]
+fn default_attribute_roundtrip_aa() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<DefaultAttribute>("<attr xmlns='urn:example:ns1'/>");
+}
+
+#[test]
+fn default_attribute_roundtrip_pa() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<DefaultAttribute>("<attr xmlns='urn:example:ns1' foo='xyz'/>");
+}
+
+#[test]
+fn default_attribute_roundtrip_ap() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<DefaultAttribute>("<attr xmlns='urn:example:ns1' bar='16'/>");
+}
+
+#[test]
+fn default_attribute_roundtrip_pp() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<DefaultAttribute>("<attr xmlns='urn:example:ns1' foo='xyz' bar='16'/>");
+}

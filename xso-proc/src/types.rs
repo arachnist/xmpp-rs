@@ -114,3 +114,44 @@ pub(crate) fn into_optional_xml_text_fn(ty: Type) -> Expr {
         },
     })
 }
+
+/// Construct a [`syn::Expr`] referring to
+/// `<#of_ty as ::std::default::Default>::default`.
+pub(crate) fn default_fn(of_ty: Type) -> Expr {
+    let span = of_ty.span();
+    Expr::Path(ExprPath {
+        attrs: Vec::new(),
+        qself: Some(QSelf {
+            lt_token: syn::token::Lt { spans: [span] },
+            ty: Box::new(of_ty),
+            position: 3,
+            as_token: Some(syn::token::As { span }),
+            gt_token: syn::token::Gt { spans: [span] },
+        }),
+        path: Path {
+            leading_colon: Some(syn::token::PathSep {
+                spans: [span, span],
+            }),
+            segments: [
+                PathSegment {
+                    ident: Ident::new("std", span),
+                    arguments: PathArguments::None,
+                },
+                PathSegment {
+                    ident: Ident::new("default", span),
+                    arguments: PathArguments::None,
+                },
+                PathSegment {
+                    ident: Ident::new("Default", span),
+                    arguments: PathArguments::None,
+                },
+                PathSegment {
+                    ident: Ident::new("default", span),
+                    arguments: PathArguments::None,
+                },
+            ]
+            .into_iter()
+            .collect(),
+        },
+    })
+}
