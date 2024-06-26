@@ -54,14 +54,14 @@ generate_element!(
     ]
 );
 
-generate_element!(
-    /// Request to create a new node.
-    Create, "create", PUBSUB,
-    attributes: [
-        /// The node name to create, if `None` the service will generate one.
-        node: Option<NodeName> = "node",
-    ]
-);
+/// Request to create a new node.
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::PUBSUB, name = "create")]
+pub struct Create {
+    /// The node name to create, if `None` the service will generate one.
+    #[xml(attribute(default))]
+    pub node: Option<NodeName>,
+}
 
 generate_element!(
     /// Request for a default node configuration.

@@ -5,27 +5,32 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use xso::{FromXml, IntoXml};
+
 use crate::date::DateTime;
+use crate::ns;
 use crate::presence::PresencePayload;
 
-generate_element!(
-    /// Represents the query for messages before our join.
-    #[derive(Default)]
-    History, "history", MUC,
-    attributes: [
-        /// How many characters of history to send, in XML characters.
-        maxchars: Option<u32> = "maxchars",
+/// Represents the query for messages before our join.
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone, Default)]
+#[xml(namespace = ns::MUC, name = "history")]
+pub struct History {
+    /// How many characters of history to send, in XML characters.
+    #[xml(attribute(default))]
+    pub maxchars: Option<u32>,
 
-        /// How many messages to send.
-        maxstanzas: Option<u32> = "maxstanzas",
+    /// How many messages to send.
+    #[xml(attribute(default))]
+    pub maxstanzas: Option<u32>,
 
-        /// Only send messages received in these last seconds.
-        seconds: Option<u32> = "seconds",
+    /// Only send messages received in these last seconds.
+    #[xml(attribute(default))]
+    pub seconds: Option<u32>,
 
-        /// Only send messages after this date.
-        since: Option<DateTime> = "since",
-    ]
-);
+    /// Only send messages after this date.
+    #[xml(attribute(default))]
+    pub since: Option<DateTime>,
+}
 
 impl History {
     /// Create a new empty history element.

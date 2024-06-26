@@ -4,9 +4,12 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use xso::{FromXml, IntoXml};
+
 use crate::data_forms::DataForm;
 use crate::date::DateTime;
 use crate::iq::{IqGetPayload, IqResultPayload, IqSetPayload};
+use crate::ns;
 
 generate_attribute!(
     /// When sending a push update, the action value indicates if the service is being added or
@@ -97,14 +100,14 @@ generate_element!(
 
 impl IqGetPayload for Service {}
 
-generate_element!(
-    /// Structure representing a `<services xmlns='urn:xmpp:extdisco:2'/>` element.
-    ServicesQuery, "services", EXT_DISCO,
-    attributes: [
-        /// TODO
-        type_: Option<Type> = "type",
-    ]
-);
+/// Structure representing a `<services xmlns='urn:xmpp:extdisco:2'/>` element.
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::EXT_DISCO, name = "services")]
+pub struct ServicesQuery {
+    /// TODO
+    #[xml(attribute(default, name = "type"))]
+    pub type_: Option<Type>,
+}
 
 impl IqGetPayload for ServicesQuery {}
 

@@ -5,11 +5,15 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use xso::{
+    error::{Error, FromElementError},
+    FromXml, IntoXml,
+};
+
 use crate::message::MessagePayload;
 use crate::ns;
 use crate::presence::PresencePayload;
 use crate::Element;
-use xso::error::{Error, FromElementError};
 
 use jid::FullJid;
 
@@ -125,15 +129,15 @@ impl From<Actor> for Element {
     }
 }
 
-generate_element!(
-    /// Used to continue a one-to-one discussion in a room, with more than one
-    /// participant.
-    Continue, "continue", MUC_USER,
-    attributes: [
-        /// The thread to continue in this room.
-        thread: Option<String> = "thread",
-    ]
-);
+/// Used to continue a one-to-one discussion in a room, with more than one
+/// participant.
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::MUC_USER, name = "continue")]
+pub struct Continue {
+    /// The thread to continue in this room.
+    #[xml(attribute(default))]
+    pub thread: Option<String>,
+}
 
 generate_elem_id!(
     /// A reason for inviting, declining, etc. a request.
@@ -527,17 +531,16 @@ mod tests {
 
     #[test]
     fn test_continue_invalid() {
-        let elem: Element = "<continue xmlns='http://jabber.org/protocol/muc#user'>
-                <foobar/>
-            </continue>"
-            .parse()
-            .unwrap();
+        let elem: Element =
+            "<continue xmlns='http://jabber.org/protocol/muc#user'><foobar/></continue>"
+                .parse()
+                .unwrap();
         let continue_ = Continue::try_from(elem).unwrap_err();
         let message = match continue_ {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Unknown child in continue element.".to_owned());
+        assert_eq!(message, "Unknown child in Continue element.".to_owned());
     }
 
     #[test]

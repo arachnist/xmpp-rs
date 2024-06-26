@@ -8,9 +8,9 @@ use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
 use minidom::{Element, IntoAttributeValue};
-use xso::error::FromElementError;
+use xso::{error::FromElementError, FromXml, IntoXml};
 
-use crate::ns::XDATA_VALIDATE;
+use crate::ns::{self, XDATA_VALIDATE};
 use crate::Error;
 
 /// Validation Method
@@ -66,16 +66,17 @@ pub enum Method {
     Regex(String),
 }
 
-generate_element!(
-    /// Selection Ranges in "list-multi"
-    ListRange, "list-range", XDATA_VALIDATE,
-    attributes: [
-        /// The 'min' attribute specifies the minimum allowable number of selected/entered values.
-        min: Option<u32> = "min",
-        /// The 'max' attribute specifies the maximum allowable number of selected/entered values.
-        max: Option<u32> = "max",
-    ]
-);
+/// Selection Ranges in "list-multi"
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::XDATA_VALIDATE, name = "list-range")]
+pub struct ListRange {
+    /// The 'min' attribute specifies the minimum allowable number of selected/entered values.
+    #[xml(attribute(default))]
+    pub min: Option<u32>,
+    /// The 'max' attribute specifies the maximum allowable number of selected/entered values.
+    #[xml(attribute(default))]
+    pub max: Option<u32>,
+}
 
 /// Enum representing errors that can occur while parsing a `Datatype`.
 #[derive(Debug, Clone, PartialEq)]

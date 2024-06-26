@@ -203,15 +203,14 @@ impl Mix {
     }
 }
 
-generate_element!(
-    /// Create a new MIX channel.
-    #[derive(Default)]
-    Create, "create", MIX_CORE,
-    attributes: [
-        /// The requested channel identifier.
-        channel: Option<ChannelId> = "channel",
-    ]
-);
+/// Create a new MIX channel.
+#[derive(FromXml, IntoXml, PartialEq, Clone, Debug, Default)]
+#[xml(namespace = ns::MIX_CORE, name = "create")]
+pub struct Create {
+    /// The requested channel identifier.
+    #[xml(attribute(default))]
+    pub channel: Option<ChannelId>,
+}
 
 impl IqSetPayload for Create {}
 impl IqResultPayload for Create {}
