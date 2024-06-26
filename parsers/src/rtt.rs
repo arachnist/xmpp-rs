@@ -4,10 +4,9 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use xso::{FromXml, IntoXml};
+use xso::{text::EmptyAsNone, FromXml, IntoXml};
 
 use crate::ns;
-use crate::util::text_node_codecs::{Codec, OptionalCodec, Text};
 use crate::Element;
 use xso::error::{Error, FromElementError};
 
@@ -31,19 +30,19 @@ generate_attribute!(
     }, Default = Edit
 );
 
-generate_element!(
-    /// Supports the transmission of text, including key presses, and text block inserts.
-    Insert, "t", RTT,
-    attributes: [
-        /// Position in the message to start inserting from.  If None, this means to start from the
-        /// end of the message.
-        pos: Option<u32> = "p",
-    ],
-    text: (
-        /// Text to insert.
-        text: OptionalCodec<Text>
-    )
-);
+/// Supports the transmission of text, including key presses, and text block inserts.
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::RTT, name = "t")]
+pub struct Insert {
+    /// Position in the message to start inserting from.  If None, this means to start from the
+    /// end of the message.
+    #[xml(attribute(default, name = "p"))]
+    pub pos: Option<u32>,
+
+    /// Text to insert.
+    #[xml(text = EmptyAsNone)]
+    pub text: Option<String>,
+}
 
 impl TryFrom<Action> for Insert {
     type Error = Error;

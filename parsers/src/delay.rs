@@ -4,27 +4,30 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use xso::{text::EmptyAsNone, FromXml, IntoXml};
+
 use crate::date::DateTime;
 use crate::message::MessagePayload;
+use crate::ns;
 use crate::presence::PresencePayload;
-use crate::util::text_node_codecs::{Codec, OptionalCodec, Text};
 use jid::Jid;
 
-generate_element!(
-    /// Notes when and by whom a message got stored for later delivery.
-    Delay, "delay", DELAY,
-    attributes: [
-        /// The entity which delayed this message.
-        from: Option<Jid> = "from",
+/// Notes when and by whom a message got stored for later delivery.
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::DELAY, name = "delay")]
+pub struct Delay {
+    /// The entity which delayed this message.
+    #[xml(attribute(default))]
+    pub from: Option<Jid>,
 
-        /// The time at which this message got stored.
-        stamp: Required<DateTime> = "stamp"
-    ],
-    text: (
-        /// The optional reason this message got delayed.
-        data: OptionalCodec<Text>
-    )
-);
+    /// The time at which this message got stored.
+    #[xml(attribute)]
+    pub stamp: DateTime,
+
+    /// The optional reason this message got delayed.
+    #[xml(text = EmptyAsNone)]
+    pub data: Option<String>,
+}
 
 impl MessagePayload for Delay {}
 impl PresencePayload for Delay {}
@@ -79,15 +82,16 @@ mod tests {
 
     #[test]
     fn test_invalid_child() {
-        let elem: Element = "<delay xmlns='urn:xmpp:delay'><coucou/></delay>"
-            .parse()
-            .unwrap();
+        let elem: Element =
+            "<delay xmlns='urn:xmpp:delay' stamp='2002-09-10T23:08:25+00:00'><coucou/></delay>"
+                .parse()
+                .unwrap();
         let error = Delay::try_from(elem).unwrap_err();
         let message = match error {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Unknown child in delay element.");
+        assert_eq!(message, "Unknown child in Delay element.");
     }
 
     #[test]
