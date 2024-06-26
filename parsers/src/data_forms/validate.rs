@@ -5,7 +5,9 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 //! XEP-0122: Data Forms Validation
-//! https://xmpp.org/extensions/xep-0122.html#usecases-datatypes
+//!
+//! See [XEP-0122](https://xmpp.org/extensions/xep-0122.html) for the
+//! specification.
 
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
@@ -20,25 +22,25 @@ use crate::Error;
 #[derive(Debug, Clone, PartialEq)]
 pub enum Method {
     /// … to indicate that the value(s) should simply match the field type and datatype constraints,
-    /// the <validate/> element shall contain a <basic/> child element. Using <basic/> validation,
+    /// the `<validate/>` element shall contain a `<basic/>` child element. Using `<basic/>` validation,
     /// the form interpreter MUST follow the validation rules of the datatype (if understood) and
     /// the field type.
     ///
-    /// https://xmpp.org/extensions/xep-0122.html#usercases-validation.basic
+    /// <https://xmpp.org/extensions/xep-0122.html#usercases-validation.basic>
     Basic,
 
     /// For "list-single" or "list-multi", to indicate that the user may enter a custom value
-    /// (matching the datatype constraints) or choose from the predefined values, the <validate/>
-    /// element shall contain an <open/> child element. The <open/> validation method applies to
+    /// (matching the datatype constraints) or choose from the predefined values, the `<validate/>`
+    /// element shall contain an `<open/>` child element. The `<open/>` validation method applies to
     /// "text-multi" differently; it hints that each value for a "text-multi" field shall be
     /// validated separately. This effectively turns "text-multi" fields into an open-ended
     /// "list-multi", with no options and all values automatically selected.
     ///
-    /// https://xmpp.org/extensions/xep-0122.html#usercases-validation.open
+    /// <https://xmpp.org/extensions/xep-0122.html#usercases-validation.open>
     Open,
 
-    /// To indicate that the value should fall within a certain range, the <validate/> element shall
-    /// contain a <range/> child element. The 'min' and 'max' attributes of the <range/> element
+    /// To indicate that the value should fall within a certain range, the `<validate/>` element shall
+    /// contain a `<range/>` child element. The 'min' and 'max' attributes of the `<range/>` element
     /// specify the minimum and maximum values allowed, respectively.
     ///
     /// The 'max' attribute specifies the maximum allowable value. This attribute is OPTIONAL.
@@ -47,11 +49,11 @@ pub enum Method {
     /// The 'min' attribute specifies the minimum allowable value. This attribute is OPTIONAL.
     /// The value depends on the datatype in use.
     ///
-    /// The <range/> element SHOULD possess either a 'min' or 'max' attribute, and MAY possess both.
+    /// The `<range/>` element SHOULD possess either a 'min' or 'max' attribute, and MAY possess both.
     /// If neither attribute is included, the processor MUST assume that there are no range
     /// constraints.
     ///
-    /// https://xmpp.org/extensions/xep-0122.html#usercases-validation.range
+    /// <https://xmpp.org/extensions/xep-0122.html#usercases-validation.range>
     Range {
         /// The 'min' attribute specifies the minimum allowable value.
         min: Option<String>,
@@ -59,13 +61,13 @@ pub enum Method {
         max: Option<String>,
     },
 
-    /// To indicate that the value should be restricted to a regular expression, the <validate/>
-    /// element shall contain a <regex/> child element. The XML character data of this element is
+    /// To indicate that the value should be restricted to a regular expression, the `<validate/>`
+    /// element shall contain a `<regex/>` child element. The XML character data of this element is
     /// the pattern to apply. The syntax of this content MUST be that defined for POSIX extended
-    /// regular expressions, including support for Unicode. The <regex/> element MUST contain
+    /// regular expressions, including support for Unicode. The `<regex/>` element MUST contain
     /// character data only.
     ///
-    /// https://xmpp.org/extensions/xep-0122.html#usercases-validatoin.regex
+    /// <https://xmpp.org/extensions/xep-0122.html#usercases-validatoin.regex>
     Regex(String),
 }
 
@@ -122,7 +124,7 @@ impl Display for DatatypeError {
 
 /// Data Forms Validation Datatypes
 ///
-/// https://xmpp.org/registrar/xdv-datatypes.html
+/// <https://xmpp.org/registrar/xdv-datatypes.html>
 #[derive(Debug, Clone, PartialEq)]
 pub enum Datatype {
     /// A Uniform Resource Identifier Reference (URI)
@@ -194,27 +196,27 @@ pub struct Validate {
     pub datatype: Option<Datatype>,
 
     /// The validation method. If no validation method is specified, form processors MUST
-    /// assume <basic/> validation. The <validate/> element SHOULD include one of the above
+    /// assume `<basic/>` validation. The `<validate/>` element SHOULD include one of the above
     /// validation method elements, and MUST NOT include more than one.
     ///
     /// Any validation method applied to a field of type "list-multi", "list-single", or "text-multi"
-    /// (other than <basic/>) MUST imply the same behavior as <open/>, with the additional constraints
+    /// (other than `<basic/>`) MUST imply the same behavior as `<open/>`, with the additional constraints
     /// defined by that method.
     ///
-    /// https://xmpp.org/extensions/xep-0122.html#usecases-validation
+    /// <https://xmpp.org/extensions/xep-0122.html#usecases-validation>
     pub method: Option<Method>,
 
-    /// For "list-multi", validation can indicate (via the <list-range/> element) that a minimum
+    /// For "list-multi", validation can indicate (via the `<list-range/>` element) that a minimum
     /// and maximum number of options should be selected and/or entered. This selection range
     /// MAY be combined with the other methods to provide more flexibility.
-    /// The <list-range/> element SHOULD be included only when the <field/> is of type "list-multi"
+    /// The `<list-range/>` element SHOULD be included only when the `<field/>` is of type "list-multi"
     /// and SHOULD be ignored otherwise.
     ///
-    /// The <list-range/> element SHOULD possess either a 'min' or 'max' attribute, and MAY possess
+    /// The `<list-range/>` element SHOULD possess either a 'min' or 'max' attribute, and MAY possess
     /// both. If neither attribute is included, the processor MUST assume that there are no
     /// selection constraints.
     ///
-    /// https://xmpp.org/extensions/xep-0122.html#usecases-ranges
+    /// <https://xmpp.org/extensions/xep-0122.html#usecases-ranges>
     pub list_range: Option<ListRange>,
 }
 
