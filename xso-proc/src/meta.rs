@@ -294,6 +294,7 @@ fn parse_prefixed_name(
 /// Contents of an `#[xml(..)]` attribute on a struct or enum variant member.
 #[derive(Debug)]
 pub(crate) enum XmlFieldMeta {
+    /// `#[xml(attribute)]`, `#[xml(attribute = ..)]` or `#[xml(attribute(..))]`
     Attribute {
         /// The span of the `#[xml(attribute)]` meta from which this was parsed.
         ///
@@ -309,6 +310,9 @@ pub(crate) enum XmlFieldMeta {
         /// The `default` flag.
         default_: Flag,
     },
+
+    /// `#[xml(text)]`
+    Text,
 }
 
 impl XmlFieldMeta {
@@ -388,11 +392,18 @@ impl XmlFieldMeta {
         }
     }
 
+    /// Parse a `#[xml(text)]` meta.
+    fn text_from_meta(_: ParseNestedMeta<'_>) -> Result<Self> {
+        Ok(Self::Text)
+    }
+
     /// Parse [`Self`] from a nestd meta, switching on the identifier
     /// of that nested meta.
     fn parse_from_meta(meta: ParseNestedMeta<'_>) -> Result<Self> {
         if meta.path.is_ident("attribute") {
             Self::attribute_from_meta(meta)
+        } else if meta.path.is_ident("text") {
+            Self::text_from_meta(meta)
         } else {
             Err(Error::new_spanned(meta.path, "unsupported field meta"))
         }

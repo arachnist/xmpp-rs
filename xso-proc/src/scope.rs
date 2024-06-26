@@ -29,6 +29,17 @@ pub(crate) struct FromEventsScope {
     /// Accesses the `AttrMap` from code in
     /// [`crate::field::FieldBuilderPart::Init`].
     pub(crate) attrs: Ident,
+
+    /// Accesses the `String` of a `rxml::Event::Text` event from code in
+    /// [`crate::field::FieldBuilderPart::Text`].
+    pub(crate) text: Ident,
+
+    /// Accesses the builder data during parsing.
+    ///
+    /// This should not be used directly outside [`crate::compound`]. Most of
+    /// the time, using [`Self::access_field`] is the correct way to access
+    /// the builder data.
+    pub(crate) builder_data_ident: Ident,
 }
 
 impl FromEventsScope {
@@ -38,7 +49,26 @@ impl FromEventsScope {
         // well-known identifiers from scratch all the time.
         Self {
             attrs: Ident::new("attrs", Span::call_site()),
+            text: Ident::new("__xso_proc_macro_text_data", Span::call_site()),
+            builder_data_ident: Ident::new("__xso_proc_macro_builder_data", Span::call_site()),
         }
+    }
+
+    /// Generate an expression which accesses the temporary value for the
+    /// given `member` during parsing.
+    pub(crate) fn access_field(&self, member: &Member) -> Expr {
+        Expr::Field(ExprField {
+            attrs: Vec::new(),
+            base: Box::new(Expr::Path(ExprPath {
+                attrs: Vec::new(),
+                qself: None,
+                path: self.builder_data_ident.clone().into(),
+            })),
+            dot_token: syn::token::Dot {
+                spans: [Span::call_site()],
+            },
+            member: Member::Named(mangle_member(member)),
+        })
     }
 }
 

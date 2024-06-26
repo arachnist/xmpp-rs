@@ -56,10 +56,14 @@ impl Compound {
         state_prefix: &str,
     ) -> Result<FromEventsSubmachine> {
         let scope = FromEventsScope::new();
-        let FromEventsScope { ref attrs, .. } = scope;
+        let FromEventsScope {
+            ref attrs,
+            ref builder_data_ident,
+            ref text,
+            ..
+        } = scope;
 
         let default_state_ident = quote::format_ident!("{}Default", state_prefix);
-        let builder_data_ident = quote::format_ident!("__data");
         let builder_data_ty: Type = TypePath {
             qself: None,
             path: quote::format_ident!("{}Data{}", state_ty_ident, state_prefix).into(),
@@ -70,6 +74,7 @@ impl Compound {
         let mut builder_data_def = TokenStream::default();
         let mut builder_data_init = TokenStream::default();
         let mut output_cons = TokenStream::default();
+        let mut text_handler = None;
 
         for field in self.fields.iter() {
             let member = field.member();
@@ -92,8 +97,44 @@ impl Compound {
                         #member: #builder_data_ident.#builder_field_name,
                     });
                 }
+
+                FieldBuilderPart::Text {
+                    value: FieldTempInit { ty, init },
+                    collect,
+                    finalize,
+                } => {
+                    if text_handler.is_some() {
+                        return Err(Error::new_spanned(
+                            field.member(),
+                            "more than one field attempts to collect text data",
+                        ));
+                    }
+
+                    builder_data_def.extend(quote! {
+                        #builder_field_name: #ty,
+                    });
+                    builder_data_init.extend(quote! {
+                        #builder_field_name: #init,
+                    });
+                    text_handler = Some(quote! {
+                        #collect
+                        ::core::result::Result::Ok(::std::ops::ControlFlow::Break(
+                            Self::#default_state_ident { #builder_data_ident }
+                        ))
+                    });
+                    output_cons.extend(quote! {
+                        #member: #finalize,
+                    });
+                }
             }
         }
+
+        let text_handler = match text_handler {
+            Some(v) => v,
+            None => quote! {
+                ::core::result::Result::Err(::xso::error::Error::Other("Unexpected text content".into()))
+            },
+        };
 
         let unknown_attr_err = format!("Unknown attribute in {}.", output_name);
         let unknown_child_err = format!("Unknown child in {}.", output_name);
@@ -121,8 +162,8 @@ impl Compound {
                 ::xso::exports::rxml::Event::StartElement(..) => {
                     ::core::result::Result::Err(::xso::error::Error::Other(#unknown_child_err))
                 }
-                ::xso::exports::rxml::Event::Text(..) => {
-                    ::core::result::Result::Err(::xso::error::Error::Other("Unexpected text content".into()))
+                ::xso::exports::rxml::Event::Text(_, #text) => {
+                    #text_handler
                 }
                 // we ignore these: a correct parser only generates
                 // them at document start, and there we want to indeed
@@ -186,10 +227,11 @@ impl Compound {
                 .with_field(&name_ident, &qname_ty(Span::call_site())),
         );
 
-        for field in self.fields.iter() {
+        for (i, field) in self.fields.iter().enumerate() {
             let member = field.member();
             let bound_name = mangle_member(member);
             let part = field.make_iterator_part(&scope, &bound_name)?;
+            let state_name = quote::format_ident!("{}Field{}", state_prefix, i);
 
             match part {
                 FieldIteratorPart::Header { setter } => {
@@ -201,6 +243,30 @@ impl Compound {
                         #bound_name,
                     });
                     states[0].add_field(&bound_name, field.ty());
+                }
+
+                FieldIteratorPart::Text { generator } => {
+                    // we have to make sure that we carry our data around in
+                    // all the previous states.
+                    for state in states.iter_mut() {
+                        state.add_field(&bound_name, field.ty());
+                    }
+                    states.push(
+                        State::new(state_name)
+                            .with_field(&bound_name, field.ty())
+                            .with_impl(quote! {
+                                ::core::option::Option::Some(::xso::exports::rxml::Event::Text(
+                                    ::xso::exports::rxml::parser::EventMetrics::zero(),
+                                    #generator,
+                                ))
+                            }),
+                    );
+                    destructure.extend(quote! {
+                        #member: #bound_name,
+                    });
+                    start_init.extend(quote! {
+                        #bound_name,
+                    });
                 }
             }
         }

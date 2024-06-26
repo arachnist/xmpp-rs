@@ -155,3 +155,68 @@ pub(crate) fn default_fn(of_ty: Type) -> Expr {
         },
     })
 }
+
+/// Construct a [`syn::Type`] referring to `::std::string::String`.
+pub(crate) fn string_ty(span: Span) -> Type {
+    Type::Path(TypePath {
+        qself: None,
+        path: Path {
+            leading_colon: Some(syn::token::PathSep {
+                spans: [span, span],
+            }),
+            segments: [
+                PathSegment {
+                    ident: Ident::new("std", span),
+                    arguments: PathArguments::None,
+                },
+                PathSegment {
+                    ident: Ident::new("string", span),
+                    arguments: PathArguments::None,
+                },
+                PathSegment {
+                    ident: Ident::new("String", span),
+                    arguments: PathArguments::None,
+                },
+            ]
+            .into_iter()
+            .collect(),
+        },
+    })
+}
+
+/// Construct a [`syn::Expr`] referring to
+/// `<#ty as ::xso::IntoXmlText>::into_xml_text`.
+pub(crate) fn into_xml_text_fn(ty: Type) -> Expr {
+    let span = ty.span();
+    Expr::Path(ExprPath {
+        attrs: Vec::new(),
+        qself: Some(QSelf {
+            lt_token: syn::token::Lt { spans: [span] },
+            ty: Box::new(ty),
+            position: 2,
+            as_token: Some(syn::token::As { span }),
+            gt_token: syn::token::Gt { spans: [span] },
+        }),
+        path: Path {
+            leading_colon: Some(syn::token::PathSep {
+                spans: [span, span],
+            }),
+            segments: [
+                PathSegment {
+                    ident: Ident::new("xso", span),
+                    arguments: PathArguments::None,
+                },
+                PathSegment {
+                    ident: Ident::new("IntoXmlText", span),
+                    arguments: PathArguments::None,
+                },
+                PathSegment {
+                    ident: Ident::new("into_xml_text", span),
+                    arguments: PathArguments::None,
+                },
+            ]
+            .into_iter()
+            .collect(),
+        },
+    })
+}

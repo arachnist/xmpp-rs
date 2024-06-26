@@ -68,6 +68,7 @@ The following mapping types are defined:
 | Type | Description |
 | --- | --- |
 | [`attribute`](#attribute-meta) | Map the field to an XML attribute on the struct's element |
+| [`text`](#text-meta) | Map the field to the text content of the struct's element |
 
 #### `attribute` meta
 
@@ -130,5 +131,30 @@ assert_eq!(foo, Foo {
     c: "3".to_string(),
     d: "4".to_string(),
     e: "5".to_string(),
+});
+```
+
+#### `text` meta
+
+The `text` meta causes the field to be mapped to the text content of the
+element. For `FromXml`, the field's type must implement [`FromXmlText`] and
+for `IntoXml`, the field's type must implement [`IntoXmlText`].
+
+The `text` meta supports no options or value.
+
+##### Example
+
+```rust
+# use xso::FromXml;
+#[derive(FromXml, Debug, PartialEq)]
+#[xml(namespace = "urn:example", name = "foo")]
+struct Foo {
+    #[xml(text)]
+    a: String,
+};
+
+let foo: Foo = xso::from_bytes(b"<foo xmlns='urn:example'>hello</foo>").unwrap();
+assert_eq!(foo, Foo {
+    a: "hello".to_string(),
 });
 ```

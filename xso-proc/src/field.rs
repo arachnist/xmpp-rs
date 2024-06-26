@@ -6,7 +6,7 @@
 
 //! Compound (struct or enum variant) field types
 
-use proc_macro2::TokenStream;
+use proc_macro2::{Span, TokenStream};
 use quote::{quote, ToTokens};
 use syn::{spanned::Spanned, *};
 
@@ -15,7 +15,9 @@ use rxml_validation::NcName;
 use crate::error_message::{self, ParentRef};
 use crate::meta::{Flag, NameRef, NamespaceRef, XmlFieldMeta};
 use crate::scope::{FromEventsScope, IntoEventsScope};
-use crate::types::{default_fn, from_xml_text_fn, into_optional_xml_text_fn};
+use crate::types::{
+    default_fn, from_xml_text_fn, into_optional_xml_text_fn, into_xml_text_fn, string_ty,
+};
 
 /// Code slices necessary for declaring and initializing a temporary variable
 /// for parsing purposes.
@@ -40,6 +42,21 @@ pub(crate) enum FieldBuilderPart {
         /// element's start event.
         value: FieldTempInit,
     },
+
+    /// Parse a field from text events.
+    Text {
+        /// Expression and type which initializes a buffer to use during
+        /// parsing.
+        value: FieldTempInit,
+
+        /// Statement which takes text and accumulates it into the temporary
+        /// value declared via `value`.
+        collect: TokenStream,
+
+        /// Expression which evaluates to the field's type, consuming the
+        /// temporary value.
+        finalize: TokenStream,
+    },
 }
 
 /// Describe how a struct or enum variant's member is converted to XML data.
@@ -55,6 +72,13 @@ pub(crate) enum FieldIteratorPart {
         /// during the StartElement event's construction, consuming the
         /// field's value.
         setter: TokenStream,
+    },
+
+    /// The field is emitted as text event.
+    Text {
+        /// An expression which consumes the field's value and returns a
+        /// String, which is then emitted as text data.
+        generator: TokenStream,
     },
 }
 
@@ -72,6 +96,9 @@ enum FieldKind {
         // attribute is absent.
         default_: Flag,
     },
+
+    /// The field maps to the character data of the element.
+    Text,
 }
 
 impl FieldKind {
@@ -115,6 +142,8 @@ impl FieldKind {
                     default_,
                 })
             }
+
+            XmlFieldMeta::Text => Ok(Self::Text),
         }
     }
 }
@@ -215,7 +244,7 @@ impl FieldDef {
                     }
                 };
 
-                return Ok(FieldBuilderPart::Init {
+                Ok(FieldBuilderPart::Init {
                     value: FieldTempInit {
                         init: quote! {
                             match #attrs.remove(#xml_namespace, #xml_name).map(#from_xml_text).transpose()? {
@@ -225,7 +254,26 @@ impl FieldDef {
                         },
                         ty: self.ty.clone(),
                     },
-                });
+                })
+            }
+
+            FieldKind::Text => {
+                let FromEventsScope { ref text, .. } = scope;
+                let field_access = scope.access_field(&self.member);
+                let from_xml_text = from_xml_text_fn(self.ty.clone());
+
+                Ok(FieldBuilderPart::Text {
+                    value: FieldTempInit {
+                        init: quote! { ::std::string::String::new() },
+                        ty: string_ty(Span::call_site()),
+                    },
+                    collect: quote! {
+                        #field_access.push_str(#text.as_str());
+                    },
+                    finalize: quote! {
+                        #from_xml_text(#field_access)?
+                    },
+                })
             }
         }
     }
@@ -256,7 +304,7 @@ impl FieldDef {
 
                 let into_optional_xml_text = into_optional_xml_text_fn(self.ty.clone());
 
-                return Ok(FieldIteratorPart::Header {
+                Ok(FieldIteratorPart::Header {
                     // This is a neat little trick:
                     // Option::from(x) converts x to an Option<T> *unless* it
                     // already is an Option<_>.
@@ -267,7 +315,17 @@ impl FieldDef {
                             #bound_name,
                         ));
                     },
-                });
+                })
+            }
+
+            FieldKind::Text => {
+                let into_xml_text = into_xml_text_fn(self.ty.clone());
+
+                Ok(FieldIteratorPart::Text {
+                    generator: quote! {
+                        #into_xml_text(#bound_name)?
+                    },
+                })
             }
         }
     }

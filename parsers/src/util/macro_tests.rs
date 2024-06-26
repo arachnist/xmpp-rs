@@ -380,3 +380,37 @@ fn default_attribute_roundtrip_pp() {
     };
     roundtrip_full::<DefaultAttribute>("<attr xmlns='urn:example:ns1' foo='xyz' bar='16'/>");
 }
+
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = NS1, name = "text")]
+struct TextString {
+    #[xml(text)]
+    text: String,
+}
+
+#[test]
+fn text_string_roundtrip() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<TextString>("<text xmlns='urn:example:ns1'>hello world!</text>");
+}
+
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = NS1, name = "text")]
+struct TextNonString {
+    #[xml(text)]
+    text: u32,
+}
+
+#[test]
+fn text_non_string_roundtrip() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<TextNonString>("<text xmlns='urn:example:ns1'>123456</text>");
+}
