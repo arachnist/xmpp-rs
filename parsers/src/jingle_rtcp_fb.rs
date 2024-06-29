@@ -4,17 +4,22 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-generate_element!(
-    /// Wrapper element for a rtcp-fb.
-    RtcpFb, "rtcp-fb", JINGLE_RTCP_FB,
-    attributes: [
-        /// Type of this rtcp-fb.
-        type_: Required<String> = "type",
+use xso::{FromXml, IntoXml};
 
-        /// Subtype of this rtcp-fb, if relevant.
-        subtype: Option<String> = "subtype",
-    ]
-);
+use crate::ns;
+
+/// Wrapper element for a rtcp-fb.
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::JINGLE_RTCP_FB, name = "rtcp-fb")]
+pub struct RtcpFb {
+    /// Type of this rtcp-fb.
+    #[xml(attribute = "type")]
+    pub type_: String,
+
+    /// Subtype of this rtcp-fb, if relevant.
+    #[xml(attribute(default))]
+    pub subtype: Option<String>,
+}
 
 #[cfg(test)]
 mod tests {

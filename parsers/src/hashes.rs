@@ -4,6 +4,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use xso::{FromXmlText, IntoXmlText};
+
 use crate::util::text_node_codecs::{Base64, Codec};
 use base64::{engine::general_purpose::STANDARD as Base64Engine, Engine};
 use minidom::IntoAttributeValue;
@@ -181,6 +183,18 @@ impl FromStr for Sha1HexAttribute {
     fn from_str(hex: &str) -> Result<Self, Self::Err> {
         let hash = Hash::from_hex(Algo::Sha_1, hex)?;
         Ok(Sha1HexAttribute(hash))
+    }
+}
+
+impl FromXmlText for Sha1HexAttribute {
+    fn from_xml_text(s: String) -> Result<Self, xso::error::Error> {
+        Self::from_str(&s).map_err(xso::error::Error::text_parse_error)
+    }
+}
+
+impl IntoXmlText for Sha1HexAttribute {
+    fn into_xml_text(self) -> Result<String, xso::error::Error> {
+        Ok(self.to_hex())
     }
 }
 

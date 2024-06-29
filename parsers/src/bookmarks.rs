@@ -16,9 +16,12 @@
 //!
 //! The [`Conference`][crate::bookmarks::Conference] struct used in [`private::Query`][`crate::private::Query`] is the one from this module. Only the querying mechanism changes from a legacy PubSub implementation here, to a legacy Private XML Query implementation in that other module. The [`Conference`][crate::bookmarks2::Conference] element from the [`bookmarks2`][crate::bookmarks2] module is a different structure, but conversion is possible from [`bookmarks::Conference`][crate::bookmarks::Conference] to [`bookmarks2::Conference`][crate::bookmarks2::Conference] via the [`Conference::into_bookmarks2`][crate::bookmarks::Conference::into_bookmarks2] method.
 
+use xso::{FromXml, IntoXml};
+
 use jid::BareJid;
 
 pub use crate::bookmarks2::Autojoin;
+use crate::ns;
 
 generate_element!(
     /// A conference bookmark.
@@ -59,17 +62,18 @@ impl Conference {
     }
 }
 
-generate_element!(
-    /// An URL bookmark.
-    Url, "url", BOOKMARKS,
-    attributes: [
-        /// A user-defined name for this URL.
-        name: Option<String> = "name",
+/// An URL bookmark.
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::BOOKMARKS, name = "url")]
+pub struct Url {
+    /// A user-defined name for this URL.
+    #[xml(attribute(default))]
+    pub name: Option<String>,
 
-        /// The URL of this bookmark.
-        url: Required<String> = "url",
-    ]
-);
+    /// The URL of this bookmark.
+    #[xml(attribute)]
+    pub url: String,
+}
 
 generate_element!(
     /// Container element for multiple bookmarks.

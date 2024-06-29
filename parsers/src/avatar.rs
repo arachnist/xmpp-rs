@@ -4,7 +4,10 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use xso::{FromXml, IntoXml};
+
 use crate::hashes::Sha1HexAttribute;
+use crate::ns;
 use crate::pubsub::PubSubPayload;
 use crate::util::text_node_codecs::{Codec, WhitespaceAwareBase64};
 
@@ -19,29 +22,34 @@ generate_element!(
 
 impl PubSubPayload for Metadata {}
 
-generate_element!(
-    /// Communicates avatar metadata.
-    Info, "info", AVATAR_METADATA,
-    attributes: [
-        /// The size of the image data in bytes.
-        bytes: Required<u32> = "bytes",
+/// Communicates avatar metadata.
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::AVATAR_METADATA, name = "info")]
+pub struct Info {
+    /// The size of the image data in bytes.
+    #[xml(attribute)]
+    pub bytes: u32,
 
-        /// The width of the image in pixels.
-        width: Option<u16> = "width",
+    /// The width of the image in pixels.
+    #[xml(attribute(default))]
+    pub width: Option<u16>,
 
-        /// The height of the image in pixels.
-        height: Option<u16> = "height",
+    /// The height of the image in pixels.
+    #[xml(attribute(default))]
+    pub height: Option<u16>,
 
-        /// The SHA-1 hash of the image data for the specified content-type.
-        id: Required<Sha1HexAttribute> = "id",
+    /// The SHA-1 hash of the image data for the specified content-type.
+    #[xml(attribute)]
+    pub id: Sha1HexAttribute,
 
-        /// The IANA-registered content type of the image data.
-        type_: Required<String> = "type",
+    /// The IANA-registered content type of the image data.
+    #[xml(attribute = "type")]
+    pub type_: String,
 
-        /// The http: or https: URL at which the image data file is hosted.
-        url: Option<String> = "url",
-    ]
-);
+    /// The http: or https: URL at which the image data file is hosted.
+    #[xml(attribute(default))]
+    pub url: Option<String>,
+}
 
 generate_element!(
     /// The actual avatar data.

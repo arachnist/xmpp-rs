@@ -4,27 +4,31 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use xso::{FromXml, IntoXml};
+use xso::{
+    error::{Error, FromElementError},
+    FromXml, IntoXml,
+};
 
 use crate::iq::{IqGetPayload, IqResultPayload};
 use crate::ns;
 use crate::Element;
-use xso::error::{Error, FromElementError};
 
-generate_element!(
-    /// Requesting a slot
-    SlotRequest, "request", HTTP_UPLOAD,
-    attributes: [
-        /// The filename to be uploaded.
-        filename: Required<String> = "filename",
+/// Requesting a slot
+#[derive(FromXml, IntoXml, Debug, Clone, PartialEq)]
+#[xml(namespace = ns::HTTP_UPLOAD, name = "request")]
+pub struct SlotRequest {
+    /// The filename to be uploaded.
+    #[xml(attribute)]
+    pub filename: String,
 
-        /// Size of the file to be uploaded.
-        size: Required<u64> = "size",
+    /// Size of the file to be uploaded.
+    #[xml(attribute)]
+    pub size: u64,
 
-        /// Content-Type of the file.
-        content_type: Option<String> = "content-type",
-    ]
-);
+    /// Content-Type of the file.
+    #[xml(attribute(name = "content-type"))]
+    pub content_type: Option<String>,
+}
 
 impl IqGetPayload for SlotRequest {}
 

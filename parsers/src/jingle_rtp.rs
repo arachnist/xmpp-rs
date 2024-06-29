@@ -137,18 +137,19 @@ impl PayloadType {
     }
 }
 
-generate_element!(
-    /// Parameter related to a payload.
-    Parameter, "parameter", JINGLE_RTP,
-    attributes: [
-        /// The name of the parameter, from the list at
-        /// <https://www.iana.org/assignments/sdp-parameters/sdp-parameters.xhtml>
-        name: Required<String> = "name",
+/// Parameter related to a payload.
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::JINGLE_RTP, name = "parameter")]
+pub struct Parameter {
+    /// The name of the parameter, from the list at
+    /// <https://www.iana.org/assignments/sdp-parameters/sdp-parameters.xhtml>
+    #[xml(attribute)]
+    pub name: String,
 
-        /// The value of this parameter.
-        value: Required<String> = "value",
-    ]
-);
+    /// The value of this parameter.
+    #[xml(attribute)]
+    pub value: String,
+}
 
 #[cfg(test)]
 mod tests {

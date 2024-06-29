@@ -109,31 +109,33 @@ generate_element!(
 #[xml(namespace = ns::SM, name = "r")]
 pub struct R;
 
-generate_element!(
-    /// Requests a stream resumption.
-    Resume, "resume", SM,
-    attributes: [
-        /// The last handled stanza.
-        h: Required<u32> = "h",
+/// Requests a stream resumption.
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::SM, name = "resume")]
+pub struct Resume {
+    /// The last handled stanza.
+    #[xml(attribute)]
+    pub h: u32,
 
-        /// The previous id given by the server on
-        /// [enabled](struct.Enabled.html).
-        previd: Required<StreamId> = "previd",
-    ]
-);
+    /// The previous id given by the server on
+    /// [enabled](struct.Enabled.html).
+    #[xml(attribute)]
+    pub previd: StreamId,
+}
 
-generate_element!(
-    /// The response by the server for a successfully resumed stream.
-    Resumed, "resumed", SM,
-    attributes: [
-        /// The last handled stanza.
-        h: Required<u32> = "h",
+/// The response by the server for a successfully resumed stream.
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::SM, name = "resumed")]
+pub struct Resumed {
+    /// The last handled stanza.
+    #[xml(attribute)]
+    pub h: u32,
 
-        /// The previous id given by the server on
-        /// [enabled](struct.Enabled.html).
-        previd: Required<StreamId> = "previd",
-    ]
-);
+    /// The previous id given by the server on
+    /// [enabled](struct.Enabled.html).
+    #[xml(attribute)]
+    pub previd: StreamId,
+}
 
 // TODO: add support for optional and required.
 /// Represents availability of Stream Management in `<stream:features/>`.

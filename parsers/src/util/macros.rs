@@ -125,6 +125,26 @@ macro_rules! generate_attribute {
                 })
             }
         }
+        impl ::xso::FromXmlText for $elem {
+            fn from_xml_text(s: String) -> Result<$elem, xso::error::Error> {
+                s.parse().map_err(xso::error::Error::text_parse_error)
+            }
+        }
+        impl ::xso::IntoXmlText for $elem {
+            fn into_xml_text(self) -> Result<String, xso::error::Error> {
+                Ok(String::from(match self {
+                    $($elem::$a => $b),+
+                }))
+            }
+
+            #[allow(unreachable_patterns)]
+            fn into_optional_xml_text(self) -> Result<Option<String>, xso::error::Error> {
+                Ok(Some(String::from(match self {
+                    $elem::$default => return Ok(None),
+                    $($elem::$a => $b),+
+                })))
+            }
+        }
         impl ::minidom::IntoAttributeValue for $elem {
             #[allow(unreachable_patterns)]
             fn into_attribute_value(self) -> Option<String> {

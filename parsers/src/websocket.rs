@@ -4,29 +4,37 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use xso::{FromXml, IntoXml};
+
 use jid::BareJid;
 
-generate_element!(
-    /// The stream opening for WebSocket.
-    Open, "open", WEBSOCKET,
-    attributes: [
-        /// The JID of the entity opening this stream.
-        from: Option<BareJid> = "from",
+use crate::ns;
 
-        /// The JID of the entity receiving this stream opening.
-        to: Option<BareJid> = "to",
+/// The stream opening for WebSocket.
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::WEBSOCKET, name = "open")]
+pub struct Open {
+    /// The JID of the entity opening this stream.
+    #[xml(attribute(default))]
+    pub from: Option<BareJid>,
 
-        /// The id of the stream, used for authentication challenges.
-        id: Option<String> = "id",
+    /// The JID of the entity receiving this stream opening.
+    #[xml(attribute(default))]
+    pub to: Option<BareJid>,
 
-        /// The XMPP version used during this stream.
-        version: Option<String> = "version",
+    /// The id of the stream, used for authentication challenges.
+    #[xml(attribute(default))]
+    pub id: Option<String>,
 
-        /// The default human language for all subsequent stanzas, which will
-        /// be transmitted to other entities for better localisation.
-        xml_lang: Option<String> = "xml:lang",
-    ]
-);
+    /// The XMPP version used during this stream.
+    #[xml(attribute(default))]
+    pub version: Option<String>,
+
+    /// The default human language for all subsequent stanzas, which will
+    /// be transmitted to other entities for better localisation.
+    #[xml(attribute(default, name = "xml:lang"))]
+    pub xml_lang: Option<String>,
+}
 
 impl Open {
     /// Creates a simple client→server `<open/>` element.

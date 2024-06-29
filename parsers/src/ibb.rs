@@ -4,7 +4,10 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use xso::{FromXml, IntoXml};
+
 use crate::iq::IqSetPayload;
+use crate::ns;
 use crate::util::text_node_codecs::{Base64, Codec};
 
 generate_id!(
@@ -59,13 +62,14 @@ Data, "data", IBB,
 
 impl IqSetPayload for Data {}
 
-generate_element!(
 /// Close an open stream.
-Close, "close", IBB,
-attributes: [
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::IBB, name = "close")]
+pub struct Close {
     /// The identifier of the stream to be closed.
-    sid: Required<StreamId> = "sid",
-]);
+    #[xml(attribute)]
+    pub sid: StreamId,
+}
 
 impl IqSetPayload for Close {}
 

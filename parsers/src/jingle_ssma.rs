@@ -4,6 +4,10 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use xso::{FromXml, IntoXml};
+
+use crate::ns;
+
 generate_element!(
     /// Source element for the ssrc SDP attribute.
     Source, "source", JINGLE_SSMA,
@@ -27,17 +31,18 @@ impl Source {
     }
 }
 
-generate_element!(
-    /// Parameter associated with a ssrc.
-    Parameter, "parameter", JINGLE_SSMA,
-    attributes: [
-        /// The name of the parameter.
-        name: Required<String> = "name",
+/// Parameter associated with a ssrc.
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::JINGLE_SSMA, name = "parameter")]
+pub struct Parameter {
+    /// The name of the parameter.
+    #[xml(attribute)]
+    pub name: String,
 
-        /// The optional value of the parameter.
-        value: Option<String> = "value",
-    ]
-);
+    /// The optional value of the parameter.
+    #[xml(attribute(default))]
+    pub value: Option<String>,
+}
 
 generate_attribute!(
     /// From RFC5888, the list of allowed semantics.

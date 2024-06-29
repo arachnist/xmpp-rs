@@ -4,24 +4,29 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use xso::{
+    error::{Error, FromElementError},
+    FromXml, IntoXml,
+};
+
 use crate::data_forms::{DataForm, DataFormType};
 use crate::iq::{IqGetPayload, IqResultPayload};
 use crate::ns;
 use crate::rsm::{SetQuery, SetResult};
 use crate::Element;
 use jid::Jid;
-use xso::error::{Error, FromElementError};
 
-generate_element!(
 /// Structure representing a `<query xmlns='http://jabber.org/protocol/disco#info'/>` element.
 ///
 /// It should only be used in an `<iq type='get'/>`, as it can only represent
 /// the request, and not a result.
-DiscoInfoQuery, "query", DISCO_INFO,
-attributes: [
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::DISCO_INFO, name = "query")]
+pub struct DiscoInfoQuery {
     /// Node on which we are doing the discovery.
-    node: Option<String> = "node",
-]);
+    #[xml(attribute(default))]
+    pub node: Option<String>,
+}
 
 impl IqGetPayload for DiscoInfoQuery {}
 
@@ -197,17 +202,22 @@ children: [
 
 impl IqGetPayload for DiscoItemsQuery {}
 
-generate_element!(
 /// Structure representing an `<item xmlns='http://jabber.org/protocol/disco#items'/>` element.
-Item, "item", DISCO_ITEMS,
-attributes: [
+#[derive(FromXml, IntoXml, Debug, Clone, PartialEq)]
+#[xml(namespace = ns::DISCO_ITEMS, name = "item")]
+pub struct Item {
     /// JID of the entity pointed by this item.
-    jid: Required<Jid> = "jid",
+    #[xml(attribute)]
+    pub jid: Jid,
+
     /// Node of the entity pointed by this item.
-    node: Option<String> = "node",
+    #[xml(attribute(default))]
+    pub node: Option<String>,
+
     /// Name of the entity pointed by this item.
-    name: Option<String> = "name",
-]);
+    #[xml(attribute(default))]
+    pub name: Option<String>,
+}
 
 generate_element!(
     /// Structure representing a `<query

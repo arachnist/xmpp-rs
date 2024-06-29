@@ -4,8 +4,12 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use crate::jingle_dtls_srtp::Fingerprint;
 use std::net::IpAddr;
+
+use xso::{FromXml, IntoXml};
+
+use crate::jingle_dtls_srtp::Fingerprint;
+use crate::ns;
 
 generate_element!(
     /// Wrapper element for an ICE-UDP transport.
@@ -63,50 +67,61 @@ generate_attribute!(
     }
 );
 
-generate_element!(
-    /// A candidate for an ICE-UDP session.
-    Candidate, "candidate", JINGLE_ICE_UDP,
-    attributes: [
-        /// A Component ID as defined in ICE-CORE.
-        component: Required<u8> = "component",
+/// A candidate for an ICE-UDP session.
+#[derive(FromXml, IntoXml, Debug, PartialEq, Clone)]
+#[xml(namespace = ns::JINGLE_ICE_UDP, name = "candidate")]
+pub struct Candidate {
+    /// A Component ID as defined in ICE-CORE.
+    #[xml(attribute)]
+    pub component: u8,
 
-        /// A Foundation as defined in ICE-CORE.
-        foundation: Required<String> = "foundation",
+    /// A Foundation as defined in ICE-CORE.
+    #[xml(attribute)]
+    pub foundation: String,
 
-        /// An index, starting at 0, that enables the parties to keep track of updates to the
-        /// candidate throughout the life of the session.
-        generation: Required<u8> = "generation",
+    /// An index, starting at 0, that enables the parties to keep track of updates to the
+    /// candidate throughout the life of the session.
+    #[xml(attribute)]
+    pub generation: u8,
 
-        /// A unique identifier for the candidate.
-        id: Required<String> = "id",
+    /// A unique identifier for the candidate.
+    #[xml(attribute)]
+    pub id: String,
 
-        /// The Internet Protocol (IP) address for the candidate transport mechanism; this can be
-        /// either an IPv4 address or an IPv6 address.
-        ip: Required<IpAddr> = "ip",
+    /// The Internet Protocol (IP) address for the candidate transport mechanism; this can be
+    /// either an IPv4 address or an IPv6 address.
+    #[xml(attribute)]
+    pub ip: IpAddr,
 
-        /// The port at the candidate IP address.
-        port: Required<u16> = "port",
+    /// The port at the candidate IP address.
+    #[xml(attribute)]
+    pub port: u16,
 
-        /// A Priority as defined in ICE-CORE.
-        priority: Required<u32> = "priority",
+    /// A Priority as defined in ICE-CORE.
+    #[xml(attribute)]
+    pub priority: u32,
 
-        /// The protocol to be used. The only value defined by this specification is "udp".
-        protocol: Required<String> = "protocol",
+    /// The protocol to be used. The only value defined by this specification is "udp".
+    #[xml(attribute)]
+    pub protocol: String,
 
-        /// A related address as defined in ICE-CORE.
-        rel_addr: Option<IpAddr> = "rel-addr",
+    /// A related address as defined in ICE-CORE.
+    #[xml(attribute(default, name = "rel-addr"))]
+    pub rel_addr: Option<IpAddr>,
 
-        /// A related port as defined in ICE-CORE.
-        rel_port: Option<u16> = "rel-port",
+    /// A related port as defined in ICE-CORE.
+    #[xml(attribute(default, name = "rel-port"))]
+    pub rel_port: Option<u16>,
 
-        /// An index, starting at 0, referencing which network this candidate is on for a given
-        /// peer.
-        network: Option<u8> = "network",
+    /// An index, starting at 0, referencing which network this candidate is on for a given
+    /// peer.
+    #[xml(attribute(default))]
+    pub network: Option<u8>,
 
-        /// A Candidate Type as defined in ICE-CORE.
-        type_: Required<Type> = "type",
-    ]
-);
+    /// A Candidate Type as defined in ICE-CORE.
+    #[xml(attribute(name = "type"))]
+    pub type_: Type,
+}
 
 #[cfg(test)]
 mod tests {

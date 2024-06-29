@@ -107,20 +107,22 @@ generate_element!(
     ]
 );
 
-generate_element!(
-    /// A subscription element, describing the state of a subscription.
-    SubscriptionElem, "subscription", PUBSUB_OWNER,
-    attributes: [
-        /// The JID affected by this subscription.
-        jid: Required<Jid> = "jid",
+/// A subscription element, describing the state of a subscription.
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::PUBSUB_OWNER, name = "subscription")]
+pub struct SubscriptionElem {
+    /// The JID affected by this subscription.
+    #[xml(attribute)]
+    pub jid: Jid,
 
-        /// The state of the subscription.
-        subscription: Required<Subscription> = "subscription",
+    /// The state of the subscription.
+    #[xml(attribute)]
+    pub subscription: Subscription,
 
-        /// Subscription unique id.
-        subid: Option<String> = "subid",
-    ]
-);
+    /// Subscription unique id.
+    #[xml(attribute(default))]
+    pub subid: Option<String>,
+}
 
 /// Main payload used to communicate with a PubSubOwner service.
 ///

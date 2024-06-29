@@ -4,8 +4,12 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use crate::jingle_ice_udp::Type;
 use std::net::IpAddr;
+
+use xso::{FromXml, IntoXml};
+
+use crate::jingle_ice_udp::Type;
+use crate::ns;
 
 generate_element!(
     /// Wrapper element for an raw UDP transport.
@@ -30,31 +34,36 @@ impl Transport {
     }
 }
 
-generate_element!(
-    /// A candidate for an ICE-UDP session.
-    Candidate, "candidate", JINGLE_RAW_UDP,
-    attributes: [
-        /// A Component ID as defined in ICE-CORE.
-        component: Required<u8> = "component",
+/// A candidate for an ICE-UDP session.
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::JINGLE_RAW_UDP, name = "candidate")]
+pub struct Candidate {
+    /// A Component ID as defined in ICE-CORE.
+    #[xml(attribute)]
+    pub component: u8,
 
-        /// An index, starting at 0, that enables the parties to keep track of updates to the
-        /// candidate throughout the life of the session.
-        generation: Required<u8> = "generation",
+    /// An index, starting at 0, that enables the parties to keep track of updates to the
+    /// candidate throughout the life of the session.
+    #[xml(attribute)]
+    pub generation: u8,
 
-        /// A unique identifier for the candidate.
-        id: Required<String> = "id",
+    /// A unique identifier for the candidate.
+    #[xml(attribute)]
+    pub id: String,
 
-        /// The Internet Protocol (IP) address for the candidate transport mechanism; this can be
-        /// either an IPv4 address or an IPv6 address.
-        ip: Required<IpAddr> = "ip",
+    /// The Internet Protocol (IP) address for the candidate transport mechanism; this can be
+    /// either an IPv4 address or an IPv6 address.
+    #[xml(attribute)]
+    pub ip: IpAddr,
 
-        /// The port at the candidate IP address.
-        port: Required<u16> = "port",
+    /// The port at the candidate IP address.
+    #[xml(attribute)]
+    pub port: u16,
 
-        /// A Candidate Type as defined in ICE-CORE.
-        type_: Option<Type> = "type",
-    ]
-);
+    /// A Candidate Type as defined in ICE-CORE.
+    #[xml(attribute(default, name = "type"))]
+    pub type_: Option<Type>,
+}
 
 #[cfg(test)]
 mod tests {

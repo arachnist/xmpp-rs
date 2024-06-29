@@ -4,20 +4,24 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use xso::{FromXml, IntoXml};
+
 use crate::message::MessagePayload;
+use crate::ns;
 
-generate_element!(
-    /// Structure representing an `<encryption xmlns='urn:xmpp:eme:0'/>` element.
-    ExplicitMessageEncryption, "encryption", EME,
-    attributes: [
-        /// Namespace of the encryption scheme used.
-        namespace: Required<String> = "namespace",
+/// Structure representing an `<encryption xmlns='urn:xmpp:eme:0'/>` element.
+#[derive(FromXml, IntoXml, Debug, Clone, PartialEq)]
+#[xml(namespace = ns::EME, name = "encryption")]
+pub struct ExplicitMessageEncryption {
+    /// Namespace of the encryption scheme used.
+    #[xml(attribute)]
+    pub namespace: String,
 
-        /// User-friendly name for the encryption scheme, should be `None` for OTR,
-        /// legacy OpenPGP and OX.
-        name: Option<String> = "name",
-    ]
-);
+    /// User-friendly name for the encryption scheme, should be `None` for OTR,
+    /// legacy OpenPGP and OX.
+    #[xml(attribute(default))]
+    pub name: Option<String>,
+}
 
 impl MessagePayload for ExplicitMessageEncryption {}
 
@@ -69,15 +73,19 @@ mod tests {
 
     #[test]
     fn test_invalid_child() {
-        let elem: Element = "<encryption xmlns='urn:xmpp:eme:0'><coucou/></encryption>"
-            .parse()
-            .unwrap();
+        let elem: Element =
+            "<encryption xmlns='urn:xmpp:eme:0' namespace='urn:xmpp:otr:0'><coucou/></encryption>"
+                .parse()
+                .unwrap();
         let error = ExplicitMessageEncryption::try_from(elem).unwrap_err();
         let message = match error {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Unknown child in encryption element.");
+        assert_eq!(
+            message,
+            "Unknown child in ExplicitMessageEncryption element."
+        );
     }
 
     #[test]

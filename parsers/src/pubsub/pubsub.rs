@@ -4,6 +4,11 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use xso::{
+    error::{Error, FromElementError},
+    FromXml, IntoXml,
+};
+
 use crate::data_forms::DataForm;
 use crate::iq::{IqGetPayload, IqResultPayload, IqSetPayload};
 use crate::ns;
@@ -12,10 +17,6 @@ use crate::pubsub::{
 };
 use crate::Element;
 use jid::Jid;
-use xso::{
-    error::{Error, FromElementError},
-    FromXml, IntoXml,
-};
 
 // TODO: a better solution would be to split this into a query and a result elements, like for
 // XEP-0030.
@@ -220,17 +221,18 @@ impl From<SubscribeOptions> for Element {
     }
 }
 
-generate_element!(
-    /// A request to subscribe a JID to a node.
-    Subscribe, "subscribe", PUBSUB,
-    attributes: [
-        /// The JID being subscribed.
-        jid: Required<Jid> = "jid",
+/// A request to subscribe a JID to a node.
+#[derive(FromXml, IntoXml, Debug, PartialEq, Clone)]
+#[xml(namespace = ns::PUBSUB, name = "subscribe")]
+pub struct Subscribe {
+    /// The JID being subscribed.
+    #[xml(attribute)]
+    pub jid: Jid,
 
-        /// The node to subscribe to.
-        node: Option<NodeName> = "node",
-    ]
-);
+    /// The node to subscribe to.
+    #[xml(attribute)]
+    pub node: Option<NodeName>,
+}
 
 generate_element!(
     /// A request for current subscriptions.
@@ -267,20 +269,22 @@ generate_element!(
     ]
 );
 
-generate_element!(
-    /// An unsubscribe request.
-    Unsubscribe, "unsubscribe", PUBSUB,
-    attributes: [
-        /// The JID affected by this request.
-        jid: Required<Jid> = "jid",
+/// An unsubscribe request.
+#[derive(FromXml, IntoXml, Debug, PartialEq, Clone)]
+#[xml(namespace = ns::PUBSUB, name = "unsubscribe")]
+pub struct Unsubscribe {
+    /// The JID affected by this request.
+    #[xml(attribute)]
+    jid: Jid,
 
-        /// The node affected by this request.
-        node: Option<NodeName> = "node",
+    /// The node affected by this request.
+    #[xml(attribute)]
+    node: Option<NodeName>,
 
-        /// The subscription identifier for this subscription.
-        subid: Option<SubscriptionId> = "subid",
-    ]
-);
+    /// The subscription identifier for this subscription.
+    #[xml(attribute)]
+    subid: Option<SubscriptionId>,
+}
 
 /// Main payload used to communicate with a PubSub service.
 ///
