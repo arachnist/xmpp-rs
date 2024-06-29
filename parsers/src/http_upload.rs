@@ -105,16 +105,18 @@ pub struct Get {
     pub url: String,
 }
 
-generate_element!(
-    /// Requesting a slot
-    SlotResult, "slot", HTTP_UPLOAD,
-    children: [
-        /// Put URL and headers
-        put: Required<Put> = ("put", HTTP_UPLOAD) => Put,
-        /// Get URL
-        get: Required<Get> = ("get", HTTP_UPLOAD) => Get
-    ]
-);
+/// Requesting a slot
+#[derive(FromXml, AsXml, Debug, Clone, PartialEq)]
+#[xml(namespace = ns::HTTP_UPLOAD, name = "slot")]
+pub struct SlotResult {
+    /// Put URL and headers
+    #[xml(child)]
+    pub put: Put,
+
+    /// Get URL
+    #[xml(child)]
+    pub get: Get,
+}
 
 impl IqResultPayload for SlotResult {}
 

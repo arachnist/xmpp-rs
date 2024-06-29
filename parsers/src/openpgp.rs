@@ -20,18 +20,18 @@ pub struct PubKeyData {
     pub data: Vec<u8>,
 }
 
-generate_element!(
-    /// Pubkey element to be used in PubSub publish payloads.
-    PubKey, "pubkey", OX,
-    attributes: [
-        /// Last updated date
-        date: Option<DateTime> = "date"
-    ],
-    children: [
-        /// Public key as base64 data
-        data: Required<PubKeyData> = ("data", OX) => PubKeyData
-    ]
-);
+/// Pubkey element to be used in PubSub publish payloads.
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::OX, name = "pubkey")]
+pub struct PubKey {
+    /// Last updated date
+    #[xml(attribute(default))]
+    pub date: Option<DateTime>,
+
+    /// Public key as base64 data
+    #[xml(child)]
+    pub data: PubKeyData,
+}
 
 impl PubSubPayload for PubKey {}
 

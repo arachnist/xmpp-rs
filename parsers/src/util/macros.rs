@@ -453,7 +453,7 @@ macro_rules! generate_id {
 }
 
 macro_rules! generate_elem_id {
-    ($(#[$meta:meta])* $elem:ident, $name:tt, $ns:ident) => (
+    ($(#[$meta:meta])* $elem:ident, $name:literal, $ns:ident) => (
         generate_elem_id!($(#[$meta])* $elem, $name, $ns, String);
         impl ::std::str::FromStr for $elem {
             type Err = xso::error::Error;
@@ -463,27 +463,11 @@ macro_rules! generate_elem_id {
             }
         }
     );
-    ($(#[$meta:meta])* $elem:ident, $name:tt, $ns:ident, $type:ty) => (
+    ($(#[$meta:meta])* $elem:ident, $name:literal, $ns:ident, $type:ty) => (
         $(#[$meta])*
-        #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-        pub struct $elem(pub $type);
-        impl ::std::convert::TryFrom<minidom::Element> for $elem {
-            type Error = xso::error::FromElementError;
-            fn try_from(elem: minidom::Element) -> Result<$elem, xso::error::FromElementError> {
-                check_self!(elem, $name, $ns);
-                check_no_children!(elem, $name);
-                check_no_attributes!(elem, $name);
-                // TODO: add a way to parse that differently when needed.
-                Ok($elem(elem.text().parse().map_err(xso::error::Error::text_parse_error)?))
-            }
-        }
-        impl From<$elem> for minidom::Element {
-            fn from(elem: $elem) -> minidom::Element {
-                minidom::Element::builder($name, crate::ns::$ns)
-                    .append(elem.0.to_string())
-                    .build()
-            }
-        }
+        #[derive(xso::FromXml, xso::AsXml, Debug, Clone, PartialEq, Eq, Hash)]
+        #[xml(namespace = crate::ns::$ns, name = $name)]
+        pub struct $elem(#[xml(text)] pub $type);
     );
 }
 

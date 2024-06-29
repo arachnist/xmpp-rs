@@ -19,20 +19,22 @@
 //! This module uses the legacy bookmarks [`bookmarks::Conference`][crate::bookmarks::Conference]
 //! struct as stored in a legacy [`bookmarks::Storage`][crate::bookmarks::Storage] struct.
 
+use xso::{AsXml, FromXml};
+
 use crate::{
     bookmarks::Storage,
     iq::{IqGetPayload, IqResultPayload, IqSetPayload},
+    ns,
 };
 
-generate_element!(
-    /// A Private XML Storage query. Only supports XEP-0048 bookmarks.
-    Query, "query", PRIVATE,
-    attributes: [],
-    children: [
-        /// XEP-0048 bookmarks in a [`Storage`] element
-        storage: Required<Storage> = ("storage", BOOKMARKS) => Storage,
-    ]
-);
+/// A Private XML Storage query. Only supports XEP-0048 bookmarks.
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::PRIVATE, name = "query")]
+pub struct Query {
+    /// XEP-0048 bookmarks in a [`Storage`] element
+    #[xml(child)]
+    pub storage: Storage,
+}
 
 impl IqSetPayload for Query {}
 impl IqGetPayload for Query {}

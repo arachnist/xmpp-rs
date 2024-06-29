@@ -117,22 +117,23 @@ impl From<Query> for Element {
     }
 }
 
-generate_element!(
-    /// The wrapper around forwarded stanzas.
-    Result_, "result", MAM,
-    attributes: [
-        /// The stanza-id under which the archive stored this stanza.
-        id: Required<String> = "id",
+/// The wrapper around forwarded stanzas.
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::MAM, name = "result")]
+pub struct Result_ {
+    /// The stanza-id under which the archive stored this stanza.
+    #[xml(attribute)]
+    pub id: String,
 
-        /// The same queryid as the one requested in the
-        /// [query](struct.Query.html).
-        queryid: Option<QueryId> = "queryid",
-    ],
-    children: [
-        /// The actual stanza being forwarded.
-        forwarded: Required<Forwarded> = ("forwarded", FORWARD) => Forwarded
-    ]
-);
+    /// The same queryid as the one requested in the
+    /// [query](struct.Query.html).
+    #[xml(attribute(default))]
+    pub queryid: Option<QueryId>,
+
+    /// The actual stanza being forwarded.
+    #[xml(child)]
+    pub forwarded: Forwarded,
+}
 
 impl MessagePayload for Result_ {}
 

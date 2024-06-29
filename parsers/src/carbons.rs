@@ -33,27 +33,25 @@ pub struct Private;
 
 impl MessagePayload for Private {}
 
-generate_element!(
-    /// Wrapper for a message received on another resource.
-    Received, "received", CARBONS,
-
-    children: [
-        /// Wrapper for the enclosed message.
-        forwarded: Required<Forwarded> = ("forwarded", FORWARD) => Forwarded
-    ]
-);
+/// Wrapper for a message received on another resource.
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::CARBONS, name = "received")]
+pub struct Received {
+    /// Wrapper for the enclosed message.
+    #[xml(child)]
+    pub forwarded: Forwarded,
+}
 
 impl MessagePayload for Received {}
 
-generate_element!(
-    /// Wrapper for a message sent from another resource.
-    Sent, "sent", CARBONS,
-
-    children: [
-        /// Wrapper for the enclosed message.
-        forwarded: Required<Forwarded> = ("forwarded", FORWARD) => Forwarded
-    ]
-);
+/// Wrapper for a message sent from another resource.
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::CARBONS, name = "sent")]
+pub struct Sent {
+    /// Wrapper for the enclosed message.
+    #[xml(child)]
+    pub forwarded: Forwarded,
+}
 
 impl MessagePayload for Sent {}
 

@@ -59,7 +59,7 @@ mod tests {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Unknown child in nick element.");
+        assert_eq!(message, "Unknown child in Nick element.");
     }
 
     #[cfg(not(feature = "disable-validation"))]
@@ -73,6 +73,6 @@ mod tests {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Unknown attribute in nick element.");
+        assert_eq!(message, "Unknown attribute in Nick element.");
     }
 }

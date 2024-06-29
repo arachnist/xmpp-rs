@@ -94,25 +94,25 @@ generate_element!(
 
 impl IqResultPayload for ListCertsResponse {}
 
-generate_element!(
-    /// Client disables an X.509 certificate.
-    Disable, "disable", SASL_CERT,
-    children: [
-        /// Name of the certificate to disable.
-        name: Required<Name> = ("name", SASL_CERT) => Name
-    ]
-);
+/// Client disables an X.509 certificate.
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::SASL_CERT, name = "disable")]
+pub struct Disable {
+    /// Name of the certificate to disable.
+    #[xml(child)]
+    pub name: Name,
+}
 
 impl IqSetPayload for Disable {}
 
-generate_element!(
-    /// Client revokes an X.509 certificate.
-    Revoke, "revoke", SASL_CERT,
-    children: [
-        /// Name of the certificate to revoke.
-        name: Required<Name> = ("name", SASL_CERT) => Name
-    ]
-);
+/// Client revokes an X.509 certificate.
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::SASL_CERT, name = "revoke")]
+pub struct Revoke {
+    /// Name of the certificate to revoke.
+    #[xml(child)]
+    pub name: Name,
+}
 
 impl IqSetPayload for Revoke {}
 

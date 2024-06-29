@@ -4,11 +4,12 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use xso::error::{Error, FromElementError};
+
 use crate::data_forms_validate::Validate;
 use crate::media_element::MediaElement;
 use crate::ns;
 use minidom::Element;
-use xso::error::{Error, FromElementError};
 
 generate_element!(
     /// Represents one of the possible values for a list- field.

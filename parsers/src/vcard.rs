@@ -23,17 +23,18 @@ use crate::iq::{IqGetPayload, IqResultPayload, IqSetPayload};
 use crate::ns;
 use minidom::Element;
 
-generate_element!(
-    /// A photo element.
-    Photo, "PHOTO", VCARD,
-    attributes: [],
-    children: [
-        /// The type of the photo.
-        type_: Required<Type> = ("TYPE", VCARD) => Type,
-        /// The binary data of the photo.
-        binval: Required<Binval> = ("BINVAL", VCARD) => Binval,
-    ]
-);
+/// A photo element.
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::VCARD, name = "PHOTO")]
+pub struct Photo {
+    /// The type of the photo.
+    #[xml(child)]
+    pub type_: Type,
+
+    /// The binary data of the photo.
+    #[xml(child)]
+    pub binval: Binval,
+}
 
 /// The type of the photo.
 #[derive(FromXml, AsXml, PartialEq, Debug, Clone)]

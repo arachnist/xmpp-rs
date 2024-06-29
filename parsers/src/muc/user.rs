@@ -567,7 +567,7 @@ mod tests {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Unknown attribute in reason element.".to_owned());
+        assert_eq!(message, "Unknown attribute in Reason element.".to_owned());
     }
 
     #[cfg(not(feature = "disable-validation"))]
@@ -583,7 +583,7 @@ mod tests {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Unknown child in reason element.".to_owned());
+        assert_eq!(message, "Unknown child in Reason element.".to_owned());
     }
 
     #[cfg(not(feature = "disable-validation"))]
