@@ -14,7 +14,7 @@ use crate::error_message::ParentRef;
 use crate::field::{FieldBuilderPart, FieldDef, FieldIteratorPart, FieldTempInit};
 use crate::scope::{mangle_member, AsItemsScope, FromEventsScope};
 use crate::state::{AsItemsSubmachine, FromEventsSubmachine, State};
-use crate::types::{namespace_ty, ncnamestr_cow_ty, phantom_lifetime_ty};
+use crate::types::{feed_fn, namespace_ty, ncnamestr_cow_ty, phantom_lifetime_ty};
 
 /// A struct or enum variant's contents.
 pub(crate) struct Compound {
@@ -78,6 +78,8 @@ impl Compound {
             ref attrs,
             ref builder_data_ident,
             ref text,
+            ref substate_data,
+            ref substate_result,
             ..
         } = scope;
 
@@ -92,12 +94,14 @@ impl Compound {
         let mut builder_data_def = TokenStream::default();
         let mut builder_data_init = TokenStream::default();
         let mut output_cons = TokenStream::default();
+        let mut child_matchers = TokenStream::default();
         let mut text_handler = None;
 
-        for field in self.fields.iter() {
+        for (i, field) in self.fields.iter().enumerate() {
             let member = field.member();
             let builder_field_name = mangle_member(member);
             let part = field.make_builder_part(&scope, output_name)?;
+            let state_name = quote::format_ident!("{}Field{}", state_prefix, i);
 
             match part {
                 FieldBuilderPart::Init {
@@ -143,6 +147,65 @@ impl Compound {
                         #member: #finalize,
                     });
                 }
+
+                FieldBuilderPart::Nested {
+                    value: FieldTempInit { ty, init },
+                    matcher,
+                    builder,
+                    collect,
+                    finalize,
+                } => {
+                    let feed = feed_fn(builder.clone());
+
+                    states.push(State::new_with_builder(
+                        state_name.clone(),
+                        &builder_data_ident,
+                        &builder_data_ty,
+                    ).with_field(
+                        substate_data,
+                        &builder,
+                    ).with_mut(substate_data).with_impl(quote! {
+                        match #feed(&mut #substate_data, ev)? {
+                            ::std::option::Option::Some(#substate_result) => {
+                                #collect
+                                ::std::result::Result::Ok(::std::ops::ControlFlow::Break(Self::#default_state_ident {
+                                    #builder_data_ident,
+                                }))
+                            }
+                            ::std::option::Option::None => {
+                                ::std::result::Result::Ok(::std::ops::ControlFlow::Break(Self::#state_name {
+                                    #builder_data_ident,
+                                    #substate_data,
+                                }))
+                            }
+                        }
+                    }));
+
+                    builder_data_def.extend(quote! {
+                        #builder_field_name: #ty,
+                    });
+
+                    builder_data_init.extend(quote! {
+                        #builder_field_name: #init,
+                    });
+
+                    child_matchers.extend(quote! {
+                        let (name, attrs) = match #matcher {
+                            ::std::result::Result::Err(::xso::error::FromEventsError::Mismatch { name, attrs }) => (name, attrs),
+                            ::std::result::Result::Err(::xso::error::FromEventsError::Invalid(e)) => return ::std::result::Result::Err(e),
+                            ::std::result::Result::Ok(#substate_data) => {
+                                return ::std::result::Result::Ok(::std::ops::ControlFlow::Break(Self::#state_name {
+                                    #builder_data_ident,
+                                    #substate_data,
+                                }))
+                            }
+                        };
+                    });
+
+                    output_cons.extend(quote! {
+                        #member: #finalize,
+                    });
+                }
             }
         }
 
@@ -184,7 +247,9 @@ impl Compound {
                         #output_cons
                     ))
                 }
-                ::xso::exports::rxml::Event::StartElement(..) => {
+                ::xso::exports::rxml::Event::StartElement(_, name, attrs) => {
+                    #child_matchers
+                    let _ = (name, attrs);
                     ::core::result::Result::Err(::xso::error::Error::Other(#unknown_child_err))
                 }
                 ::xso::exports::rxml::Event::Text(_, #text) => {
@@ -270,7 +335,7 @@ impl Compound {
         for (i, field) in self.fields.iter().enumerate() {
             let member = field.member();
             let bound_name = mangle_member(member);
-            let part = field.make_iterator_part(&bound_name)?;
+            let part = field.make_iterator_part(&scope, &bound_name)?;
             let state_name = quote::format_ident!("{}Field{}", state_prefix, i);
             let ty = scope.borrow(field.ty().clone());
 
@@ -319,6 +384,32 @@ impl Compound {
                     });
                     start_init.extend(quote! {
                         #bound_name,
+                    });
+                }
+
+                FieldIteratorPart::Content {
+                    value: FieldTempInit { ty, init },
+                    generator,
+                } => {
+                    // we have to make sure that we carry our data around in
+                    // all the previous states.
+                    for state in states.iter_mut() {
+                        state.add_field(&bound_name, &ty);
+                    }
+
+                    states.push(
+                        State::new(state_name.clone())
+                            .with_field(&bound_name, &ty)
+                            .with_mut(&bound_name)
+                            .with_impl(quote! {
+                                #generator?
+                            }),
+                    );
+                    destructure.extend(quote! {
+                        #member: #bound_name,
+                    });
+                    start_init.extend(quote! {
+                        #bound_name: #init,
                     });
                 }
             }

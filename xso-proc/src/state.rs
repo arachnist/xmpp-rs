@@ -23,6 +23,9 @@ pub(crate) struct State {
 
     /// Right-hand-side of the match arm for this state.
     advance_body: TokenStream,
+
+    /// If set, that identifier will be bound mutably.
+    uses_mut: Option<Ident>,
 }
 
 impl State {
@@ -54,6 +57,7 @@ impl State {
             decl: TokenStream::default(),
             destructure: TokenStream::default(),
             advance_body: TokenStream::default(),
+            uses_mut: None,
         }
     }
 
@@ -95,6 +99,14 @@ impl State {
     pub(crate) fn set_impl(&mut self, body: TokenStream) {
         self.advance_body = body;
     }
+
+    /// Modify the state to mark the given field as mutable and return the
+    /// modified state.
+    pub(crate) fn with_mut(mut self, ident: &Ident) -> Self {
+        assert!(self.uses_mut.is_none());
+        self.uses_mut = Some(ident.clone());
+        self
+    }
 }
 
 /// A partial [`FromEventsStateMachine`] which only covers the builder for a
@@ -132,11 +144,20 @@ impl FromEventsSubmachine {
                 decl,
                 destructure,
                 advance_body,
+                uses_mut,
             } = state;
 
             state_defs.extend(quote! {
                 #name { #decl },
             });
+
+            let binding = if let Some(uses_mut) = uses_mut.as_ref() {
+                quote! {
+                    let mut #uses_mut = #uses_mut;
+                }
+            } else {
+                TokenStream::default()
+            };
 
             // XXX: nasty hack, but works: the first member of the enum always
             // exists and it always is the builder data, which we always need
@@ -144,6 +165,7 @@ impl FromEventsSubmachine {
             // token stream with `mut` to make that first member mutable.
             advance_match_arms.extend(quote! {
                 Self::#name { mut #destructure } => {
+                    #binding
                     #advance_body
                 }
             });
@@ -218,6 +240,7 @@ impl AsItemsSubmachine {
                 ref decl,
                 ref destructure,
                 ref advance_body,
+                ref uses_mut,
             } = state;
 
             let footer = match self.states.get(i + 1) {
@@ -242,12 +265,37 @@ impl AsItemsSubmachine {
                 #name { #decl },
             });
 
-            advance_match_arms.extend(quote! {
-                Self::#name { #destructure } => {
-                    let item = #advance_body;
-                    #footer
-                }
-            });
+            if let Some(uses_mut) = uses_mut.as_ref() {
+                // the variant is non-consuming, meaning it can be called
+                // multiple times and it uses the identifier in `uses_mut`
+                // mutably.
+                // the transition is only triggered when it emits a None
+                // item
+                // (we cannot do this at the place the `State` is constructed,
+                // because we don't yet know all its fields then; it must be
+                // done here.)
+                advance_match_arms.extend(quote! {
+                    Self::#name { #destructure } => {
+                        let mut #uses_mut = #uses_mut;
+                        match #advance_body {
+                            ::std::option::Option::Some(item) => {
+                                ::std::result::Result::Ok((::std::option::Option::Some(Self::#name { #destructure }), ::std::option::Option::Some(item)))
+                            },
+                            item => { #footer },
+                        }
+                    }
+                });
+            } else {
+                // if the variant is consuming, it can only be called once.
+                // it may or may not emit an event, but the transition is
+                // always triggered
+                advance_match_arms.extend(quote! {
+                    Self::#name { #destructure } => {
+                        let item = #advance_body;
+                        #footer
+                    }
+                });
+            }
         }
 
         AsItemsStateMachine {

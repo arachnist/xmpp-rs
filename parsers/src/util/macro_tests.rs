@@ -491,3 +491,33 @@ fn text_with_codec_roundtrip_non_empty() {
     };
     roundtrip_full::<TextWithCodec>("<text xmlns='urn:example:ns1'>hello</text>");
 }
+
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = NS1, name = "parent")]
+struct Parent {
+    #[xml(child)]
+    child: RequiredAttribute,
+}
+
+#[test]
+fn parent_roundtrip() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<Parent>("<parent xmlns='urn:example:ns1'><attr foo='hello world!'/></parent>")
+}
+
+#[test]
+fn parent_positive() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    let v =
+        parse_str::<Parent>("<parent xmlns='urn:example:ns1'><attr foo='hello world!'/></parent>")
+            .unwrap();
+    assert_eq!(v.child.foo, "hello world!");
+}

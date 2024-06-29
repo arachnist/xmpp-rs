@@ -13,6 +13,8 @@ Version NEXT:
 
         All this is to avoid triggering the camel case lint on the types we
         generate.
+    * Added
+      - Support for child elements in derive macros.
 
 Version 0.1.2:
 2024-07-26 Jonas Schäfer <jonas@zombofant.net>

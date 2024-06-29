@@ -69,6 +69,7 @@ The following mapping types are defined:
 | Type | Description |
 | --- | --- |
 | [`attribute`](#attribute-meta) | Map the field to an XML attribute on the struct's element |
+| [`child`](#child-meta) | Map the field to a child element |
 | [`text`](#text-meta) | Map the field to the text content of the struct's element |
 
 #### `attribute` meta
@@ -132,6 +133,43 @@ assert_eq!(foo, Foo {
     c: "3".to_string(),
     d: "4".to_string(),
     e: "5".to_string(),
+});
+```
+
+#### `child` meta
+
+The `child` meta causes the field to be mapped to a child element of the
+element. It supports no options. The field's type must implement [`FromXml`]
+in order to derive `FromXml` and [`AsXml`] in order to derive `AsXml`.
+
+##### Example
+
+```rust
+# use xso::FromXml;
+#[derive(FromXml, Debug, PartialEq)]
+#[xml(namespace = "urn:example", name = "child")]
+struct Child {
+    #[xml(attribute = "some-attr")]
+    some_attr: String,
+}
+
+#[derive(FromXml, Debug, PartialEq)]
+#[xml(namespace = "urn:example", name = "parent")]
+struct Parent {
+    #[xml(attribute)]
+    foo: String,
+
+    #[xml(child)]
+    bar: Child,
+}
+
+let parent: Parent = xso::from_bytes(b"<parent
+    xmlns='urn:example'
+    foo='hello world!'
+><child some-attr='within'/></parent>").unwrap();
+assert_eq!(parent, Parent {
+    foo: "hello world!".to_owned(),
+    bar: Child { some_attr: "within".to_owned() },
 });
 ```
 

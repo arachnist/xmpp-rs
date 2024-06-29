@@ -422,3 +422,213 @@ pub(crate) fn phantom_lifetime_ty(lifetime: Lifetime) -> Type {
         },
     })
 }
+
+/// Construct a [`syn::TypePath`] referring to
+/// `<#of_ty as ::xso::FromXml>`.
+fn from_xml_of(of_ty: Type) -> (Span, TypePath) {
+    let span = of_ty.span();
+    (
+        span,
+        TypePath {
+            qself: Some(QSelf {
+                lt_token: syn::token::Lt { spans: [span] },
+                ty: Box::new(of_ty),
+                position: 2,
+                as_token: Some(syn::token::As { span }),
+                gt_token: syn::token::Gt { spans: [span] },
+            }),
+            path: Path {
+                leading_colon: Some(syn::token::PathSep {
+                    spans: [span, span],
+                }),
+                segments: [
+                    PathSegment {
+                        ident: Ident::new("xso", span),
+                        arguments: PathArguments::None,
+                    },
+                    PathSegment {
+                        ident: Ident::new("FromXml", span),
+                        arguments: PathArguments::None,
+                    },
+                ]
+                .into_iter()
+                .collect(),
+            },
+        },
+    )
+}
+
+/// Construct a [`syn::Type`] referring to
+/// `<#of_ty as ::xso::FromXml>::Builder`.
+pub(crate) fn from_xml_builder_ty(of_ty: Type) -> Type {
+    let (span, mut ty) = from_xml_of(of_ty);
+    ty.path.segments.push(PathSegment {
+        ident: Ident::new("Builder", span),
+        arguments: PathArguments::None,
+    });
+    Type::Path(ty)
+}
+
+/// Construct a [`syn::Expr`] referring to
+/// `<#of_ty as ::xso::FromXml>::from_events`.
+pub(crate) fn from_events_fn(of_ty: Type) -> Expr {
+    let (span, mut ty) = from_xml_of(of_ty);
+    ty.path.segments.push(PathSegment {
+        ident: Ident::new("from_events", span),
+        arguments: PathArguments::None,
+    });
+    Expr::Path(ExprPath {
+        attrs: Vec::new(),
+        qself: ty.qself,
+        path: ty.path,
+    })
+}
+
+/// Construct a [`syn::Type`] which wraps the given `ty` in
+/// `::std::option::Option<_>`.
+pub(crate) fn option_ty(ty: Type) -> Type {
+    let span = ty.span();
+    Type::Path(TypePath {
+        qself: None,
+        path: Path {
+            leading_colon: Some(syn::token::PathSep {
+                spans: [span, span],
+            }),
+            segments: [
+                PathSegment {
+                    ident: Ident::new("std", span),
+                    arguments: PathArguments::None,
+                },
+                PathSegment {
+                    ident: Ident::new("option", span),
+                    arguments: PathArguments::None,
+                },
+                PathSegment {
+                    ident: Ident::new("Option", span),
+                    arguments: PathArguments::AngleBracketed(AngleBracketedGenericArguments {
+                        colon2_token: None,
+                        lt_token: syn::token::Lt { spans: [span] },
+                        args: [GenericArgument::Type(ty)].into_iter().collect(),
+                        gt_token: syn::token::Gt { spans: [span] },
+                    }),
+                },
+            ]
+            .into_iter()
+            .collect(),
+        },
+    })
+}
+
+/// Construct a [`syn::TypePath`] referring to
+/// `<#of_ty as ::xso::FromEventsBuilder>`.
+fn from_events_builder_of(of_ty: Type) -> (Span, TypePath) {
+    let span = of_ty.span();
+    (
+        span,
+        TypePath {
+            qself: Some(QSelf {
+                lt_token: syn::token::Lt { spans: [span] },
+                ty: Box::new(of_ty),
+                position: 2,
+                as_token: Some(syn::token::As { span }),
+                gt_token: syn::token::Gt { spans: [span] },
+            }),
+            path: Path {
+                leading_colon: Some(syn::token::PathSep {
+                    spans: [span, span],
+                }),
+                segments: [
+                    PathSegment {
+                        ident: Ident::new("xso", span),
+                        arguments: PathArguments::None,
+                    },
+                    PathSegment {
+                        ident: Ident::new("FromEventsBuilder", span),
+                        arguments: PathArguments::None,
+                    },
+                ]
+                .into_iter()
+                .collect(),
+            },
+        },
+    )
+}
+
+/// Construct a [`syn::Expr`] referring to
+/// `<#of_ty as ::xso::FromEventsBuilder>::feed`.
+pub(crate) fn feed_fn(of_ty: Type) -> Expr {
+    let (span, mut ty) = from_events_builder_of(of_ty);
+    ty.path.segments.push(PathSegment {
+        ident: Ident::new("feed", span),
+        arguments: PathArguments::None,
+    });
+    Expr::Path(ExprPath {
+        attrs: Vec::new(),
+        qself: ty.qself,
+        path: ty.path,
+    })
+}
+
+fn as_xml_of(of_ty: Type) -> (Span, TypePath) {
+    let span = of_ty.span();
+    (
+        span,
+        TypePath {
+            qself: Some(QSelf {
+                lt_token: syn::token::Lt { spans: [span] },
+                ty: Box::new(of_ty),
+                position: 2,
+                as_token: Some(syn::token::As { span }),
+                gt_token: syn::token::Gt { spans: [span] },
+            }),
+            path: Path {
+                leading_colon: Some(syn::token::PathSep {
+                    spans: [span, span],
+                }),
+                segments: [
+                    PathSegment {
+                        ident: Ident::new("xso", span),
+                        arguments: PathArguments::None,
+                    },
+                    PathSegment {
+                        ident: Ident::new("AsXml", span),
+                        arguments: PathArguments::None,
+                    },
+                ]
+                .into_iter()
+                .collect(),
+            },
+        },
+    )
+}
+
+/// Construct a [`syn::Expr`] referring to
+/// `<#of_ty as ::xso::AsXml>::as_xml_iter`.
+pub(crate) fn as_xml_iter_fn(of_ty: Type) -> Expr {
+    let (span, mut ty) = as_xml_of(of_ty);
+    ty.path.segments.push(PathSegment {
+        ident: Ident::new("as_xml_iter", span),
+        arguments: PathArguments::None,
+    });
+    Expr::Path(ExprPath {
+        attrs: Vec::new(),
+        qself: ty.qself,
+        path: ty.path,
+    })
+}
+
+/// Construct a [`syn::Type`] referring to
+/// `<#of_ty as ::xso::AsXml>::ItemIter`.
+pub(crate) fn item_iter_ty(of_ty: Type, lifetime: Lifetime) -> Type {
+    let (span, mut ty) = as_xml_of(of_ty);
+    ty.path.segments.push(PathSegment {
+        ident: Ident::new("ItemIter", span),
+        arguments: PathArguments::AngleBracketed(AngleBracketedGenericArguments {
+            colon2_token: None,
+            lt_token: token::Lt { spans: [span] },
+            args: [GenericArgument::Lifetime(lifetime)].into_iter().collect(),
+            gt_token: token::Gt { spans: [span] },
+        }),
+    });
+    Type::Path(ty)
+}

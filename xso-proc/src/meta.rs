@@ -316,6 +316,9 @@ pub(crate) enum XmlFieldMeta {
         /// The path to the optional codec type.
         codec: Option<Type>,
     },
+
+    /// `#[xml(child)`
+    Child,
 }
 
 impl XmlFieldMeta {
@@ -420,6 +423,11 @@ impl XmlFieldMeta {
         }
     }
 
+    /// Parse a `#[xml(child)]` meta.
+    fn child_from_meta(_: ParseNestedMeta<'_>) -> Result<Self> {
+        Ok(Self::Child)
+    }
+
     /// Parse [`Self`] from a nestd meta, switching on the identifier
     /// of that nested meta.
     fn parse_from_meta(meta: ParseNestedMeta<'_>) -> Result<Self> {
@@ -427,6 +435,8 @@ impl XmlFieldMeta {
             Self::attribute_from_meta(meta)
         } else if meta.path.is_ident("text") {
             Self::text_from_meta(meta)
+        } else if meta.path.is_ident("child") {
+            Self::child_from_meta(meta)
         } else {
             Err(Error::new_spanned(meta.path, "unsupported field meta"))
         }

@@ -42,6 +42,16 @@ pub(crate) struct FromEventsScope {
     /// the time, using [`Self::access_field`] is the correct way to access
     /// the builder data.
     pub(crate) builder_data_ident: Ident,
+
+    /// Accesses the result produced by a nested state's builder type.
+    ///
+    /// See [`crate::field::FieldBuilderPart::Nested`].
+    pub(crate) substate_data: Ident,
+
+    /// Accesses the result produced by a nested state's builder type.
+    ///
+    /// See [`crate::field::FieldBuilderPart::Nested`].
+    pub(crate) substate_result: Ident,
 }
 
 impl FromEventsScope {
@@ -53,6 +63,8 @@ impl FromEventsScope {
             attrs: Ident::new("attrs", Span::call_site()),
             text: Ident::new("__xso_proc_macro_text_data", Span::call_site()),
             builder_data_ident: Ident::new("__xso_proc_macro_builder_data", Span::call_site()),
+            substate_data: Ident::new("__xso_proc_macro_substate_data", Span::call_site()),
+            substate_result: Ident::new("__xso_proc_macro_substate_result", Span::call_site()),
         }
     }
 
