@@ -25,6 +25,7 @@ use proc_macro2::{Span, TokenStream};
 use quote::quote;
 use syn::*;
 
+mod common;
 mod compound;
 mod error_message;
 mod field;
@@ -33,6 +34,8 @@ mod scope;
 mod state;
 mod structs;
 mod types;
+
+use common::{AsXmlParts, FromXmlParts, ItemDef};
 
 /// Convert an [`syn::Item`] into the parts relevant for us.
 ///
@@ -57,7 +60,7 @@ fn from_xml_impl(input: Item) -> Result<TokenStream> {
     let name_ident = Ident::new("name", Span::call_site());
     let attrs_ident = Ident::new("attrs", Span::call_site());
 
-    let structs::FromXmlParts {
+    let FromXmlParts {
         defs,
         from_events_body,
         builder_ty_ident,
@@ -116,7 +119,7 @@ pub fn from_xml(input: RawTokenStream) -> RawTokenStream {
 fn as_xml_impl(input: Item) -> Result<TokenStream> {
     let (vis, ident, def) = parse_struct(input)?;
 
-    let structs::AsXmlParts {
+    let AsXmlParts {
         defs,
         as_xml_iter_body,
         item_iter_ty_lifetime,

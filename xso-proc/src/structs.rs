@@ -6,39 +6,13 @@
 
 //! Handling of structs
 
-use proc_macro2::{Span, TokenStream};
+use proc_macro2::Span;
 use quote::quote;
 use syn::*;
 
+use crate::common::{AsXmlParts, FromXmlParts, ItemDef};
 use crate::compound::Compound;
 use crate::meta::{NameRef, NamespaceRef, XmlCompoundMeta};
-
-/// Parts necessary to construct a `::xso::FromXml` implementation.
-pub(crate) struct FromXmlParts {
-    /// Additional items necessary for the implementation.
-    pub(crate) defs: TokenStream,
-
-    /// The body of the `::xso::FromXml::from_xml` function.
-    pub(crate) from_events_body: TokenStream,
-
-    /// The name of the type which is the `::xso::FromXml::Builder`.
-    pub(crate) builder_ty_ident: Ident,
-}
-
-/// Parts necessary to construct a `::xso::AsXml` implementation.
-pub(crate) struct AsXmlParts {
-    /// Additional items necessary for the implementation.
-    pub(crate) defs: TokenStream,
-
-    /// The body of the `::xso::AsXml::as_xml_iter` function.
-    pub(crate) as_xml_iter_body: TokenStream,
-
-    /// The type which is the `::xso::AsXml::ItemIter`.
-    pub(crate) item_iter_ty: Type,
-
-    /// The lifetime name used in `item_iter_ty`.
-    pub(crate) item_iter_ty_lifetime: Lifetime,
-}
 
 /// Definition of a struct and how to parse it.
 pub(crate) struct StructDef {
@@ -95,8 +69,10 @@ impl StructDef {
             debug: meta.debug.is_set(),
         })
     }
+}
 
-    pub(crate) fn make_from_events_builder(
+impl ItemDef for StructDef {
+    fn make_from_events_builder(
         &self,
         vis: &Visibility,
         name_ident: &Ident,
@@ -149,7 +125,7 @@ impl StructDef {
         })
     }
 
-    pub(crate) fn make_as_xml_iter(&self, vis: &Visibility) -> Result<AsXmlParts> {
+    fn make_as_xml_iter(&self, vis: &Visibility) -> Result<AsXmlParts> {
         let xml_namespace = &self.namespace;
         let xml_name = &self.name;
 
@@ -223,7 +199,7 @@ impl StructDef {
         })
     }
 
-    pub(crate) fn debug(&self) -> bool {
+    fn debug(&self) -> bool {
         self.debug
     }
 }
