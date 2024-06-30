@@ -83,6 +83,28 @@ pub trait AsXml {
     fn as_xml_iter(&self) -> Result<Self::ItemIter<'_>, self::error::Error>;
 }
 
+/// Helper iterator to convert an `Option<T>` to XML.
+pub struct OptionAsXml<T: Iterator>(Option<T>);
+
+impl<'x, T: Iterator<Item = Result<Item<'x>, self::error::Error>>> Iterator for OptionAsXml<T> {
+    type Item = Result<Item<'x>, self::error::Error>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.0.as_mut()?.next()
+    }
+}
+
+impl<T: AsXml> AsXml for Option<T> {
+    type ItemIter<'x> = OptionAsXml<T::ItemIter<'x>> where T: 'x;
+
+    fn as_xml_iter(&self) -> Result<Self::ItemIter<'_>, self::error::Error> {
+        match self {
+            Some(ref value) => Ok(OptionAsXml(Some(T::as_xml_iter(value)?))),
+            None => Ok(OptionAsXml(None)),
+        }
+    }
+}
+
 /// Trait for a temporary object allowing to construct a struct from
 /// [`rxml::Event`] items.
 ///
@@ -107,6 +129,17 @@ pub trait FromEventsBuilder {
     /// inconsistent result data, though it may never result in unsound or
     /// unsafe behaviour.
     fn feed(&mut self, ev: rxml::Event) -> Result<Option<Self::Output>, self::error::Error>;
+}
+
+/// Helper struct to construct an `Option<T>` from XML events.
+pub struct OptionBuilder<T: FromEventsBuilder>(T);
+
+impl<T: FromEventsBuilder> FromEventsBuilder for OptionBuilder<T> {
+    type Output = Option<T::Output>;
+
+    fn feed(&mut self, ev: rxml::Event) -> Result<Option<Self::Output>, self::error::Error> {
+        self.0.feed(ev).map(|ok| ok.map(|value| Some(value)))
+    }
 }
 
 /// Trait allowing to construct a struct from a stream of
@@ -144,6 +177,17 @@ pub trait FromXml {
         name: rxml::QName,
         attrs: rxml::AttrMap,
     ) -> Result<Self::Builder, self::error::FromEventsError>;
+}
+
+impl<T: FromXml> FromXml for Option<T> {
+    type Builder = OptionBuilder<T::Builder>;
+
+    fn from_events(
+        name: rxml::QName,
+        attrs: rxml::AttrMap,
+    ) -> Result<Self::Builder, self::error::FromEventsError> {
+        Ok(OptionBuilder(T::from_events(name, attrs)?))
+    }
 }
 
 /// Trait allowing to convert XML text to a value.

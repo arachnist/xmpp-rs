@@ -521,3 +521,32 @@ fn parent_positive() {
             .unwrap();
     assert_eq!(v.child.foo, "hello world!");
 }
+
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = NS1, name = "parent")]
+struct OptionalChild {
+    #[xml(child(default))]
+    child: std::option::Option<RequiredAttribute>,
+}
+
+#[test]
+fn optional_child_roundtrip_present() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<OptionalChild>(
+        "<parent xmlns='urn:example:ns1'><attr foo='hello world!'/></parent>",
+    )
+}
+
+#[test]
+fn optional_child_roundtrip_absent() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<OptionalChild>("<parent xmlns='urn:example:ns1'/>")
+}

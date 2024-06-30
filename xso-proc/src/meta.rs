@@ -318,7 +318,10 @@ pub(crate) enum XmlFieldMeta {
     },
 
     /// `#[xml(child)`
-    Child,
+    Child {
+        /// The `default` flag.
+        default_: Flag,
+    },
 }
 
 impl XmlFieldMeta {
@@ -424,8 +427,26 @@ impl XmlFieldMeta {
     }
 
     /// Parse a `#[xml(child)]` meta.
-    fn child_from_meta(_: ParseNestedMeta<'_>) -> Result<Self> {
-        Ok(Self::Child)
+    fn child_from_meta(meta: ParseNestedMeta<'_>) -> Result<Self> {
+        if meta.input.peek(syn::token::Paren) {
+            let mut default_ = Flag::Absent;
+            meta.parse_nested_meta(|meta| {
+                if meta.path.is_ident("default") {
+                    if default_.is_set() {
+                        return Err(Error::new_spanned(meta.path, "duplicate `default` key"));
+                    }
+                    default_ = (&meta.path).into();
+                    Ok(())
+                } else {
+                    Err(Error::new_spanned(meta.path, "unsupported key"))
+                }
+            })?;
+            Ok(Self::Child { default_ })
+        } else {
+            Ok(Self::Child {
+                default_: Flag::Absent,
+            })
+        }
     }
 
     /// Parse [`Self`] from a nestd meta, switching on the identifier

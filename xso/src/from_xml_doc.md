@@ -139,8 +139,19 @@ assert_eq!(foo, Foo {
 #### `child` meta
 
 The `child` meta causes the field to be mapped to a child element of the
-element. It supports no options. The field's type must implement [`FromXml`]
-in order to derive `FromXml` and [`AsXml`] in order to derive `AsXml`.
+element.
+
+| Key | Value type | Description |
+| --- | --- | --- |
+| `default` | flag | If present, an absent child will substitute the default value instead of raising an error. |
+
+The field's type must implement [`FromXml`] in order to derive `FromXml` and
+[`AsXml`] in order to derive `AsXml`.
+
+If `default` is specified and the child is absent in the source, the value
+is generated using [`std::default::Default`], requiring the field type to
+implement the `Default` trait for a `FromXml` derivation. `default` has no
+influence on `AsXml`.
 
 ##### Example
 

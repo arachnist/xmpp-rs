@@ -152,7 +152,11 @@ enum FieldKind {
     },
 
     /// The field maps to a child
-    Child,
+    Child {
+        // Flag indicating whether the value should be defaulted if the
+        // child is absent.
+        default_: Flag,
+    },
 }
 
 impl FieldKind {
@@ -199,7 +203,7 @@ impl FieldKind {
 
             XmlFieldMeta::Text { codec } => Ok(Self::Text { codec }),
 
-            XmlFieldMeta::Child => Ok(Self::Child),
+            XmlFieldMeta::Child { default_ } => Ok(Self::Child { default_ }),
         }
     }
 }
@@ -341,7 +345,7 @@ impl FieldDef {
                 })
             }
 
-            FieldKind::Child => {
+            FieldKind::Child { ref default_ } => {
                 let FromEventsScope {
                     ref substate_result,
                     ..
@@ -352,6 +356,18 @@ impl FieldDef {
 
                 let from_events = from_events_fn(self.ty.clone());
                 let from_xml_builder = from_xml_builder_ty(self.ty.clone());
+
+                let on_absent = match default_ {
+                    Flag::Absent => quote! {
+                        return ::core::result::Result::Err(::xso::error::Error::Other(#missing_msg).into())
+                    },
+                    Flag::Present(_) => {
+                        let default_ = default_fn(self.ty.clone());
+                        quote! {
+                            #default_()
+                        }
+                    }
+                };
 
                 Ok(FieldBuilderPart::Nested {
                     value: FieldTempInit {
@@ -368,7 +384,7 @@ impl FieldDef {
                     finalize: quote! {
                         match #field_access {
                             ::std::option::Option::Some(value) => value,
-                            ::std::option::Option::None => return ::core::result::Result::Err(::xso::error::Error::Other(#missing_msg).into()),
+                            ::std::option::Option::None => #on_absent,
                         }
                     },
                 })
@@ -426,7 +442,7 @@ impl FieldDef {
                 Ok(FieldIteratorPart::Text { generator })
             }
 
-            FieldKind::Child => {
+            FieldKind::Child { default_: _ } => {
                 let AsItemsScope { ref lifetime, .. } = scope;
 
                 let as_xml_iter = as_xml_iter_fn(self.ty.clone());
