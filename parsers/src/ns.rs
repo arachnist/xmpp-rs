@@ -100,6 +100,9 @@ pub const CAPS: &str = "http://jabber.org/protocol/caps";
 /// XEP-0118: User Tune
 pub const TUNE: &str = "http://jabber.org/protocol/tune";
 
+/// XEP-0122: Data Forms Validation
+pub const XDATA_VALIDATE: &str = "http://jabber.org/protocol/xdata-validate";
+
 /// XEP-0153: vCard-Based Avatars
 pub const VCARD_UPDATE: &str = "vcard-temp:x:update";
 
@@ -290,8 +293,8 @@ pub const OID: &str = "urn:xmpp:occupant-id:0";
 /// XEP-0444: Message Reactions
 pub const REACTIONS: &str = "urn:xmpp:reactions:0";
 
-/// XEP-0122: Data Forms Validation
-pub const XDATA_VALIDATE: &str = "http://jabber.org/protocol/xdata-validate";
+/// XEP-0484: Fast Authentication Streamlining Tokens
+pub const FAST: &str = "urn:xmpp:fast:0";
 
 /// Alias for the main namespace of the stream, that is "jabber:client" when
 /// the component feature isn’t enabled.
@@ -302,6 +305,3 @@ pub const DEFAULT_NS: &str = JABBER_CLIENT;
 /// "jabber:component:accept" when the component feature is enabled.
 #[cfg(feature = "component")]
 pub const DEFAULT_NS: &str = COMPONENT_ACCEPT;
-
-/// XEP-0484: Fast Authentication Streamlining Tokens
-pub const FAST: &str = "urn:xmpp:fast:0";
