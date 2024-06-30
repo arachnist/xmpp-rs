@@ -30,14 +30,14 @@ pub struct DiscoInfoQuery {
 
 impl IqGetPayload for DiscoInfoQuery {}
 
-generate_element!(
-#[derive(Eq, Hash)]
 /// Structure representing a `<feature xmlns='http://jabber.org/protocol/disco#info'/>` element.
-Feature, "feature", DISCO_INFO,
-attributes: [
+#[derive(FromXml, IntoXml, Debug, Clone, PartialEq, Eq, Hash)]
+#[xml(namespace = ns::DISCO_INFO, name = "feature")]
+pub struct Feature {
     /// Namespace of the feature we want to represent.
-    var: Required<String> = "var",
-]);
+    #[xml(attribute)]
+    pub var: String,
+}
 
 impl Feature {
     /// Create a new `<feature/>` with the according `@var`.
@@ -381,7 +381,10 @@ mod tests {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Required attribute 'var' missing.");
+        assert_eq!(
+            message,
+            "Required attribute field 'var' on Feature element missing."
+        );
     }
 
     #[test]
