@@ -176,6 +176,7 @@ impl FromEventsSubmachine {
             state_defs,
             advance_match_arms,
             variants: vec![FromEventsEntryPoint { init: self.init }],
+            pre_init: TokenStream::default(),
         }
     }
 
@@ -369,6 +370,9 @@ pub(crate) struct FromEventsStateMachine {
     /// Extra items which are needed for the state machine implementation.
     defs: TokenStream,
 
+    /// Extra code run during pre-init phase.
+    pre_init: TokenStream,
+
     /// A sequence of enum variant declarations, separated and terminated by
     /// commas.
     state_defs: TokenStream,
@@ -390,6 +394,36 @@ pub(crate) struct FromEventsStateMachine {
 }
 
 impl FromEventsStateMachine {
+    /// Create a new, empty state machine.
+    pub(crate) fn new() -> Self {
+        Self {
+            defs: TokenStream::default(),
+            state_defs: TokenStream::default(),
+            advance_match_arms: TokenStream::default(),
+            pre_init: TokenStream::default(),
+            variants: Vec::new(),
+        }
+    }
+
+    /// Merge another state machine into this state machine.
+    ///
+    /// This *discards* the other state machine's pre-init code.
+    pub(crate) fn merge(&mut self, other: FromEventsStateMachine) {
+        self.defs.extend(other.defs);
+        self.state_defs.extend(other.state_defs);
+        self.advance_match_arms.extend(other.advance_match_arms);
+        self.variants.extend(other.variants);
+    }
+
+    /// Set additional code to inject at the head of the `new` method for the
+    /// builder.
+    ///
+    /// This can be used to do preliminary checks and is commonly used with
+    /// specifically-formed init codes on the variants.
+    pub(crate) fn set_pre_init(&mut self, code: TokenStream) {
+        self.pre_init = code;
+    }
+
     /// Render the state machine as a token stream.
     ///
     /// The token stream contains the following pieces:
@@ -411,9 +445,10 @@ impl FromEventsStateMachine {
             state_defs,
             advance_match_arms,
             variants,
+            pre_init,
         } = self;
 
-        let mut init_body = TokenStream::default();
+        let mut init_body = pre_init;
         for variant in variants {
             let FromEventsEntryPoint { init } = variant;
             init_body.extend(quote! {
@@ -550,6 +585,24 @@ pub(crate) struct AsItemsStateMachine {
 }
 
 impl AsItemsStateMachine {
+    /// Create a new, empty state machine.
+    pub(crate) fn new() -> Self {
+        Self {
+            defs: TokenStream::default(),
+            state_defs: TokenStream::default(),
+            advance_match_arms: TokenStream::default(),
+            variants: Vec::new(),
+        }
+    }
+
+    /// Merge another state machine into this state machine.
+    pub(crate) fn merge(&mut self, other: AsItemsStateMachine) {
+        self.defs.extend(other.defs);
+        self.state_defs.extend(other.state_defs);
+        self.advance_match_arms.extend(other.advance_match_arms);
+        self.variants.extend(other.variants);
+    }
+
     /// Render the state machine as a token stream.
     ///
     /// The token stream contains the following pieces:
@@ -588,7 +641,7 @@ impl AsItemsStateMachine {
             let mut match_arms = TokenStream::default();
             for AsItemsEntryPoint { destructure, init } in variants {
                 match_arms.extend(quote! {
-                    #destructure => #init,
+                    #destructure => { #init }
                 });
             }
 

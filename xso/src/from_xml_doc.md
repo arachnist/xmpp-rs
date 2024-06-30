@@ -71,6 +71,60 @@ By default, the builder type uses the type's name suffixed with
 `FromXmlBuilder` and the iterator type uses the type's name suffixed with
 `AsXmlIterator`.
 
+### Enum meta
+
+The following keys are defined on enums:
+
+| Key | Value type | Description |
+| --- | --- | --- |
+| `namespace` | *string literal* or *path* | The XML element namespace to match for this enum. If it is a *path*, it must point at a `&'static str`. |
+| `builder` | optional *ident* | The name to use for the generated builder type. |
+| `iterator` | optional *ident* | The name to use for the generated iterator type. |
+
+All variants of an enum live within the same namespace and are distinguished
+exclusively by their XML name within that namespace. The contents of the XML
+element (including attributes) is not inspected before selecting the variant
+when parsing XML.
+
+For details on `builder` and `iterator`, see the [Struct meta](#struct-meta)
+documentation above.
+
+#### Enum variant meta
+
+| Key | Value type | Description |
+| --- | --- | --- |
+| `name` | *string literal* or *path* | The XML element name to match for this variant. If it is a *path*, it must point at a `&'static NcNameStr`. |
+
+Note that the `name` value must be a valid XML element name, without colons.
+The namespace prefix, if any, is assigned automatically at serialisation time
+and cannot be overridden.
+
+#### Example
+
+```rust
+# use xso::FromXml;
+#[derive(FromXml, Debug, PartialEq)]
+#[xml(namespace = "urn:example")]
+enum Foo {
+    #[xml(name = "a")]
+    Variant1 {
+        #[xml(attribute)]
+        foo: String,
+    },
+    #[xml(name = "b")]
+    Variant2 {
+        #[xml(attribute)]
+        bar: String,
+    },
+}
+
+let foo: Foo = xso::from_bytes(b"<a xmlns='urn:example' foo='hello'/>").unwrap();
+assert_eq!(foo, Foo::Variant1 { foo: "hello".to_string() });
+
+let foo: Foo = xso::from_bytes(b"<b xmlns='urn:example' bar='hello'/>").unwrap();
+assert_eq!(foo, Foo::Variant2 { bar: "hello".to_string() });
+```
+
 ### Field meta
 
 For fields, the *meta* consists of a nested meta inside the `#[xml(..)]` meta,

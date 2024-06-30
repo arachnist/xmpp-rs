@@ -163,7 +163,7 @@ impl ItemDef for StructDef {
         let defs = self
             .inner
             .make_as_item_iter_statemachine(
-                &target_ty_ident.clone().into(),
+                &Path::from(target_ty_ident.clone()).into(),
                 "Struct",
                 &item_iter_ty_lifetime,
             )?

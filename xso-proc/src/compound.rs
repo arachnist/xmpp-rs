@@ -297,7 +297,7 @@ impl Compound {
     /// `rxml::QName` is in scope.
     pub(crate) fn make_as_item_iter_statemachine(
         &self,
-        input_name: &Path,
+        input_name: &ParentRef,
         state_prefix: &str,
         lifetime: &Lifetime,
     ) -> Result<AsItemsSubmachine> {
@@ -430,11 +430,13 @@ impl Compound {
             }),
         );
 
+        let ParentRef::Named(input_path) = input_name;
+
         Ok(AsItemsSubmachine {
             defs: TokenStream::default(),
             states,
             destructure: quote! {
-                #input_name { #destructure }
+                #input_path { #destructure }
             },
             init: quote! {
                 Self::#element_head_start_state_ident { #dummy_ident: ::std::marker::PhantomData, #name_ident: name.1, #ns_ident: name.0, #start_init }

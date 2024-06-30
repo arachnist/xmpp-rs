@@ -27,6 +27,7 @@ use syn::*;
 
 mod common;
 mod compound;
+mod enums;
 mod error_message;
 mod field;
 mod meta;
@@ -41,12 +42,17 @@ use common::{AsXmlParts, FromXmlParts, ItemDef};
 ///
 /// If the item is of an unsupported variant, an appropriate error is
 /// returned.
-fn parse_struct(item: Item) -> Result<(Visibility, Ident, structs::StructDef)> {
+fn parse_struct(item: Item) -> Result<(Visibility, Ident, Box<dyn ItemDef>)> {
     match item {
         Item::Struct(item) => {
             let meta = meta::XmlCompoundMeta::parse_from_attributes(&item.attrs)?;
             let def = structs::StructDef::new(&item.ident, meta, &item.fields)?;
-            Ok((item.vis, item.ident, def))
+            Ok((item.vis, item.ident, Box::new(def)))
+        }
+        Item::Enum(item) => {
+            let meta = meta::XmlCompoundMeta::parse_from_attributes(&item.attrs)?;
+            let def = enums::EnumDef::new(&item.ident, meta, &item.variants)?;
+            Ok((item.vis, item.ident, Box::new(def)))
         }
         other => Err(Error::new_spanned(other, "cannot derive on this item")),
     }

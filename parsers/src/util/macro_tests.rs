@@ -617,3 +617,120 @@ fn renamed_types_get_renamed() {
 #[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = NS1, name = "elem")]
 struct LintTest_;
+
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = NS1)]
+enum NameSwitchedEnum {
+    #[xml(name = "a")]
+    Variant1 {
+        #[xml(attribute)]
+        foo: String,
+    },
+    #[xml(name = "b")]
+    Variant2 {
+        #[xml(text)]
+        foo: String,
+    },
+}
+
+#[test]
+fn name_switched_enum_positive_variant_1() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    match parse_str::<NameSwitchedEnum>("<a xmlns='urn:example:ns1' foo='hello'/>") {
+        Ok(NameSwitchedEnum::Variant1 { foo }) => {
+            assert_eq!(foo, "hello");
+        }
+        other => panic!("unexpected result: {:?}", other),
+    }
+}
+
+#[test]
+fn name_switched_enum_positive_variant_2() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    match parse_str::<NameSwitchedEnum>("<b xmlns='urn:example:ns1'>hello</b>") {
+        Ok(NameSwitchedEnum::Variant2 { foo }) => {
+            assert_eq!(foo, "hello");
+        }
+        other => panic!("unexpected result: {:?}", other),
+    }
+}
+
+#[test]
+fn name_switched_enum_negative_name_mismatch() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    match parse_str::<NameSwitchedEnum>("<x xmlns='urn:example:ns1'>hello</x>") {
+        Err(xso::error::FromElementError::Mismatch { .. }) => (),
+        other => panic!("unexpected result: {:?}", other),
+    }
+}
+
+#[test]
+fn name_switched_enum_negative_namespace_mismatch() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    match parse_str::<NameSwitchedEnum>("<b xmlns='urn:example:ns2'>hello</b>") {
+        Err(xso::error::FromElementError::Mismatch { .. }) => (),
+        other => panic!("unexpected result: {:?}", other),
+    }
+}
+
+#[test]
+fn name_switched_enum_roundtrip_variant_1() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<NameSwitchedEnum>("<a xmlns='urn:example:ns1' foo='hello'/>")
+}
+
+#[test]
+fn name_switched_enum_roundtrip_variant_2() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<NameSwitchedEnum>("<b xmlns='urn:example:ns1'>hello</b>")
+}
+
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = NS1, builder = RenamedEnumBuilder, iterator = RenamedEnumIter)]
+enum RenamedEnumTypes {
+    #[xml(name = "elem")]
+    A,
+}
+
+#[test]
+fn renamed_enum_types_roundtrip() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<RenamedEnumTypes>("<elem xmlns='urn:example:ns1'/>")
+}
+
+#[test]
+#[allow(unused_comparisons)]
+fn renamed_enum_types_get_renamed() {
+    // these merely serve as a test that the types are declared with the names
+    // given in the attributes.
+    assert!(std::mem::size_of::<RenamedEnumBuilder>() >= 0);
+    assert!(std::mem::size_of::<RenamedEnumIter>() >= 0);
+}

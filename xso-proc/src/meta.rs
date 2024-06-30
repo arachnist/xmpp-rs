@@ -9,6 +9,8 @@
 //! This module is concerned with parsing attributes from the Rust "meta"
 //! annotations on structs, enums, enum variants and fields.
 
+use std::hash::{Hash, Hasher};
+
 use proc_macro2::{Span, TokenStream};
 use quote::{quote, quote_spanned};
 use syn::{meta::ParseNestedMeta, spanned::Spanned, *};
@@ -56,7 +58,7 @@ impl quote::ToTokens for NamespaceRef {
 }
 
 /// Value for the `#[xml(name = .. )]` attribute.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) enum NameRef {
     /// The XML name is specified as a string literal.
     Literal {
@@ -70,6 +72,38 @@ pub(crate) enum NameRef {
     /// The XML name is specified as a path.
     Path(Path),
 }
+
+impl Hash for NameRef {
+    fn hash<H: Hasher>(&self, h: &mut H) {
+        match self {
+            Self::Literal { ref value, .. } => value.hash(h),
+            Self::Path(ref path) => path.hash(h),
+        }
+    }
+}
+
+impl PartialEq for NameRef {
+    fn eq(&self, other: &NameRef) -> bool {
+        match self {
+            Self::Literal {
+                value: ref my_value,
+                ..
+            } => match other {
+                Self::Literal {
+                    value: ref other_value,
+                    ..
+                } => my_value == other_value,
+                _ => false,
+            },
+            Self::Path(ref my_path) => match other {
+                Self::Path(ref other_path) => my_path == other_path,
+                _ => false,
+            },
+        }
+    }
+}
+
+impl Eq for NameRef {}
 
 impl syn::parse::Parse for NameRef {
     fn parse(input: syn::parse::ParseStream<'_>) -> Result<Self> {
