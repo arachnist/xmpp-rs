@@ -302,3 +302,6 @@ pub const DEFAULT_NS: &str = JABBER_CLIENT;
 /// "jabber:component:accept" when the component feature is enabled.
 #[cfg(feature = "component")]
 pub const DEFAULT_NS: &str = COMPONENT_ACCEPT;
+
+/// XEP-0484: Fast Authentication Streamlining Tokens
+pub const FAST: &str = "urn:xmpp:fast:0";

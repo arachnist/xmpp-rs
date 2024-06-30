@@ -266,3 +266,6 @@ pub mod mam_prefs;
 
 /// XEP-0444: Message Reactions
 pub mod reactions;
+
+/// XEP-0484: Fast Authentication Streamlining Tokens
+pub mod fast;
