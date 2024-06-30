@@ -16,14 +16,14 @@ use xso::{text::FixedHex, AsXml, FromXml};
 
 use crate::ns;
 
-generate_element!(
-    /// The presence payload for an avatar VCard update
-    VCardUpdate, "x", VCARD_UPDATE,
-    children: [
-        /// The photo element. Is empty if "a client is not yet ready to advertise an image".
-        photo: Option<Photo> = ("photo", VCARD_UPDATE) => Photo,
-    ]
-);
+/// The presence payload for an avatar VCard update
+#[derive(FromXml, AsXml, Debug, PartialEq, Clone)]
+#[xml(namespace = ns::VCARD_UPDATE, name = "x")]
+pub struct VCardUpdate {
+    /// The photo element. Is empty if "a client is not yet ready to advertise an image".
+    #[xml(child(default))]
+    pub photo: Option<Photo>,
+}
 
 /// The photo element containing the avatar metadata
 #[derive(FromXml, AsXml, PartialEq, Debug, Clone)]

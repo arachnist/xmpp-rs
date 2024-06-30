@@ -185,20 +185,21 @@ impl From<DiscoInfoResult> for Element {
     }
 }
 
-generate_element!(
 /// Structure representing a `<query xmlns='http://jabber.org/protocol/disco#items'/>` element.
 ///
 /// It should only be used in an `<iq type='get'/>`, as it can only represent
 /// the request, and not a result.
-DiscoItemsQuery, "query", DISCO_ITEMS,
-attributes: [
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::DISCO_ITEMS, name = "query")]
+pub struct DiscoItemsQuery {
     /// Node on which we are doing the discovery.
-    node: Option<String> = "node",
-],
-children: [
+    #[xml(attribute(default))]
+    pub node: Option<String>,
+
     /// Optional paging via Result Set Management
-    rsm: Option<crate::rsm::SetQuery> = ("set", RSM) => SetQuery,
-]);
+    #[xml(child(default))]
+    pub rsm: Option<SetQuery>,
+}
 
 impl IqGetPayload for DiscoItemsQuery {}
 

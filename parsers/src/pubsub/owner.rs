@@ -41,40 +41,40 @@ pub struct Affiliation {
     affiliation: AffiliationAttribute,
 }
 
-generate_element!(
-    /// Request to configure a node.
-    Configure, "configure", PUBSUB_OWNER,
-    attributes: [
-        /// The node to be configured.
-        node: Option<NodeName> = "node",
-    ],
-    children: [
-        /// The form to configure it.
-        form: Option<DataForm> = ("x", DATA_FORMS) => DataForm
-    ]
-);
+/// Request to configure a node.
+#[derive(FromXml, AsXml, Debug, PartialEq, Clone)]
+#[xml(namespace = ns::PUBSUB_OWNER, name = "configure")]
+pub struct Configure {
+    /// The node to be configured.
+    #[xml(attribute(default))]
+    pub node: Option<NodeName>,
 
-generate_element!(
-    /// Request to change default configuration.
-    Default, "default", PUBSUB_OWNER,
-    children: [
-        /// The form to configure it.
-        form: Option<DataForm> = ("x", DATA_FORMS) => DataForm
-    ]
-);
+    /// The form to configure it.
+    #[xml(child(default))]
+    pub form: Option<DataForm>,
+}
 
-generate_element!(
-    /// Request to delete a node.
-    Delete, "delete", PUBSUB_OWNER,
-    attributes: [
-        /// The node to be configured.
-        node: Required<NodeName> = "node",
-    ],
-    children: [
-        /// Redirection to replace the deleted node.
-        redirect: Option<Redirect> = ("redirect", PUBSUB_OWNER) => Redirect
-    ]
-);
+/// Request to retrieve default configuration.
+#[derive(FromXml, AsXml, Debug, PartialEq, Clone)]
+#[xml(namespace = ns::PUBSUB_OWNER, name = "default")]
+pub struct Default {
+    /// The form to configure it.
+    #[xml(child(default))]
+    pub form: Option<DataForm>,
+}
+
+/// Request to delete a node.
+#[derive(FromXml, AsXml, Debug, PartialEq, Clone)]
+#[xml(namespace = ns::PUBSUB_OWNER, name = "delete")]
+pub struct Delete {
+    /// The node to be deleted.
+    #[xml(attribute)]
+    pub node: NodeName,
+
+    /// Redirection to replace the deleted node.
+    #[xml(child(default))]
+    pub redirect: Option<Redirect>,
+}
 
 /// A redirect element.
 #[derive(FromXml, AsXml, PartialEq, Debug, Clone)]

@@ -93,19 +93,19 @@ pub struct Enabled {
     pub resume: ResumeAttr,
 }
 
-generate_element!(
-    /// A stream management error happened.
-    Failed, "failed", SM,
-    attributes: [
-        /// The last handled stanza.
-        h: Option<u32> = "h",
-    ],
-    children: [
-        /// The error returned.
-        // XXX: implement the * handling.
-        error: Option<DefinedCondition> = ("*", XMPP_STANZAS) => DefinedCondition
-    ]
-);
+/// A stream management error happened.
+#[derive(FromXml, AsXml, Debug, PartialEq, Clone)]
+#[xml(namespace = ns::SM, name = "failed")]
+pub struct Failed {
+    /// The last handled stanza.
+    #[xml(attribute)]
+    pub h: Option<u32>,
+
+    /// The error returned.
+    // XXX: implement the * handling.
+    #[xml(child(default))]
+    pub error: Option<DefinedCondition>,
+}
 
 /// Requests the currently received stanzas by the other party.
 #[derive(FromXml, AsXml, PartialEq, Debug, Clone)]

@@ -5,8 +5,9 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 use xso::{
-    error::{Error, FromElementError},
-    AsXml, FromXml,
+    error::{Error, FromElementError, FromEventsError},
+    exports::rxml,
+    minidom_compat, AsXml, FromXml,
 };
 
 use crate::data_forms::DataForm;
@@ -46,14 +47,14 @@ pub struct Affiliation {
     pub affiliation: AffiliationAttribute,
 }
 
-generate_element!(
-    /// Request to configure a new node.
-    Configure, "configure", PUBSUB,
-    children: [
-        /// The form to configure it.
-        form: Option<DataForm> = ("x", DATA_FORMS) => DataForm
-    ]
-);
+/// Request to configure a new node.
+#[derive(FromXml, AsXml, Debug, PartialEq, Clone)]
+#[xml(namespace = ns::PUBSUB, name = "configure")]
+pub struct Configure {
+    /// The form to configure it.
+    #[xml(child(default))]
+    pub form: Option<DataForm>,
+}
 
 /// Request to create a new node.
 #[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
@@ -114,24 +115,26 @@ pub struct Item(pub PubSubItem);
 
 impl_pubsub_item!(Item, PUBSUB);
 
-generate_element!(
-    /// The options associated to a subscription request.
-    Options, "options", PUBSUB,
-    attributes: [
-        /// The JID affected by this request.
-        jid: Required<Jid> = "jid",
+/// The options associated to a subscription request.
+#[derive(FromXml, AsXml, Debug, PartialEq, Clone)]
+#[xml(namespace = ns::PUBSUB, name = "options")]
+pub struct Options {
+    /// The JID affected by this request.
+    #[xml(attribute)]
+    pub jid: Jid,
 
-        /// The node affected by this request.
-        node: Option<NodeName> = "node",
+    /// The node affected by this request.
+    #[xml(attribute(default))]
+    pub node: Option<NodeName>,
 
-        /// The subscription identifier affected by this request.
-        subid: Option<SubscriptionId> = "subid",
-    ],
-    children: [
-        /// The form describing the subscription.
-        form: Option<DataForm> = ("x", DATA_FORMS) => DataForm
-    ]
-);
+    /// The subscription identifier affected by this request.
+    #[xml(attribute(default))]
+    pub subid: Option<SubscriptionId>,
+
+    /// The form describing the subscription.
+    #[xml(child(default))]
+    pub form: Option<DataForm>,
+}
 
 generate_element!(
     /// Request to publish items to a node.
@@ -146,14 +149,14 @@ generate_element!(
     ]
 );
 
-generate_element!(
-    /// The options associated to a publish request.
-    PublishOptions, "publish-options", PUBSUB,
-    children: [
-        /// The form describing these options.
-        form: Option<DataForm> = ("x", DATA_FORMS) => DataForm
-    ]
-);
+/// The options associated to a publish request.
+#[derive(FromXml, AsXml, Debug, PartialEq, Clone)]
+#[xml(namespace = ns::PUBSUB, name = "publish-options")]
+pub struct PublishOptions {
+    /// The form describing these options.
+    #[xml(child(default))]
+    pub form: Option<DataForm>,
+}
 
 generate_attribute!(
     /// Whether a retract request should notify subscribers or not.
@@ -209,6 +212,20 @@ impl TryFrom<Element> for SubscribeOptions {
     }
 }
 
+impl FromXml for SubscribeOptions {
+    type Builder = minidom_compat::FromEventsViaElement<SubscribeOptions>;
+
+    fn from_events(
+        qname: rxml::QName,
+        attrs: rxml::AttrMap,
+    ) -> Result<Self::Builder, FromEventsError> {
+        if qname.0 != crate::ns::PUBSUB || qname.1 != "subscribe-options" {
+            return Err(FromEventsError::Mismatch { name: qname, attrs });
+        }
+        Self::Builder::new(qname, attrs)
+    }
+}
+
 impl From<SubscribeOptions> for Element {
     fn from(subscribe_options: SubscribeOptions) -> Element {
         Element::builder("subscribe-options", ns::PUBSUB)
@@ -218,6 +235,14 @@ impl From<SubscribeOptions> for Element {
                 None
             })
             .build()
+    }
+}
+
+impl AsXml for SubscribeOptions {
+    type ItemIter<'x> = minidom_compat::AsItemsViaElement<'x>;
+
+    fn as_xml_iter(&self) -> Result<Self::ItemIter<'_>, Error> {
+        minidom_compat::AsItemsViaElement::new(self.clone())
     }
 }
 
@@ -247,27 +272,30 @@ generate_element!(
     ]
 );
 
-generate_element!(
-    /// A subscription element, describing the state of a subscription.
-    SubscriptionElem, "subscription", PUBSUB,
-    attributes: [
-        /// The JID affected by this subscription.
-        jid: Required<Jid> = "jid",
+/// A subscription element, describing the state of a subscription.
+#[derive(FromXml, AsXml, Debug, PartialEq, Clone)]
+#[xml(namespace = ns::PUBSUB, name = "subscription")]
+pub struct SubscriptionElem {
+    /// The JID affected by this subscription.
+    #[xml(attribute)]
+    jid: Jid,
 
-        /// The node affected by this subscription.
-        node: Option<NodeName> = "node",
+    /// The node affected by this subscription.
+    #[xml(attribute(default))]
+    node: Option<NodeName>,
 
-        /// The subscription identifier for this subscription.
-        subid: Option<SubscriptionId> = "subid",
+    /// The subscription identifier for this subscription.
+    #[xml(attribute(default))]
+    subid: Option<SubscriptionId>,
 
-        /// The state of the subscription.
-        subscription: Option<Subscription> = "subscription",
-    ],
-    children: [
-        /// The options related to this subscription.
-        subscribe_options: Option<SubscribeOptions> = ("subscribe-options", PUBSUB) => SubscribeOptions
-    ]
-);
+    /// The state of the subscription.
+    #[xml(attribute(default))]
+    subscription: Option<Subscription>,
+
+    /// The options related to this subscription.
+    #[xml(child(default))]
+    subscribe_options: Option<SubscribeOptions>,
+}
 
 /// An unsubscribe request.
 #[derive(FromXml, AsXml, Debug, PartialEq, Clone)]

@@ -6,7 +6,11 @@
 
 use crate::ns;
 use minidom::Element;
-use xso::error::{Error, FromElementError};
+use xso::{
+    error::{Error, FromElementError, FromEventsError},
+    exports::rxml,
+    minidom_compat, AsXml, FromXml,
+};
 
 /// Requests paging through a potentially big set of items (represented by an
 /// UID).
@@ -67,6 +71,20 @@ impl TryFrom<Element> for SetQuery {
     }
 }
 
+impl FromXml for SetQuery {
+    type Builder = minidom_compat::FromEventsViaElement<SetQuery>;
+
+    fn from_events(
+        qname: rxml::QName,
+        attrs: rxml::AttrMap,
+    ) -> Result<Self::Builder, FromEventsError> {
+        if qname.0 != crate::ns::RSM || qname.1 != "set" {
+            return Err(FromEventsError::Mismatch { name: qname, attrs });
+        }
+        Self::Builder::new(qname, attrs)
+    }
+}
+
 impl From<SetQuery> for Element {
     fn from(set: SetQuery) -> Element {
         Element::builder("set", ns::RSM)
@@ -90,6 +108,14 @@ impl From<SetQuery> for Element {
                     .map(|index| Element::builder("index", ns::RSM).append(format!("{}", index))),
             )
             .build()
+    }
+}
+
+impl AsXml for SetQuery {
+    type ItemIter<'x> = minidom_compat::AsItemsViaElement<'x>;
+
+    fn as_xml_iter(&self) -> Result<Self::ItemIter<'_>, Error> {
+        minidom_compat::AsItemsViaElement::new(self.clone())
     }
 }
 

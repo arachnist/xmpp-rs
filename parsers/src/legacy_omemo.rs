@@ -88,20 +88,28 @@ pub struct PreKeyPublic {
     pub data: Vec<u8>,
 }
 
-generate_element!(
-    /// A collection of publicly accessible data that can be used to build a session with a device, namely its public IdentityKey, a signed PreKey with corresponding signature, and a list of (single use) PreKeys.
-    Bundle, "bundle", LEGACY_OMEMO,
-    children: [
-        /// SignedPreKey public key
-        signed_pre_key_public: Option<SignedPreKeyPublic> = ("signedPreKeyPublic", LEGACY_OMEMO) => SignedPreKeyPublic,
-        /// SignedPreKey signature
-        signed_pre_key_signature: Option<SignedPreKeySignature> = ("signedPreKeySignature", LEGACY_OMEMO) => SignedPreKeySignature,
-        /// IdentityKey public key
-        identity_key: Option<IdentityKey> = ("identityKey", LEGACY_OMEMO) => IdentityKey,
-        /// List of (single use) PreKeys
-        prekeys: Option<Prekeys> = ("prekeys", LEGACY_OMEMO) => Prekeys,
-    ]
-);
+/// A collection of publicly accessible data that can be used to build a
+/// session with a device, namely its public IdentityKey, a signed PreKey with
+/// corresponding signature, and a list of (single use) PreKeys.
+#[derive(FromXml, AsXml, Debug, PartialEq, Clone)]
+#[xml(namespace = ns::LEGACY_OMEMO, name = "bundle")]
+pub struct Bundle {
+    /// SignedPreKey public key
+    #[xml(child(default))]
+    pub signed_pre_key_public: Option<SignedPreKeyPublic>,
+
+    /// SignedPreKey signature
+    #[xml(child(default))]
+    pub signed_pre_key_signature: Option<SignedPreKeySignature>,
+
+    /// IdentityKey public key
+    #[xml(child(default))]
+    pub identity_key: Option<IdentityKey>,
+
+    /// List of (single use) PreKeys
+    #[xml(child(default))]
+    pub prekeys: Option<Prekeys>,
+}
 
 impl PubSubPayload for Bundle {}
 
@@ -167,17 +175,19 @@ pub struct Payload {
     pub data: Vec<u8>,
 }
 
-generate_element!(
-    /// An OMEMO element, which can be either a MessageElement (with payload),
-    /// or a KeyTransportElement (without payload).
-    Encrypted, "encrypted", LEGACY_OMEMO,
-    children: [
-        /// The header contains encrypted keys for a message
-        header: Required<Header> = ("header", LEGACY_OMEMO) => Header,
-        /// Payload for MessageElement
-        payload: Option<Payload> = ("payload", LEGACY_OMEMO) => Payload
-    ]
-);
+/// An OMEMO element, which can be either a MessageElement (with payload),
+/// or a KeyTransportElement (without payload).
+#[derive(FromXml, AsXml, Debug, PartialEq, Clone)]
+#[xml(namespace = ns::LEGACY_OMEMO, name = "encrypted")]
+pub struct Encrypted {
+    /// The header contains encrypted keys for a message
+    #[xml(child)]
+    pub header: Header,
+
+    /// Payload for MessageElement
+    #[xml(child(default))]
+    pub payload: Option<Payload>,
+}
 
 impl MessagePayload for Encrypted {}
 

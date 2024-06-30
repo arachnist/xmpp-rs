@@ -4,7 +4,11 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use xso::error::{Error, FromElementError};
+use xso::{
+    error::{Error, FromElementError, FromEventsError},
+    exports::rxml,
+    minidom_compat, AsXml, FromXml,
+};
 
 use crate::data_forms_validate::Validate;
 use crate::media_element::MediaElement;
@@ -358,6 +362,20 @@ impl TryFrom<Element> for DataForm {
     }
 }
 
+impl FromXml for DataForm {
+    type Builder = minidom_compat::FromEventsViaElement<DataForm>;
+
+    fn from_events(
+        qname: rxml::QName,
+        attrs: rxml::AttrMap,
+    ) -> Result<Self::Builder, FromEventsError> {
+        if qname.0 != crate::ns::DATA_FORMS || qname.1 != "x" {
+            return Err(FromEventsError::Mismatch { name: qname, attrs });
+        }
+        Self::Builder::new(qname, attrs)
+    }
+}
+
 impl From<DataForm> for Element {
     fn from(form: DataForm) -> Element {
         Element::builder("x", ns::DATA_FORMS)
@@ -378,6 +396,14 @@ impl From<DataForm> for Element {
             }))
             .append_all(form.fields.iter().cloned().map(Element::from))
             .build()
+    }
+}
+
+impl AsXml for DataForm {
+    type ItemIter<'x> = minidom_compat::AsItemsViaElement<'x>;
+
+    fn as_xml_iter(&self) -> Result<Self::ItemIter<'_>, Error> {
+        minidom_compat::AsItemsViaElement::new(self.clone())
     }
 }
 

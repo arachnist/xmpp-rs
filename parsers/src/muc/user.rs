@@ -6,8 +6,9 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 use xso::{
-    error::{Error, FromElementError},
-    AsXml, FromXml,
+    error::{Error, FromElementError, FromEventsError},
+    exports::rxml,
+    minidom_compat, AsXml, FromXml,
 };
 
 use crate::message::MessagePayload;
@@ -117,6 +118,20 @@ impl TryFrom<Element> for Actor {
     }
 }
 
+impl FromXml for Actor {
+    type Builder = minidom_compat::FromEventsViaElement<Actor>;
+
+    fn from_events(
+        qname: rxml::QName,
+        attrs: rxml::AttrMap,
+    ) -> Result<Self::Builder, FromEventsError> {
+        if qname.0 != crate::ns::MUC_USER || qname.1 != "actor" {
+            return Err(FromEventsError::Mismatch { name: qname, attrs });
+        }
+        Self::Builder::new(qname, attrs)
+    }
+}
+
 impl From<Actor> for Element {
     fn from(actor: Actor) -> Element {
         let elem = Element::builder("actor", ns::MUC_USER);
@@ -126,6 +141,14 @@ impl From<Actor> for Element {
             Actor::Nick(nick) => elem.attr("nick", nick),
         })
         .build()
+    }
+}
+
+impl AsXml for Actor {
+    type ItemIter<'x> = minidom_compat::AsItemsViaElement<'x>;
+
+    fn as_xml_iter(&self) -> Result<Self::ItemIter<'_>, Error> {
+        minidom_compat::AsItemsViaElement::new(self.clone())
     }
 }
 
@@ -190,31 +213,38 @@ generate_attribute!(
     }, Default = None
 );
 
-generate_element!(
-    /// An item representing a user in a room.
-    Item, "item", MUC_USER, attributes: [
-        /// The affiliation of this user with the room.
-        affiliation: Required<Affiliation> = "affiliation",
+/// An item representing a user in a room.
+#[derive(FromXml, AsXml, Debug, PartialEq, Clone)]
+#[xml(namespace = ns::MUC_USER, name = "item")]
+pub struct Item {
+    /// The affiliation of this user with the room.
+    #[xml(attribute)]
+    affiliation: Affiliation,
 
-        /// The real JID of this user, if you are allowed to see it.
-        jid: Option<FullJid> = "jid",
+    /// The real JID of this user, if you are allowed to see it.
+    #[xml(attribute(default))]
+    jid: Option<FullJid>,
 
-        /// The current nickname of this user.
-        nick: Option<String> = "nick",
+    /// The current nickname of this user.
+    #[xml(attribute(default))]
+    nick: Option<String>,
 
-        /// The current role of this user.
-        role: Required<Role> = "role",
-    ], children: [
-        /// The actor affected by this item.
-        actor: Option<Actor> = ("actor", MUC_USER) => Actor,
+    /// The current role of this user.
+    #[xml(attribute)]
+    role: Role,
 
-        /// Whether this continues a one-to-one discussion.
-        continue_: Option<Continue> = ("continue", MUC_USER) => Continue,
+    /// The actor affected by this item.
+    #[xml(child(default))]
+    actor: Option<Actor>,
 
-        /// A reason for this item.
-        reason: Option<Reason> = ("reason", MUC_USER) => Reason
-    ]
-);
+    /// Whether this continues a one-to-one discussion.
+    #[xml(child(default))]
+    continue_: Option<Continue>,
+
+    /// A reason for this item.
+    #[xml(child(default))]
+    reason: Option<Reason>,
+}
 
 impl Item {
     /// Creates a new item with the given affiliation and role.
@@ -590,6 +620,8 @@ mod tests {
     #[test]
     fn test_item_invalid_attr() {
         let elem: Element = "<item xmlns='http://jabber.org/protocol/muc#user'
+                  affiliation='member'
+                  role='moderator'
                   foo='bar'/>"
             .parse()
             .unwrap();
@@ -598,7 +630,7 @@ mod tests {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Unknown attribute in item element.".to_owned());
+        assert_eq!(message, "Unknown attribute in Item element.".to_owned());
     }
 
     #[test]
@@ -622,7 +654,10 @@ mod tests {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Required attribute 'role' missing.".to_owned());
+        assert_eq!(
+            message,
+            "Required attribute field 'role' on Item element missing.".to_owned()
+        );
     }
 
     #[test]
@@ -652,7 +687,7 @@ mod tests {
         };
         assert_eq!(
             message,
-            "Required attribute 'affiliation' missing.".to_owned()
+            "Required attribute field 'affiliation' on Item element missing.".to_owned()
         );
     }
 
