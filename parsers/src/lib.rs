@@ -120,6 +120,9 @@ pub mod caps;
 /// XEP-0118: User Tune
 pub mod tune;
 
+/// XEP-0122: Data Forms Validation
+pub mod data_forms_validate;
+
 ///XEP-0153: vCard-Based Avatars
 pub mod vcard_update;
 

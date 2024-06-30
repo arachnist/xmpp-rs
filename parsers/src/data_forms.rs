@@ -4,7 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use crate::data_forms::Validate;
+use crate::data_forms_validate::Validate;
 use crate::media_element::MediaElement;
 use crate::ns;
 use crate::Element;
@@ -387,7 +387,7 @@ impl From<DataForm> for Element {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::data_forms::{Datatype, Validate};
+    use crate::data_forms_validate::{Datatype, Validate};
 
     #[cfg(target_pointer_width = "32")]
     #[test]

@@ -4,11 +4,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-//! XEP-0122: Data Forms Validation
-//!
-//! See [XEP-0122](https://xmpp.org/extensions/xep-0122.html) for the
-//! specification.
-
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
