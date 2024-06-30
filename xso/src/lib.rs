@@ -94,6 +94,17 @@ impl<'x, T: Iterator<Item = Result<Item<'x>, self::error::Error>>> Iterator for 
     }
 }
 
+/// Helper iterator to convert an `Box<T>` to XML.
+pub struct BoxAsXml<T: Iterator>(Box<T>);
+
+impl<'x, T: Iterator<Item = Result<Item<'x>, self::error::Error>>> Iterator for BoxAsXml<T> {
+    type Item = Result<Item<'x>, self::error::Error>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.0.next()
+    }
+}
+
 impl<T: AsXml> AsXml for Option<T> {
     type ItemIter<'x> = OptionAsXml<T::ItemIter<'x>> where T: 'x;
 
@@ -102,6 +113,14 @@ impl<T: AsXml> AsXml for Option<T> {
             Some(ref value) => Ok(OptionAsXml(Some(T::as_xml_iter(value)?))),
             None => Ok(OptionAsXml(None)),
         }
+    }
+}
+
+impl<T: AsXml> AsXml for Box<T> {
+    type ItemIter<'x> = BoxAsXml<T::ItemIter<'x>> where T: 'x;
+
+    fn as_xml_iter(&self) -> Result<Self::ItemIter<'_>, self::error::Error> {
+        Ok(BoxAsXml(Box::new(T::as_xml_iter(&self)?)))
     }
 }
 
@@ -134,11 +153,22 @@ pub trait FromEventsBuilder {
 /// Helper struct to construct an `Option<T>` from XML events.
 pub struct OptionBuilder<T: FromEventsBuilder>(T);
 
+/// Helper struct to construct an `Box<T>` from XML events.
+pub struct BoxBuilder<T: FromEventsBuilder>(Box<T>);
+
 impl<T: FromEventsBuilder> FromEventsBuilder for OptionBuilder<T> {
     type Output = Option<T::Output>;
 
     fn feed(&mut self, ev: rxml::Event) -> Result<Option<Self::Output>, self::error::Error> {
         self.0.feed(ev).map(|ok| ok.map(|value| Some(value)))
+    }
+}
+
+impl<T: FromEventsBuilder> FromEventsBuilder for BoxBuilder<T> {
+    type Output = Box<T::Output>;
+
+    fn feed(&mut self, ev: rxml::Event) -> Result<Option<Self::Output>, self::error::Error> {
+        self.0.feed(ev).map(|ok| ok.map(|value| Box::new(value)))
     }
 }
 
@@ -187,6 +217,17 @@ impl<T: FromXml> FromXml for Option<T> {
         attrs: rxml::AttrMap,
     ) -> Result<Self::Builder, self::error::FromEventsError> {
         Ok(OptionBuilder(T::from_events(name, attrs)?))
+    }
+}
+
+impl<T: FromXml> FromXml for Box<T> {
+    type Builder = BoxBuilder<T::Builder>;
+
+    fn from_events(
+        name: rxml::QName,
+        attrs: rxml::AttrMap,
+    ) -> Result<Self::Builder, self::error::FromEventsError> {
+        Ok(BoxBuilder(Box::new(T::from_events(name, attrs)?)))
     }
 }
 

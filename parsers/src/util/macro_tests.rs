@@ -550,3 +550,40 @@ fn optional_child_roundtrip_absent() {
     };
     roundtrip_full::<OptionalChild>("<parent xmlns='urn:example:ns1'/>")
 }
+
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = NS1, name = "elem")]
+struct BoxedChild {
+    #[xml(child(default))]
+    child: std::option::Option<Box<BoxedChild>>,
+}
+
+#[test]
+fn boxed_child_roundtrip_absent() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<BoxedChild>("<elem xmlns='urn:example:ns1'/>")
+}
+
+#[test]
+fn boxed_child_roundtrip_nested_1() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<BoxedChild>("<elem xmlns='urn:example:ns1'><elem/></elem>")
+}
+
+#[test]
+fn boxed_child_roundtrip_nested_2() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<BoxedChild>("<elem xmlns='urn:example:ns1'><elem><elem/></elem></elem>")
+}
