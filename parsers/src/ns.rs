@@ -275,6 +275,9 @@ pub const LEGACY_OMEMO_DEVICELIST: &str = "eu.siacs.conversations.axolotl.device
 /// XEP-0384: OMEMO Encryption (experimental version 0.3.0)
 pub const LEGACY_OMEMO_BUNDLES: &str = "eu.siacs.conversations.axolotl.bundles";
 
+/// XEP-0386: Bind 2
+pub const BIND2: &str = "urn:xmpp:bind:0";
+
 /// XEP-0390: Entity Capabilities 2.0
 pub const ECAPS2: &str = "urn:xmpp:caps";
 /// XEP-0390: Entity Capabilities 2.0

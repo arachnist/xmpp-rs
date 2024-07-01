@@ -1,6 +1,7 @@
 Version xxx:
 0000-00-00 Authors
     * New parsers/serialisers:
+        - Bind 2 (XEP-0386)
         - Fast Authentication Streamlining Tokens (XEP-0484)
     * Improvements:
       - Re-export the jid module entirely.
