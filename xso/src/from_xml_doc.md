@@ -140,7 +140,9 @@ The `text` meta causes the field to be mapped to the text content of the
 element. For `FromXml`, the field's type must implement [`FromXmlText`] and
 for `IntoXml`, the field's type must implement [`IntoXmlText`].
 
-The `text` meta supports no options or value.
+The `text` meta supports no options or value. Only a single field per struct
+may be annotated with `#[xml(text)]` at a time, to avoid parsing ambiguities.
+This is also true if only `IntoXml` is derived on a field, for consistency.
 
 ##### Example
 

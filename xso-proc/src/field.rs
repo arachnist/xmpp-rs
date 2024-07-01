@@ -329,4 +329,12 @@ impl FieldDef {
             }
         }
     }
+
+    /// Return true if this field's parsing consumes text data.
+    pub(crate) fn is_text_field(&self) -> bool {
+        match self.kind {
+            FieldKind::Text { .. } => true,
+            _ => false,
+        }
+    }
 }

@@ -8,7 +8,7 @@
 
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
-use syn::*;
+use syn::{spanned::Spanned, *};
 
 use crate::error_message::ParentRef;
 use crate::field::{FieldBuilderPart, FieldDef, FieldIteratorPart, FieldTempInit};
@@ -26,6 +26,7 @@ impl Compound {
     /// Construct a compound from fields.
     pub(crate) fn from_fields(compound_fields: &Fields) -> Result<Self> {
         let mut fields = Vec::with_capacity(compound_fields.len());
+        let mut text_field = None;
         for (i, field) in compound_fields.iter().enumerate() {
             let index = match i.try_into() {
                 Ok(v) => v,
@@ -38,7 +39,24 @@ impl Compound {
                     ))
                 }
             };
-            fields.push(FieldDef::from_field(field, index)?);
+            let field = FieldDef::from_field(field, index)?;
+
+            if field.is_text_field() {
+                if let Some(other_field) = text_field.as_ref() {
+                    let mut err = Error::new_spanned(
+                        field.member(),
+                        "only one `#[xml(text)]` field allowed per compound",
+                    );
+                    err.combine(Error::new(
+                        *other_field,
+                        "the other `#[xml(text)]` field is here",
+                    ));
+                    return Err(err);
+                }
+                text_field = Some(field.member().span())
+            }
+
+            fields.push(field);
         }
 
         Ok(Self { fields })
@@ -104,10 +122,9 @@ impl Compound {
                     finalize,
                 } => {
                     if text_handler.is_some() {
-                        return Err(Error::new_spanned(
-                            field.member(),
-                            "more than one field attempts to collect text data",
-                        ));
+                        // the existence of only one text handler is enforced
+                        // by Compound's constructor(s).
+                        panic!("more than one field attempts to collect text data");
                     }
 
                     builder_data_def.extend(quote! {
