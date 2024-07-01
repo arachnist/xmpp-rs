@@ -398,6 +398,17 @@ fn text_string_roundtrip() {
     roundtrip_full::<TextString>("<text xmlns='urn:example:ns1'>hello world!</text>");
 }
 
+#[test]
+fn text_string_positive_preserves_whitespace() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    let el = parse_str::<TextString>("<text xmlns='urn:example:ns1'> \t\n</text>").unwrap();
+    assert_eq!(el.text, " \t\n");
+}
+
 #[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
 #[xml(namespace = NS1, name = "text")]
 struct TextNonString {
@@ -413,4 +424,43 @@ fn text_non_string_roundtrip() {
         result::Result::{Err, Ok},
     };
     roundtrip_full::<TextNonString>("<text xmlns='urn:example:ns1'>123456</text>");
+}
+
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = NS1, name = "elem")]
+struct IgnoresWhitespaceWithoutTextConsumer;
+
+#[test]
+fn ignores_whitespace_without_text_consumer_positive() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    let _ = parse_str::<IgnoresWhitespaceWithoutTextConsumer>(
+        "<elem xmlns='urn:example:ns1'> \t\r\n</elem>",
+    )
+    .unwrap();
+}
+
+#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[xml(namespace = NS1, name = "elem")]
+struct FailsTextWithoutTextConsumer;
+
+#[test]
+fn fails_text_without_text_consumer_positive() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    match parse_str::<FailsTextWithoutTextConsumer>("<elem xmlns='urn:example:ns1'>  quak  </elem>")
+    {
+        Err(::xso::error::FromElementError::Invalid(::xso::error::Error::Other(e)))
+            if e.contains("Unexpected text") =>
+        {
+            ()
+        }
+        other => panic!("unexpected result: {:?}", other),
+    }
 }

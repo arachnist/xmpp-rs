@@ -132,7 +132,15 @@ impl Compound {
         let text_handler = match text_handler {
             Some(v) => v,
             None => quote! {
-                ::core::result::Result::Err(::xso::error::Error::Other("Unexpected text content".into()))
+                // note: u8::is_ascii_whitespace includes U+000C, which is not
+                // part of XML's white space definition.'
+                if #text.as_bytes().iter().any(|b| *b != b' ' && *b != b'\t' && *b != b'\r' && *b != b'\n') {
+                    ::core::result::Result::Err(::xso::error::Error::Other("Unexpected text content".into()))
+                } else {
+                    ::core::result::Result::Ok(::std::ops::ControlFlow::Break(
+                        Self::#default_state_ident { #builder_data_ident }
+                    ))
+                }
             },
         };
 
