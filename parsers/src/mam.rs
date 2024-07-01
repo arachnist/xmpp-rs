@@ -4,7 +4,13 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use xso::{
+    error::{Error, FromElementError},
+    FromXml, IntoXml,
+};
+
 use crate::data_forms::DataForm;
+use crate::date::DateTime;
 use crate::forwarding::Forwarded;
 use crate::iq::{IqGetPayload, IqResultPayload, IqSetPayload};
 use crate::message::MessagePayload;
@@ -13,7 +19,6 @@ use crate::pubsub::NodeName;
 use crate::rsm::{SetQuery, SetResult};
 use crate::Element;
 use minidom::Node;
-use xso::error::{Error, FromElementError};
 
 generate_id!(
     /// An identifier matching a result message to the query requesting it.
@@ -159,6 +164,52 @@ generate_element!(
 
 impl IqResultPayload for Fin {}
 
+/// Metadata of the first message in the archive.
+#[derive(FromXml, IntoXml, Debug, Clone, PartialEq)]
+#[xml(namespace = ns::MAM, name = "start")]
+pub struct Start {
+    /// The id of the first message in the archive.
+    #[xml(attribute)]
+    pub id: String,
+
+    /// Time at which that message was sent.
+    #[xml(attribute)]
+    pub timestamp: DateTime,
+}
+
+/// Metadata of the last message in the archive.
+#[derive(FromXml, IntoXml, Debug, Clone, PartialEq)]
+#[xml(namespace = ns::MAM, name = "end")]
+pub struct End {
+    /// The id of the last message in the archive.
+    #[xml(attribute)]
+    pub id: String,
+
+    /// Time at which that message was sent.
+    #[xml(attribute)]
+    pub timestamp: DateTime,
+}
+
+/// Request an archive for its metadata.
+#[derive(FromXml, IntoXml, Debug, Clone, PartialEq)]
+#[xml(namespace = ns::MAM, name = "metadata")]
+pub struct MetadataQuery;
+
+impl IqGetPayload for MetadataQuery {}
+
+generate_element!(
+/// Response from the archive, containing the start and end metadata if it isn’t empty.
+MetadataResponse, "metadata", MAM,
+children: [
+    /// Metadata about the first message in the archive.
+    start: Option<Start> = ("start", MAM) => Start,
+
+    /// Metadata about the last message in the archive.
+    end: Option<End> = ("end", MAM) => End,
+]);
+
+impl IqResultPayload for MetadataResponse {}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -171,6 +222,10 @@ mod tests {
         assert_size!(Result_, 164);
         assert_size!(Complete, 1);
         assert_size!(Fin, 44);
+        assert_size!(Start, 28);
+        assert_size!(End, 28);
+        assert_size!(MetadataQuery, 0);
+        assert_size!(MetadataResponse, 56);
     }
 
     #[cfg(target_pointer_width = "64")]
@@ -181,6 +236,10 @@ mod tests {
         assert_size!(Result_, 312);
         assert_size!(Complete, 1);
         assert_size!(Fin, 88);
+        assert_size!(Start, 40);
+        assert_size!(End, 40);
+        assert_size!(MetadataQuery, 0);
+        assert_size!(MetadataResponse, 80);
     }
 
     #[test]
@@ -289,6 +348,26 @@ mod tests {
         .parse()
         .unwrap();
         Query::try_from(elem).unwrap();
+    }
+
+    #[test]
+    fn test_metadata() {
+        let elem: Element = r"<metadata xmlns='urn:xmpp:mam:2'/>".parse().unwrap();
+        MetadataQuery::try_from(elem).unwrap();
+
+        let elem: Element = r"<metadata xmlns='urn:xmpp:mam:2'>
+  <start id='YWxwaGEg' timestamp='2008-08-22T21:09:04Z' />
+  <end id='b21lZ2Eg' timestamp='2020-04-20T14:34:21Z' />
+</metadata>"
+            .parse()
+            .unwrap();
+        let metadata = MetadataResponse::try_from(elem).unwrap();
+        let start = metadata.start.unwrap();
+        let end = metadata.end.unwrap();
+        assert_eq!(start.id, "YWxwaGEg");
+        assert_eq!(start.timestamp.0.timestamp(), 1219439344);
+        assert_eq!(end.id, "b21lZ2Eg");
+        assert_eq!(end.timestamp.0.timestamp(), 1587393261);
     }
 
     #[test]
