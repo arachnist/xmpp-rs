@@ -394,7 +394,7 @@ mod tests {
     fn test_size() {
         assert_size!(Option_, 24);
         assert_size!(FieldType, 1);
-        assert_size!(Field, 132);
+        assert_size!(Field, 140);
         assert_size!(DataFormType, 1);
         assert_size!(DataForm, 52);
     }
