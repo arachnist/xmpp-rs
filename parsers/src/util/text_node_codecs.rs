@@ -5,8 +5,6 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 use base64::{engine::general_purpose::STANDARD as Base64Engine, Engine};
-use jid::Jid;
-use std::str::FromStr;
 use xso::error::Error;
 
 /// A trait for codecs that can decode and encode text nodes.
@@ -171,21 +169,6 @@ impl Codec for ColonSeparatedHex {
             bytes.push(format!("{:02X}", byte));
         }
         Some(bytes.join(":"))
-    }
-}
-
-/// Codec for a JID.
-pub struct JidCodec;
-
-impl Codec for JidCodec {
-    type Decoded = Jid;
-
-    fn decode(s: &str) -> Result<Jid, Error> {
-        Jid::from_str(s).map_err(Error::text_parse_error)
-    }
-
-    fn encode(jid: &Jid) -> Option<String> {
-        Some(jid.to_string())
     }
 }
 
