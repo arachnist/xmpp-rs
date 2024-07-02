@@ -260,6 +260,9 @@ pub mod legacy_omemo;
 /// XEP-0386: Bind 2
 pub mod bind2;
 
+/// XEP-0388: Extensible SASL Profile
+pub mod sasl2;
+
 /// XEP-0390: Entity Capabilities 2.0
 pub mod ecaps2;
 

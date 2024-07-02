@@ -278,6 +278,9 @@ pub const LEGACY_OMEMO_BUNDLES: &str = "eu.siacs.conversations.axolotl.bundles";
 /// XEP-0386: Bind 2
 pub const BIND2: &str = "urn:xmpp:bind:0";
 
+/// XEP-0388: Extensible SASL Profile
+pub const SASL2: &str = "urn:xmpp:sasl:2";
+
 /// XEP-0390: Entity Capabilities 2.0
 pub const ECAPS2: &str = "urn:xmpp:caps";
 /// XEP-0390: Entity Capabilities 2.0
