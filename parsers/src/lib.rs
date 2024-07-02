@@ -272,6 +272,9 @@ pub mod occupant_id;
 /// XEP-0441: Message Archive Management Preferences
 pub mod mam_prefs;
 
+/// XEP-0440: SASL Channel-Binding Type Capability
+pub mod sasl_cb;
+
 /// XEP-0444: Message Reactions
 pub mod reactions;
 

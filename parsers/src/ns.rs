@@ -293,6 +293,9 @@ pub const BOOKMARKS2_COMPAT_PEP: &str = "urn:xmpp:bookmarks:1#compat-pep";
 /// XEP-0421: Anonymous unique occupant identifiers for MUCs
 pub const OID: &str = "urn:xmpp:occupant-id:0";
 
+/// XEP-0440: SASL Channel-Binding Type Capability
+pub const SASL_CB: &str = "urn:xmpp:sasl-cb:0";
+
 /// XEP-0444: Message Reactions
 pub const REACTIONS: &str = "urn:xmpp:reactions:0";
 

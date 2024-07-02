@@ -17,6 +17,7 @@ XXXX-YY-ZZ RELEASER <admin@example.com>
         (!416)
     * New parsers/serialisers:
         - Stream Features (RFC 6120) (!400)
+        - SASL Channel-Binding Type Capability (XEP-0440)
 
 Version 0.21.0:
 2024-07-25 Emmanuel Gil Peyrot <linkmauve@linkmauve.fr>
