@@ -156,11 +156,7 @@ impl Field {
             // > treat a FORM_TYPE field without an explicit type attribute,
             // > in data forms of type "submit", as the FORM_TYPE field with
             // > the special meaning defined herein.
-            DataFormType::Submit => match self.type_ {
-                FieldType::Hidden => true,
-                FieldType::TextSingle => true,
-                _ => false,
-            },
+            DataFormType::Submit => matches!(self.type_, FieldType::Hidden | FieldType::TextSingle),
 
             // XEP-0068 does not explicitly mention cancel type forms.
             // However, XEP-0004 states:

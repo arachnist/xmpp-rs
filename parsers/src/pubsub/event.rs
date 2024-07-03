@@ -97,7 +97,7 @@ fn parse_items(elem: Element, node: NodeName) -> Result<PubSubEvent, Error> {
                 None => is_retract = Some(false),
                 Some(false) => (),
                 Some(true) => {
-                    return Err(Error::Other("Mix of item and retract in items element.").into());
+                    return Err(Error::Other("Mix of item and retract in items element."));
                 }
             }
             items.push(Item::try_from(child.clone())?);
@@ -106,7 +106,7 @@ fn parse_items(elem: Element, node: NodeName) -> Result<PubSubEvent, Error> {
                 None => is_retract = Some(true),
                 Some(true) => (),
                 Some(false) => {
-                    return Err(Error::Other("Mix of item and retract in items element.").into());
+                    return Err(Error::Other("Mix of item and retract in items element."));
                 }
             }
             check_no_children!(child, "retract");
@@ -114,7 +114,7 @@ fn parse_items(elem: Element, node: NodeName) -> Result<PubSubEvent, Error> {
             let id = get_attr!(child, "id", Required);
             retracts.push(id);
         } else {
-            return Err(Error::Other("Invalid child in items element.").into());
+            return Err(Error::Other("Invalid child in items element."));
         }
     }
     Ok(match is_retract {
@@ -123,7 +123,7 @@ fn parse_items(elem: Element, node: NodeName) -> Result<PubSubEvent, Error> {
             node,
             items: retracts,
         },
-        None => return Err(Error::Other("Missing children in items element.").into()),
+        None => return Err(Error::Other("Missing children in items element.")),
     })
 }
 
@@ -242,12 +242,12 @@ impl PubSubEvent {
     /// Return the name of the node to which this event is related.
     pub fn node_name(&self) -> &NodeName {
         match self {
-            Self::Purge { node, .. } => &node,
-            Self::PublishedItems { node, .. } => &node,
-            Self::RetractedItems { node, .. } => &node,
-            Self::Subscription { node, .. } => &node,
-            Self::Delete { node, .. } => &node,
-            Self::Configuration { node, .. } => &node,
+            Self::Purge { node, .. } => node,
+            Self::PublishedItems { node, .. } => node,
+            Self::RetractedItems { node, .. } => node,
+            Self::Subscription { node, .. } => node,
+            Self::Delete { node, .. } => node,
+            Self::Configuration { node, .. } => node,
         }
     }
 }

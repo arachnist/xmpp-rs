@@ -295,7 +295,7 @@ impl TryFrom<Element> for Method {
                 check_no_children!(elem, "regex");
                 Method::Regex(elem.text())
             }
-            _ => return Err(Error::Other("Encountered invalid validation method.").into()),
+            _ => return Err(Error::Other("Encountered invalid validation method.")),
         };
         Ok(method)
     }

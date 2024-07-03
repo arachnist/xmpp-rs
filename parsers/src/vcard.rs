@@ -62,7 +62,9 @@ impl TryFrom<Element> for VCard {
     fn try_from(value: Element) -> Result<Self, Self::Error> {
         // Check that the root element is <vCard>
         if !value.is("vCard", ns::VCARD) {
-            return Err(Error::Other("Root element is not <vCard xmlns='vcard-temp'>").into());
+            return Err(Error::Other(
+                "Root element is not <vCard xmlns='vcard-temp'>",
+            ));
         }
 
         // Parse the <PHOTO> element, if any.
@@ -76,15 +78,11 @@ impl TryFrom<Element> for VCard {
     }
 }
 
-impl Into<Element> for VCard {
-    fn into(self) -> Element {
-        let mut builder = Element::builder("vCard", ns::VCARD);
-
-        if let Some(photo) = self.photo {
-            builder = builder.append(photo);
-        }
-
-        builder.build()
+impl From<VCard> for Element {
+    fn from(vcard: VCard) -> Element {
+        Element::builder("vCard", ns::VCARD)
+            .append_all(vcard.photo)
+            .build()
     }
 }
 

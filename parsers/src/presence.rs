@@ -42,7 +42,7 @@ impl FromStr for Show {
             "dnd" => Show::Dnd,
             "xa" => Show::Xa,
 
-            _ => return Err(Error::Other("Invalid value for show.").into()),
+            _ => return Err(Error::Other("Invalid value for show.")),
         })
     }
 }
@@ -65,7 +65,7 @@ type Status = String;
 
 type Priority = i8;
 
-///
+/// Accepted values for the 'type' attribute of a presence.
 #[derive(Debug, Default, Clone, PartialEq)]
 pub enum Type {
     /// This value is not an acceptable 'type' attribute, it is only used
@@ -114,7 +114,9 @@ impl FromStr for Type {
             "unsubscribed" => Type::Unsubscribed,
 
             _ => {
-                return Err(Error::Other("Invalid 'type' attribute on presence element.").into());
+                return Err(Error::Other(
+                    "Invalid 'type' attribute on presence element.",
+                ));
             }
         })
     }

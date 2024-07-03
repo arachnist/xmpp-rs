@@ -225,7 +225,7 @@ impl TryFrom<Element> for Rtt {
             seq,
             event,
             id,
-            actions: actions,
+            actions,
         })
     }
 }

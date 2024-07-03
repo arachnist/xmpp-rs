@@ -291,7 +291,7 @@ impl TryFrom<Element> for StanzaError {
                 if condition == DefinedCondition::Gone || condition == DefinedCondition::Redirect {
                     stanza_error.alternate_address = child.nodes().find_map(|node| {
                         let Node::Text(text) = node else { return None };
-                        return Some(text.to_string());
+                        Some(text.to_string())
                     });
                 }
 

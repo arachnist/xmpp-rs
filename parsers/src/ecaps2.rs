@@ -163,8 +163,8 @@ pub fn hash_ecaps2(data: &[u8], algo: Algo) -> Result<Hash, Error> {
                 hasher.finalize_variable(&mut vec).unwrap();
                 vec
             }
-            Algo::Sha_1 => return Err(Error::Other("Disabled algorithm sha-1: unsafe.").into()),
-            Algo::Unknown(_algo) => return Err(Error::Other("Unknown algorithm in ecaps2.").into()),
+            Algo::Sha_1 => return Err(Error::Other("Disabled algorithm sha-1: unsafe.")),
+            Algo::Unknown(_algo) => return Err(Error::Other("Unknown algorithm in ecaps2.")),
         },
         algo,
     })
