@@ -105,7 +105,7 @@ impl PartialEq for Jid {
 
 impl PartialOrd for Jid {
     fn partial_cmp(&self, other: &Jid) -> Option<Ordering> {
-        self.normalized.partial_cmp(&other.normalized)
+        Some(self.cmp(other))
     }
 }
 
