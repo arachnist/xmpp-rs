@@ -96,7 +96,7 @@ impl IntoEventsInner {
                     remaining: el.take_nodes().into_iter(),
                     nested: None,
                 };
-                return Ok(Some(event));
+                Ok(Some(event))
             }
             IntoEventsInner::Nodes {
                 ref mut nested,
@@ -213,7 +213,7 @@ impl FromXml for Element {
         let mut builder = Element::builder(qname.1, qname.0);
         for ((namespace, name), value) in attrs.into_iter() {
             if namespace.is_none() {
-                builder = builder.attr(name, String::from(value));
+                builder = builder.attr(name, value);
             } else {
                 let (is_new, prefix) = prefixes.declare_with_auto_prefix(namespace.clone());
                 let name = prefix.with_suffix(&name);
@@ -225,7 +225,7 @@ impl FromXml for Element {
                         )
                         .unwrap();
                 }
-                builder = builder.attr(name, String::from(value));
+                builder = builder.attr(name, value);
             }
         }
 

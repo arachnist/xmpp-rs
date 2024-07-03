@@ -151,7 +151,7 @@ pub struct EmptyAsNone;
 
 impl TextCodec<Option<String>> for EmptyAsNone {
     fn decode(s: String) -> Result<Option<String>, Error> {
-        if s.len() == 0 {
+        if s.is_empty() {
             Ok(None)
         } else {
             Ok(Some(s))
@@ -160,7 +160,7 @@ impl TextCodec<Option<String>> for EmptyAsNone {
 
     fn encode(value: Option<String>) -> Result<Option<String>, Error> {
         Ok(match value {
-            Some(v) if v.len() > 0 => Some(v),
+            Some(v) if !v.is_empty() => Some(v),
             Some(_) | None => None,
         })
     }
@@ -210,9 +210,9 @@ pub struct Base64<Filter: TextFilter = NoFilter>(PhantomData<Filter>);
 impl<Filter: TextFilter> TextCodec<Vec<u8>> for Base64<Filter> {
     fn decode(s: String) -> Result<Vec<u8>, Error> {
         let value = Filter::preprocess(s);
-        Ok(StandardBase64Engine
-            .decode(value.as_str().as_bytes())
-            .map_err(Error::text_parse_error)?)
+        StandardBase64Engine
+            .decode(value.as_bytes())
+            .map_err(Error::text_parse_error)
     }
 
     fn encode(value: Vec<u8>) -> Result<Option<String>, Error> {
@@ -224,7 +224,7 @@ impl<Filter: TextFilter> TextCodec<Vec<u8>> for Base64<Filter> {
 #[cfg_attr(docsrs, doc(cfg(feature = "base64")))]
 impl<Filter: TextFilter> TextCodec<Option<Vec<u8>>> for Base64<Filter> {
     fn decode(s: String) -> Result<Option<Vec<u8>>, Error> {
-        if s.len() == 0 {
+        if s.is_empty() {
             return Ok(None);
         }
         Ok(Some(Self::decode(s)?))

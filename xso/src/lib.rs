@@ -276,9 +276,8 @@ pub fn transform<T: FromXml, F: IntoXml>(from: F) -> Result<T, self::error::Erro
     };
     for event in iter {
         let event = event?;
-        match sink.feed(event)? {
-            Some(v) => return Ok(v),
-            None => (),
+        if let Some(v) = sink.feed(event)? {
+            return Ok(v);
         }
     }
     Err(self::error::Error::XmlError(
@@ -312,9 +311,8 @@ pub fn try_from_element<T: FromXml>(
     iter.next().expect("first event from minidom::Element")?;
     for event in iter {
         let event = event?;
-        match sink.feed(event)? {
-            Some(v) => return Ok(v),
-            None => (),
+        if let Some(v) = sink.feed(event)? {
+            return Ok(v);
         }
     }
     // unreachable! instead of error here, because minidom::Element always
@@ -368,9 +366,8 @@ pub fn from_bytes<T: FromXml>(mut buf: &[u8]) -> Result<T, self::error::Error> {
         Err(self::error::FromEventsError::Invalid(e)) => return Err(e),
     };
     for ev in reader {
-        match builder.feed(map_nonio_error(ev)?)? {
-            Some(v) => return Ok(v),
-            None => (),
+        if let Some(v) = builder.feed(map_nonio_error(ev)?)? {
+            return Ok(v);
         }
     }
     Err(self::error::Error::XmlError(
