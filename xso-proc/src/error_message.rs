@@ -75,7 +75,7 @@ impl fmt::Display for FieldName<'_> {
 pub(super) fn on_missing_attribute(parent_name: &ParentRef, field: &Member) -> String {
     format!(
         "Required attribute {} on {} missing.",
-        FieldName(&field),
+        FieldName(field),
         parent_name
     )
 }

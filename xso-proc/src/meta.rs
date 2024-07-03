@@ -16,9 +16,9 @@ use syn::{meta::ParseNestedMeta, spanned::Spanned, *};
 use rxml_validation::NcName;
 
 /// XML core namespace URI (for the `xml:` prefix)
-pub const XMLNS_XML: &'static str = "http://www.w3.org/XML/1998/namespace";
+pub const XMLNS_XML: &str = "http://www.w3.org/XML/1998/namespace";
 /// XML namespace URI (for the `xmlns:` prefix)
-pub const XMLNS_XMLNS: &'static str = "http://www.w3.org/2000/xmlns/";
+pub const XMLNS_XMLNS: &str = "http://www.w3.org/2000/xmlns/";
 
 /// Value for the `#[xml(namespace = ..)]` attribute.
 #[derive(Debug)]

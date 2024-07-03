@@ -118,7 +118,7 @@ impl StructDef {
             .compile()
             .render(
                 vis,
-                &builder_ty_ident,
+                builder_ty_ident,
                 &state_ty_ident,
                 &TypePath {
                     qself: None,
@@ -165,7 +165,7 @@ impl StructDef {
                 }
                 .into(),
                 &state_ty_ident,
-                &event_iter_ty_ident,
+                event_iter_ty_ident,
             )?;
 
         Ok(IntoXmlParts {

@@ -97,7 +97,7 @@ impl Compound {
         for field in self.fields.iter() {
             let member = field.member();
             let builder_field_name = mangle_member(member);
-            let part = field.make_builder_part(&scope, &output_name)?;
+            let part = field.make_builder_part(&scope, output_name)?;
 
             match part {
                 FieldBuilderPart::Init {
@@ -174,7 +174,7 @@ impl Compound {
 
         states.push(State::new_with_builder(
             default_state_ident.clone(),
-            &builder_data_ident,
+            builder_data_ident,
             &builder_data_ty,
         ).with_impl(quote! {
             match ev {
