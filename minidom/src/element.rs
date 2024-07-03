@@ -413,7 +413,7 @@ impl Element {
                 },
                 None => RxmlNamespace::NONE,
             };
-            writer.write(Item::Attribute(&namespace, name, (&**value).into()))?;
+            writer.write(Item::Attribute(&namespace, name, value))?;
         }
 
         if !self.children.is_empty() {

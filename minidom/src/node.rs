@@ -159,10 +159,10 @@ impl Node {
 
     #[doc(hidden)]
     pub(crate) fn write_to_inner<W: Write>(&self, writer: &mut ItemWriter<W>) -> Result<()> {
-        match *self {
-            Node::Element(ref elmt) => elmt.write_to_inner(writer)?,
-            Node::Text(ref s) => {
-                writer.write(Item::Text((&**s).into()))?;
+        match self {
+            Node::Element(elmt) => elmt.write_to_inner(writer)?,
+            Node::Text(s) => {
+                writer.write(Item::Text(s))?;
             }
         }
 
