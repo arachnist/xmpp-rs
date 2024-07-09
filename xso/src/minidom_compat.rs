@@ -19,7 +19,7 @@ use rxml::{
 
 use crate::{
     error::{Error, FromEventsError},
-    rxml_util::Item,
+    rxml_util::{EventToItem, Item},
     AsXml, FromEventsBuilder, FromXml, IntoXml,
 };
 
@@ -450,6 +450,35 @@ impl Iterator for IntoEventsViaElement {
 
     fn next(&mut self) -> Option<Self::Item> {
         self.inner.next()
+    }
+}
+
+/// Helper struct to stream a struct which implements conversion
+/// to [`minidom::Element`].
+pub struct AsItemsViaElement<'x> {
+    iter: EventToItem<IntoEventsViaElement>,
+    lifetime_binding: PhantomData<Item<'x>>,
+}
+
+impl<'x> AsItemsViaElement<'x> {
+    /// Create a new streaming parser for `T`.
+    pub fn new<E, T>(value: T) -> Result<Self, crate::error::Error>
+    where
+        Error: From<E>,
+        minidom::Element: TryFrom<T, Error = E>,
+    {
+        Ok(Self {
+            iter: EventToItem::new(IntoEventsViaElement::new(value)?),
+            lifetime_binding: PhantomData,
+        })
+    }
+}
+
+impl<'x> Iterator for AsItemsViaElement<'x> {
+    type Item = Result<Item<'x>, Error>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next().map(|x| x.map(Item::into_owned))
     }
 }
 
