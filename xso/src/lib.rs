@@ -58,27 +58,6 @@ pub use xso_proc::FromXml;
 #[cfg(feature = "macros")]
 pub use xso_proc::AsXml;
 
-/// Trait allowing to consume a struct and iterate its contents as
-/// serialisable [`rxml::Event`] items.
-///
-/// **Important:** Changing the [`EventIter`][`Self::EventIter`] associated
-/// type is considered a non-breaking change for any given implementation of
-/// this trait. Always refer to a type's iterator type using fully-qualified
-/// notation, for example: `<T as xso::IntoXml>::EventIter`.
-pub trait IntoXml {
-    /// The iterator type.
-    ///
-    /// **Important:** Changing this type is considered a non-breaking change
-    /// for any given implementation of this trait. Always refer to a type's
-    /// iterator type using fully-qualified notation, for example:
-    /// `<T as xso::IntoXml>::EventIter`.
-    type EventIter: Iterator<Item = Result<rxml::Event, self::error::Error>>;
-
-    /// Return an iterator which emits the contents of the struct or enum as
-    /// serialisable [`rxml::Event`] items.
-    fn into_event_iter(self) -> Result<Self::EventIter, self::error::Error>;
-}
-
 /// Trait allowing to iterate a struct's contents as serialisable
 /// [`Item`]s.
 ///
@@ -205,83 +184,6 @@ impl<T: FromXmlText> FromXmlText for Option<T> {
 impl<T: FromXmlText> FromXmlText for Box<T> {
     fn from_xml_text(data: String) -> Result<Self, self::error::Error> {
         Ok(Box::new(T::from_xml_text(data)?))
-    }
-}
-
-/// Trait to convert a value to an XML text string.
-///
-/// This trait is implemented for many standard library types implementing
-/// [`std::fmt::Display`]. In addition, the following feature flags can enable
-/// more implementations:
-///
-/// - `jid`: `jid::Jid`, `jid::BareJid`, `jid::FullJid`
-/// - `uuid`: `uuid::Uuid`
-///
-/// Because of the unfortunate situation as described in [`FromXmlText`], we
-/// are **extremely liberal** with accepting optional dependencies for this
-/// purpose. You are very welcome to make merge requests against this crate
-/// adding support for parsing third-party crates.
-pub trait IntoXmlText: Sized {
-    /// Convert the value to an XML string in a context where an absent value
-    /// cannot be represented.
-    fn into_xml_text(self) -> Result<String, self::error::Error>;
-
-    /// Convert the value to an XML string in a context where an absent value
-    /// can be represented.
-    ///
-    /// The provided implementation will always return the result of
-    /// [`Self::into_xml_text`] wrapped into `Some(.)`. By re-implementing
-    /// this method, implementors can customize the behaviour for certain
-    /// values.
-    fn into_optional_xml_text(self) -> Result<Option<String>, self::error::Error> {
-        Ok(Some(self.into_xml_text()?))
-    }
-}
-
-impl IntoXmlText for String {
-    fn into_xml_text(self) -> Result<String, self::error::Error> {
-        Ok(self)
-    }
-}
-
-impl<T: IntoXmlText> IntoXmlText for Box<T> {
-    fn into_xml_text(self) -> Result<String, self::error::Error> {
-        T::into_xml_text(*self)
-    }
-}
-
-impl<T: IntoXmlText, B: ToOwned<Owned = T>> IntoXmlText for Cow<'_, B> {
-    fn into_xml_text(self) -> Result<String, self::error::Error> {
-        T::into_xml_text(self.into_owned())
-    }
-}
-
-/// Specialized variant of [`IntoXmlText`].
-///
-/// Do **not** implement this unless you cannot implement [`IntoXmlText`]:
-/// implementing [`IntoXmlText`] is more versatile and an
-/// [`IntoOptionalXmlText`] implementation is automatically provided.
-///
-/// If you need to customize the behaviour of the [`IntoOptionalXmlText`]
-/// blanket implementation, implement a custom
-/// [`IntoXmlText::into_optional_xml_text`] instead.
-pub trait IntoOptionalXmlText {
-    /// Convert the value to an XML string in a context where an absent value
-    /// can be represented.
-    fn into_optional_xml_text(self) -> Result<Option<String>, self::error::Error>;
-}
-
-impl<T: IntoXmlText> IntoOptionalXmlText for T {
-    fn into_optional_xml_text(self) -> Result<Option<String>, self::error::Error> {
-        <Self as IntoXmlText>::into_optional_xml_text(self)
-    }
-}
-
-impl<T: IntoOptionalXmlText> IntoOptionalXmlText for Option<T> {
-    fn into_optional_xml_text(self) -> Result<Option<String>, self::error::Error> {
-        self.map(T::into_optional_xml_text)
-            .transpose()
-            .map(Option::flatten)
     }
 }
 

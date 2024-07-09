@@ -20,7 +20,7 @@ use rxml::{
 use crate::{
     error::{Error, FromEventsError},
     rxml_util::{EventToItem, Item},
-    AsXml, FromEventsBuilder, FromXml, IntoXml,
+    AsXml, FromEventsBuilder, FromXml,
 };
 
 /// State machine for converting a minidom Element into rxml events.
@@ -115,7 +115,7 @@ impl IntoEventsInner {
                             return Ok(Some(Event::Text(EventMetrics::zero(), text)));
                         }
                         Some(Node::Element(el)) => {
-                            *nested = Some(Box::new(el.into_event_iter()?));
+                            *nested = Some(Box::new(IntoEvents::new(el)));
                             // fallthrough to next loop iteration
                         }
                         None => {
@@ -136,21 +136,19 @@ impl IntoEventsInner {
 /// This can be constructed from the
 /// [`IntoXml::into_event_iter`][`crate::IntoXml::into_event_iter`]
 /// implementation on [`minidom::Element`].
-pub struct IntoEvents(IntoEventsInner);
+struct IntoEvents(IntoEventsInner);
+
+impl IntoEvents {
+    fn new(el: Element) -> Self {
+        IntoEvents(IntoEventsInner::Header(el))
+    }
+}
 
 impl Iterator for IntoEvents {
     type Item = Result<Event, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.0.next().transpose()
-    }
-}
-
-impl IntoXml for Element {
-    type EventIter = IntoEvents;
-
-    fn into_event_iter(self) -> Result<Self::EventIter, Error> {
-        Ok(IntoEvents(IntoEventsInner::Header(self)))
     }
 }
 
@@ -427,36 +425,8 @@ where
 
 /// Helper struct to stream a struct which implements conversion
 /// to [`minidom::Element`].
-pub struct IntoEventsViaElement {
-    inner: IntoEvents,
-}
-
-impl IntoEventsViaElement {
-    /// Create a new streaming parser for `T`.
-    pub fn new<E, T>(value: T) -> Result<Self, crate::error::Error>
-    where
-        Error: From<E>,
-        minidom::Element: TryFrom<T, Error = E>,
-    {
-        let element: minidom::Element = value.try_into()?;
-        Ok(Self {
-            inner: element.into_event_iter()?,
-        })
-    }
-}
-
-impl Iterator for IntoEventsViaElement {
-    type Item = Result<Event, Error>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.inner.next()
-    }
-}
-
-/// Helper struct to stream a struct which implements conversion
-/// to [`minidom::Element`].
 pub struct AsItemsViaElement<'x> {
-    iter: EventToItem<IntoEventsViaElement>,
+    iter: EventToItem<IntoEvents>,
     lifetime_binding: PhantomData<Item<'x>>,
 }
 
@@ -467,8 +437,9 @@ impl<'x> AsItemsViaElement<'x> {
         Error: From<E>,
         minidom::Element: TryFrom<T, Error = E>,
     {
+        let element: minidom::Element = value.try_into()?;
         Ok(Self {
-            iter: EventToItem::new(IntoEventsViaElement::new(value)?),
+            iter: EventToItem::new(IntoEvents::new(element)),
             lifetime_binding: PhantomData,
         })
     }
