@@ -12,9 +12,9 @@ use syn::{spanned::Spanned, *};
 
 use crate::error_message::ParentRef;
 use crate::field::{FieldBuilderPart, FieldDef, FieldIteratorPart, FieldTempInit};
-use crate::scope::{mangle_member, FromEventsScope, IntoEventsScope};
-use crate::state::{FromEventsSubmachine, IntoEventsSubmachine, State};
-use crate::types::qname_ty;
+use crate::scope::{mangle_member, AsItemsScope, FromEventsScope};
+use crate::state::{AsItemsSubmachine, FromEventsSubmachine, State};
+use crate::types::{namespace_ty, ncnamestr_cow_ty, phantom_lifetime_ty};
 
 /// A struct or enum variant's contents.
 pub(crate) struct Compound {
@@ -230,58 +230,86 @@ impl Compound {
     /// **Important:** The returned submachine is not in functional state!
     /// It's `init` must be modified so that a variable called `name` of type
     /// `rxml::QName` is in scope.
-    pub(crate) fn make_into_event_iter_statemachine(
+    pub(crate) fn make_as_item_iter_statemachine(
         &self,
         input_name: &Path,
         state_prefix: &str,
-    ) -> Result<IntoEventsSubmachine> {
-        let scope = IntoEventsScope::new();
-        let IntoEventsScope { ref attrs, .. } = scope;
+        lifetime: &Lifetime,
+    ) -> Result<AsItemsSubmachine> {
+        let scope = AsItemsScope::new(lifetime);
 
-        let start_element_state_ident = quote::format_ident!("{}StartElement", state_prefix);
-        let end_element_state_ident = quote::format_ident!("{}EndElement", state_prefix);
+        let element_head_start_state_ident =
+            quote::format_ident!("{}ElementHeadStart", state_prefix);
+        let element_head_end_state_ident = quote::format_ident!("{}ElementHeadEnd", state_prefix);
+        let element_foot_state_ident = quote::format_ident!("{}ElementFoot", state_prefix);
         let name_ident = quote::format_ident!("name");
+        let ns_ident = quote::format_ident!("ns");
+        let dummy_ident = quote::format_ident!("dummy");
         let mut states = Vec::new();
 
-        let mut init_body = TokenStream::default();
         let mut destructure = TokenStream::default();
         let mut start_init = TokenStream::default();
 
         states.push(
-            State::new(start_element_state_ident.clone())
-                .with_field(&name_ident, &qname_ty(Span::call_site())),
+            State::new(element_head_start_state_ident.clone())
+                .with_field(&dummy_ident, &phantom_lifetime_ty(lifetime.clone()))
+                .with_field(&ns_ident, &namespace_ty(Span::call_site()))
+                .with_field(
+                    &name_ident,
+                    &ncnamestr_cow_ty(Span::call_site(), lifetime.clone()),
+                ),
+        );
+
+        let mut element_head_end_idx = states.len();
+        states.push(
+            State::new(element_head_end_state_ident.clone()).with_impl(quote! {
+                ::core::option::Option::Some(::xso::Item::ElementHeadEnd)
+            }),
         );
 
         for (i, field) in self.fields.iter().enumerate() {
             let member = field.member();
             let bound_name = mangle_member(member);
-            let part = field.make_iterator_part(&scope, &bound_name)?;
+            let part = field.make_iterator_part(&bound_name)?;
             let state_name = quote::format_ident!("{}Field{}", state_prefix, i);
+            let ty = scope.borrow(field.ty().clone());
 
             match part {
-                FieldIteratorPart::Header { setter } => {
+                FieldIteratorPart::Header { generator } => {
+                    // we have to make sure that we carry our data around in
+                    // all the previous states.
+                    for state in &mut states[..element_head_end_idx] {
+                        state.add_field(&bound_name, &ty);
+                    }
+                    states.insert(
+                        element_head_end_idx,
+                        State::new(state_name)
+                            .with_field(&bound_name, &ty)
+                            .with_impl(quote! {
+                                #generator
+                            }),
+                    );
+                    element_head_end_idx += 1;
+
                     destructure.extend(quote! {
-                        #member: #bound_name,
+                        #member: ref #bound_name,
                     });
-                    init_body.extend(setter);
                     start_init.extend(quote! {
                         #bound_name,
                     });
-                    states[0].add_field(&bound_name, field.ty());
                 }
 
                 FieldIteratorPart::Text { generator } => {
                     // we have to make sure that we carry our data around in
                     // all the previous states.
                     for state in states.iter_mut() {
-                        state.add_field(&bound_name, field.ty());
+                        state.add_field(&bound_name, &ty);
                     }
                     states.push(
                         State::new(state_name)
-                            .with_field(&bound_name, field.ty())
+                            .with_field(&bound_name, &ty)
                             .with_impl(quote! {
-                                #generator.map(|value| ::xso::exports::rxml::Event::Text(
-                                    ::xso::exports::rxml::parser::EventMetrics::zero(),
+                                #generator.map(|value| ::xso::Item::Text(
                                     value,
                                 ))
                             }),
@@ -298,32 +326,27 @@ impl Compound {
 
         states[0].set_impl(quote! {
             {
-                let mut #attrs = ::xso::exports::rxml::AttrMap::new();
-                #init_body
-                ::core::option::Option::Some(::xso::exports::rxml::Event::StartElement(
-                    ::xso::exports::rxml::parser::EventMetrics::zero(),
+                ::core::option::Option::Some(::xso::Item::ElementHeadStart(
+                    #ns_ident,
                     #name_ident,
-                    #attrs,
                 ))
             }
         });
 
         states.push(
-            State::new(end_element_state_ident.clone()).with_impl(quote! {
-                ::core::option::Option::Some(::xso::exports::rxml::Event::EndElement(
-                    ::xso::exports::rxml::parser::EventMetrics::zero(),
-                ))
+            State::new(element_foot_state_ident.clone()).with_impl(quote! {
+                ::core::option::Option::Some(::xso::Item::ElementFoot)
             }),
         );
 
-        Ok(IntoEventsSubmachine {
+        Ok(AsItemsSubmachine {
             defs: TokenStream::default(),
             states,
             destructure: quote! {
                 #input_name { #destructure }
             },
             init: quote! {
-                Self::#start_element_state_ident { #name_ident, #start_init }
+                Self::#element_head_start_state_ident { #dummy_ident: ::std::marker::PhantomData, #name_ident: name.1, #ns_ident: name.0, #start_init }
             },
         })
     }

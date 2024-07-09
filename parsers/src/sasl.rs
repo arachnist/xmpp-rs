@@ -7,7 +7,7 @@
 use xso::{
     error::{Error, FromElementError},
     text::Base64,
-    FromXml, IntoXml,
+    AsXml, FromXml,
 };
 
 use crate::ns;
@@ -48,7 +48,7 @@ generate_attribute!(
 
 /// The first step of the SASL process, selecting the mechanism and sending
 /// the first part of the handshake.
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = ns::SASL, name = "auth")]
 pub struct Auth {
     /// The mechanism used.
@@ -63,7 +63,7 @@ pub struct Auth {
 /// In case the mechanism selected at the [auth](struct.Auth.html) step
 /// requires a second step, the server sends this element with additional
 /// data.
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = ns::SASL, name = "challenge")]
 pub struct Challenge {
     /// The challenge data.
@@ -74,7 +74,7 @@ pub struct Challenge {
 /// In case the mechanism selected at the [auth](struct.Auth.html) step
 /// requires a second step, this contains the client’s response to the
 /// server’s [challenge](struct.Challenge.html).
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = ns::SASL, name = "response")]
 pub struct Response {
     /// The response data.
@@ -84,12 +84,12 @@ pub struct Response {
 
 /// Sent by the client at any point after [auth](struct.Auth.html) if it
 /// wants to cancel the current authentication process.
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = ns::SASL, name = "abort")]
 pub struct Abort;
 
 /// Sent by the server on SASL success.
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = ns::SASL, name = "success")]
 pub struct Success {
     /// Possible data sent on success.

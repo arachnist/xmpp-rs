@@ -4,14 +4,14 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use xso::{FromXml, IntoXml};
+use xso::{AsXml, FromXml};
 
 use crate::date::DateTime;
 use crate::ns;
 use crate::presence::PresencePayload;
 
 /// Represents the last time the user interacted with their system.
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = ns::IDLE, name = "idle")]
 pub struct Idle {
     /// The time at which the user stopped interacting.

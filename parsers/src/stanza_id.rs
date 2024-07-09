@@ -4,7 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use xso::{FromXml, IntoXml};
+use xso::{AsXml, FromXml};
 
 use crate::message::MessagePayload;
 use crate::ns;
@@ -12,7 +12,7 @@ use jid::Jid;
 
 /// Gives the identifier a service has stamped on this stanza, often in
 /// order to identify it inside of [an archive](../mam/index.html).
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = ns::SID, name = "stanza-id")]
 pub struct StanzaId {
     /// The id associated to this stanza by another entity.
@@ -28,7 +28,7 @@ impl MessagePayload for StanzaId {}
 
 /// A hack for MUC before version 1.31 to track a message which may have
 /// its 'id' attribute changed.
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = ns::SID, name = "origin-id")]
 pub struct OriginId {
     /// The id this client set for this stanza.

@@ -9,8 +9,8 @@
 use proc_macro2::Span;
 use syn::{spanned::Spanned, *};
 
-/// Construct a [`syn::Type`] referring to `::xso::exports::rxml::QName`.
-pub(crate) fn qname_ty(span: Span) -> Type {
+/// Construct a [`syn::Type`] referring to `::xso::exports::rxml::Namespace`.
+pub(crate) fn namespace_ty(span: Span) -> Type {
     Type::Path(TypePath {
         qself: None,
         path: Path {
@@ -31,7 +31,7 @@ pub(crate) fn qname_ty(span: Span) -> Type {
                     arguments: PathArguments::None,
                 },
                 PathSegment {
-                    ident: Ident::new("QName", span),
+                    ident: Ident::new("Namespace", span),
                     arguments: PathArguments::None,
                 },
             ]
@@ -39,6 +39,83 @@ pub(crate) fn qname_ty(span: Span) -> Type {
             .collect(),
         },
     })
+}
+
+/// Construct a [`syn::Type`] referring to `::xso::exports::rxml::NcNameStr`.
+pub(crate) fn ncnamestr_ty(span: Span) -> Type {
+    Type::Path(TypePath {
+        qself: None,
+        path: Path {
+            leading_colon: Some(syn::token::PathSep {
+                spans: [span, span],
+            }),
+            segments: [
+                PathSegment {
+                    ident: Ident::new("xso", span),
+                    arguments: PathArguments::None,
+                },
+                PathSegment {
+                    ident: Ident::new("exports", span),
+                    arguments: PathArguments::None,
+                },
+                PathSegment {
+                    ident: Ident::new("rxml", span),
+                    arguments: PathArguments::None,
+                },
+                PathSegment {
+                    ident: Ident::new("NcNameStr", span),
+                    arguments: PathArguments::None,
+                },
+            ]
+            .into_iter()
+            .collect(),
+        },
+    })
+}
+
+/// Construct a [`syn::Type`] referring to `Cow<#lifetime, #ty>`.
+pub(crate) fn cow_ty(ty: Type, lifetime: Lifetime) -> Type {
+    let span = ty.span();
+    Type::Path(TypePath {
+        qself: None,
+        path: Path {
+            leading_colon: Some(syn::token::PathSep {
+                spans: [span, span],
+            }),
+            segments: [
+                PathSegment {
+                    ident: Ident::new("std", span),
+                    arguments: PathArguments::None,
+                },
+                PathSegment {
+                    ident: Ident::new("borrow", span),
+                    arguments: PathArguments::None,
+                },
+                PathSegment {
+                    ident: Ident::new("Cow", span),
+                    arguments: PathArguments::AngleBracketed(AngleBracketedGenericArguments {
+                        colon2_token: None,
+                        lt_token: token::Lt { spans: [span] },
+                        args: [
+                            GenericArgument::Lifetime(lifetime),
+                            GenericArgument::Type(ty),
+                        ]
+                        .into_iter()
+                        .collect(),
+                        gt_token: token::Gt { spans: [span] },
+                    }),
+                },
+            ]
+            .into_iter()
+            .collect(),
+        },
+    })
+}
+
+/// Construct a [`syn::Type`] referring to
+/// `Cow<#lifetime, ::rxml::NcNameStr>`.
+pub(crate) fn ncnamestr_cow_ty(ty_span: Span, lifetime: Lifetime) -> Type {
+    cow_ty(ncnamestr_ty(ty_span), lifetime)
 }
 
 /// Construct a [`syn::Expr`] referring to
@@ -79,8 +156,8 @@ pub(crate) fn from_xml_text_fn(ty: Type) -> Expr {
 }
 
 /// Construct a [`syn::Expr`] referring to
-/// `<#ty as ::xso::IntoOptionalXmlText>::into_optional_xml_text`.
-pub(crate) fn into_optional_xml_text_fn(ty: Type) -> Expr {
+/// `<#ty as ::xso::AsOptionalXmlText>::as_optional_xml_text`.
+pub(crate) fn as_optional_xml_text_fn(ty: Type) -> Expr {
     let span = ty.span();
     Expr::Path(ExprPath {
         attrs: Vec::new(),
@@ -101,11 +178,11 @@ pub(crate) fn into_optional_xml_text_fn(ty: Type) -> Expr {
                     arguments: PathArguments::None,
                 },
                 PathSegment {
-                    ident: Ident::new("IntoOptionalXmlText", span),
+                    ident: Ident::new("AsOptionalXmlText", span),
                     arguments: PathArguments::None,
                 },
                 PathSegment {
-                    ident: Ident::new("into_optional_xml_text", span),
+                    ident: Ident::new("as_optional_xml_text", span),
                     arguments: PathArguments::None,
                 },
             ]
@@ -185,8 +262,8 @@ pub(crate) fn string_ty(span: Span) -> Type {
 }
 
 /// Construct a [`syn::Expr`] referring to
-/// `<#ty as ::xso::IntoXmlText>::into_xml_text`.
-pub(crate) fn into_xml_text_fn(ty: Type) -> Expr {
+/// `<#ty as ::xso::AsXmlText>::as_xml_text`.
+pub(crate) fn as_xml_text_fn(ty: Type) -> Expr {
     let span = ty.span();
     Expr::Path(ExprPath {
         attrs: Vec::new(),
@@ -207,11 +284,11 @@ pub(crate) fn into_xml_text_fn(ty: Type) -> Expr {
                     arguments: PathArguments::None,
                 },
                 PathSegment {
-                    ident: Ident::new("IntoXmlText", span),
+                    ident: Ident::new("AsXmlText", span),
                     arguments: PathArguments::None,
                 },
                 PathSegment {
-                    ident: Ident::new("into_xml_text", span),
+                    ident: Ident::new("as_xml_text", span),
                     arguments: PathArguments::None,
                 },
             ]
@@ -291,5 +368,57 @@ pub(crate) fn text_codec_decode_fn(codec_ty: Type, for_ty: Type) -> Expr {
         attrs: Vec::new(),
         qself: ty.qself,
         path: ty.path,
+    })
+}
+
+/// Construct a [`syn::Type`] for `&#lifetime #ty`.
+pub(crate) fn ref_ty(ty: Type, lifetime: Lifetime) -> Type {
+    let span = ty.span();
+    Type::Reference(TypeReference {
+        and_token: token::And { spans: [span] },
+        lifetime: Some(lifetime),
+        mutability: None,
+        elem: Box::new(ty),
+    })
+}
+
+/// Construct a [`syn::Type`] referring to
+/// `::std::marker::PhantomData<&#lifetime ()>`.
+pub(crate) fn phantom_lifetime_ty(lifetime: Lifetime) -> Type {
+    let span = lifetime.span();
+    let dummy = Type::Tuple(TypeTuple {
+        paren_token: token::Paren::default(),
+        elems: punctuated::Punctuated::default(),
+    });
+    Type::Path(TypePath {
+        qself: None,
+        path: Path {
+            leading_colon: Some(syn::token::PathSep {
+                spans: [span, span],
+            }),
+            segments: [
+                PathSegment {
+                    ident: Ident::new("std", span),
+                    arguments: PathArguments::None,
+                },
+                PathSegment {
+                    ident: Ident::new("marker", span),
+                    arguments: PathArguments::None,
+                },
+                PathSegment {
+                    ident: Ident::new("PhantomData", span),
+                    arguments: PathArguments::AngleBracketed(AngleBracketedGenericArguments {
+                        colon2_token: None,
+                        lt_token: token::Lt { spans: [span] },
+                        args: [GenericArgument::Type(ref_ty(dummy, lifetime))]
+                            .into_iter()
+                            .collect(),
+                        gt_token: token::Gt { spans: [span] },
+                    }),
+                },
+            ]
+            .into_iter()
+            .collect(),
+        },
     })
 }

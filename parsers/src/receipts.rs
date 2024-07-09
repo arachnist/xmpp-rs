@@ -4,14 +4,14 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use xso::{FromXml, IntoXml};
+use xso::{AsXml, FromXml};
 
 use crate::message::MessagePayload;
 use crate::ns;
 
 /// Requests that this message is acked by the final recipient once
 /// received.
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = ns::RECEIPTS, name = "request")]
 pub struct Request;
 
@@ -19,7 +19,7 @@ impl MessagePayload for Request {}
 
 /// Notes that a previous message has correctly been received, it is
 /// referenced by its 'id' attribute.
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = ns::RECEIPTS, name = "received")]
 pub struct Received {
     /// The 'id' attribute of the received message.

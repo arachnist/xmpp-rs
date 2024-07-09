@@ -4,7 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use xso::{text::Base64, FromXml, IntoXml};
+use xso::{text::Base64, AsXml, FromXml};
 
 use crate::date::DateTime;
 use crate::ns;
@@ -12,7 +12,7 @@ use crate::pubsub::PubSubPayload;
 
 /// Data contained in the PubKey element
 // TODO: Merge this container with the PubKey struct
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = ns::OX, name = "data")]
 pub struct PubKeyData {
     /// Base64 data
@@ -36,7 +36,7 @@ generate_element!(
 impl PubSubPayload for PubKey {}
 
 /// Public key metadata
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = ns::OX, name = "pubkey-metadata")]
 pub struct PubKeyMeta {
     /// OpenPGP v4 fingerprint

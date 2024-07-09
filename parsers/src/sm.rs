@@ -4,13 +4,13 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use xso::{FromXml, IntoXml};
+use xso::{AsXml, FromXml};
 
 use crate::ns;
 use crate::stanza_error::DefinedCondition;
 
 /// Acknowledgement of the currently received stanzas.
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = ns::SM, name = "a")]
 pub struct A {
     /// The last handled stanza.
@@ -105,12 +105,12 @@ generate_element!(
 );
 
 /// Requests the currently received stanzas by the other party.
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = ns::SM, name = "r")]
 pub struct R;
 
 /// Requests a stream resumption.
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = ns::SM, name = "resume")]
 pub struct Resume {
     /// The last handled stanza.
@@ -124,7 +124,7 @@ pub struct Resume {
 }
 
 /// The response by the server for a successfully resumed stream.
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = ns::SM, name = "resumed")]
 pub struct Resumed {
     /// The last handled stanza.
@@ -139,7 +139,7 @@ pub struct Resumed {
 
 // TODO: add support for optional and required.
 /// Represents availability of Stream Management in `<stream:features/>`.
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = ns::SM, name = "sm")]
 pub struct StreamManagement;
 

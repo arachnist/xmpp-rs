@@ -8,9 +8,7 @@
 
 use std::borrow::Cow;
 
-use rxml::{Namespace, NcNameStr, XmlVersion};
-#[cfg(feature = "minidom")]
-use rxml::Event;
+use rxml::{parser::EventMetrics, AttrMap, Event, Namespace, NcName, NcNameStr, XmlVersion};
 
 /// An encodable item.
 ///
@@ -164,11 +162,129 @@ impl<I: Iterator<Item = Result<Event, crate::error::Error>>> Iterator for EventT
     }
 }
 
+/// Iterator adapter which converts an iterator over [`Item`] to
+/// an iterator over [`Event`][`crate::Event`].
+///
+/// As `Event` does not support borrowing data, this iterator copies the data
+/// from the items on the fly.
+pub(crate) struct ItemToEvent<I> {
+    inner: I,
+    event_buffer: Option<Event>,
+    elem_buffer: Option<(Namespace, NcName, AttrMap)>,
+}
+
+impl<'x, I: Iterator<Item = Result<Item<'x>, crate::error::Error>>> ItemToEvent<I> {
+    /// Create a new adapter with `inner` as the source iterator.
+    pub(crate) fn new(inner: I) -> Self {
+        Self {
+            inner,
+            event_buffer: None,
+            elem_buffer: None,
+        }
+    }
+}
+
+impl<I> ItemToEvent<I> {
+    fn update<'x>(&mut self, item: Item<'x>) -> Result<Option<Event>, crate::error::Error> {
+        assert!(self.event_buffer.is_none());
+        match item {
+            Item::XmlDeclaration(v) => {
+                assert!(self.elem_buffer.is_none());
+                Ok(Some(Event::XmlDeclaration(EventMetrics::zero(), v)))
+            }
+            Item::ElementHeadStart(ns, name) => {
+                if self.elem_buffer.is_some() {
+                    // this is only used with AsXml implementations, so
+                    // triggering this is always a coding failure instead of a
+                    // runtime error.
+                    panic!("got a second ElementHeadStart items without ElementHeadEnd inbetween: ns={:?} name={:?} (state={:?})", ns, name, self.elem_buffer);
+                }
+                self.elem_buffer = Some((ns.to_owned(), name.into_owned(), AttrMap::new()));
+                Ok(None)
+            }
+            Item::Attribute(ns, name, value) => {
+                let Some((_, _, attrs)) = self.elem_buffer.as_mut() else {
+                    // this is only used with AsXml implementations, so
+                    // triggering this is always a coding failure instead of a
+                    // runtime error.
+                    panic!(
+                        "got a second Attribute item without ElementHeadStart: ns={:?}, name={:?}",
+                        ns, name
+                    );
+                };
+                attrs.insert(ns, name.into_owned(), value.into_owned());
+                Ok(None)
+            }
+            Item::ElementHeadEnd => {
+                let Some((ns, name, attrs)) = self.elem_buffer.take() else {
+                    // this is only used with AsXml implementations, so
+                    // triggering this is always a coding failure instead of a
+                    // runtime error.
+                    panic!(
+                        "got ElementHeadEnd item without ElementHeadStart: {:?}",
+                        item
+                    );
+                };
+                Ok(Some(Event::StartElement(
+                    EventMetrics::zero(),
+                    (ns, name),
+                    attrs,
+                )))
+            }
+            Item::Text(value) => {
+                if let Some(elem_buffer) = self.elem_buffer.as_ref() {
+                    // this is only used with AsXml implementations, so
+                    // triggering this is always a coding failure instead of a
+                    // runtime error.
+                    panic!("got Text after ElementHeadStart but before ElementHeadEnd: Text({:?}) (state = {:?})", value, elem_buffer);
+                }
+                Ok(Some(Event::Text(EventMetrics::zero(), value.into_owned())))
+            }
+            Item::ElementFoot => {
+                let end_ev = Event::EndElement(EventMetrics::zero());
+                let result = if let Some((ns, name, attrs)) = self.elem_buffer.take() {
+                    // content-less element
+                    self.event_buffer = Some(end_ev);
+                    Event::StartElement(EventMetrics::zero(), (ns, name), attrs)
+                } else {
+                    end_ev
+                };
+                Ok(Some(result))
+            }
+        }
+    }
+}
+
+impl<'x, I: Iterator<Item = Result<Item<'x>, crate::error::Error>>> Iterator for ItemToEvent<I> {
+    type Item = Result<Event, crate::error::Error>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(event) = self.event_buffer.take() {
+            return Some(Ok(event));
+        }
+        loop {
+            let item = match self.inner.next() {
+                Some(Ok(v)) => v,
+                Some(Err(e)) => return Some(Err(e)),
+                None => return None,
+            };
+            match self.update(item).transpose() {
+                Some(v) => return Some(v),
+                None => (),
+            }
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        // we may create an indefinte amount of items for a single event,
+        // so we cannot provide a reasonable upper bound.
+        (self.inner.size_hint().0, None)
+    }
+}
+
 #[cfg(all(test, feature = "minidom"))]
 mod tests_minidom {
     use std::convert::TryInto;
-
-    use rxml::{parser::EventMetrics, AttrMap};
 
     use super::*;
 
@@ -304,6 +420,147 @@ mod tests_minidom {
         match items[3] {
             Item::ElementFoot => (),
             ref other => panic!("unexected item in position 3: {:?}", other),
+        };
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::convert::TryInto;
+
+    use super::*;
+
+    fn items_to_events<'x, I: IntoIterator<Item = Item<'x>>>(
+        items: I,
+    ) -> Result<Vec<Event>, crate::error::Error> {
+        let iter = ItemToEvent {
+            inner: items.into_iter().map(|x| Ok(x)),
+            event_buffer: None,
+            elem_buffer: None,
+        };
+        let mut result = Vec::new();
+        for ev in iter {
+            let ev = ev?;
+            result.push(ev);
+        }
+        Ok(result)
+    }
+
+    #[test]
+    fn item_to_event_xml_decl() {
+        let items = vec![Item::XmlDeclaration(XmlVersion::V1_0)];
+        let events = items_to_events(items).expect("item conversion");
+        assert_eq!(events.len(), 1);
+        match events[0] {
+            Event::XmlDeclaration(_, XmlVersion::V1_0) => (),
+            ref other => panic!("unexected event in position 0: {:?}", other),
+        };
+    }
+
+    #[test]
+    fn item_to_event_simple_empty_element() {
+        let items = vec![
+            Item::ElementHeadStart(Namespace::NONE, Cow::Borrowed("elem".try_into().unwrap())),
+            Item::ElementHeadEnd,
+            Item::ElementFoot,
+        ];
+        let events = items_to_events(items).expect("item conversion");
+        assert_eq!(events.len(), 2);
+        match events[0] {
+            Event::StartElement(_, (ref ns, ref name), ref attrs) => {
+                assert_eq!(attrs.len(), 0);
+                assert_eq!(ns, Namespace::none());
+                assert_eq!(name, "elem");
+            }
+            ref other => panic!("unexected event in position 0: {:?}", other),
+        };
+        match events[1] {
+            Event::EndElement(_) => (),
+            ref other => panic!("unexected event in position 1: {:?}", other),
+        };
+    }
+
+    #[test]
+    fn item_to_event_short_empty_element() {
+        let items = vec![
+            Item::ElementHeadStart(Namespace::NONE, Cow::Borrowed("elem".try_into().unwrap())),
+            Item::ElementFoot,
+        ];
+        let events = items_to_events(items).expect("item conversion");
+        assert_eq!(events.len(), 2);
+        match events[0] {
+            Event::StartElement(_, (ref ns, ref name), ref attrs) => {
+                assert_eq!(attrs.len(), 0);
+                assert_eq!(ns, Namespace::none());
+                assert_eq!(name, "elem");
+            }
+            ref other => panic!("unexected event in position 0: {:?}", other),
+        };
+        match events[1] {
+            Event::EndElement(_) => (),
+            ref other => panic!("unexected event in position 1: {:?}", other),
+        };
+    }
+
+    #[test]
+    fn item_to_event_element_with_text_content() {
+        let items = vec![
+            Item::ElementHeadStart(Namespace::NONE, Cow::Borrowed("elem".try_into().unwrap())),
+            Item::ElementHeadEnd,
+            Item::Text(Cow::Borrowed("Hello World!")),
+            Item::ElementFoot,
+        ];
+        let events = items_to_events(items).expect("item conversion");
+        assert_eq!(events.len(), 3);
+        match events[0] {
+            Event::StartElement(_, (ref ns, ref name), ref attrs) => {
+                assert_eq!(attrs.len(), 0);
+                assert_eq!(ns, Namespace::none());
+                assert_eq!(name, "elem");
+            }
+            ref other => panic!("unexected event in position 0: {:?}", other),
+        };
+        match events[1] {
+            Event::Text(_, ref value) => {
+                assert_eq!(value, "Hello World!");
+            }
+            ref other => panic!("unexected event in position 1: {:?}", other),
+        };
+        match events[2] {
+            Event::EndElement(_) => (),
+            ref other => panic!("unexected event in position 2: {:?}", other),
+        };
+    }
+
+    #[test]
+    fn item_to_event_element_with_attributes() {
+        let items = vec![
+            Item::ElementHeadStart(Namespace::NONE, Cow::Borrowed("elem".try_into().unwrap())),
+            Item::Attribute(
+                Namespace::NONE,
+                Cow::Borrowed("attr".try_into().unwrap()),
+                Cow::Borrowed("value"),
+            ),
+            Item::ElementHeadEnd,
+            Item::ElementFoot,
+        ];
+        let events = items_to_events(items).expect("item conversion");
+        assert_eq!(events.len(), 2);
+        match events[0] {
+            Event::StartElement(_, (ref ns, ref name), ref attrs) => {
+                assert_eq!(ns, Namespace::none());
+                assert_eq!(name, "elem");
+                assert_eq!(attrs.len(), 1);
+                assert_eq!(
+                    attrs.get(Namespace::none(), "attr").map(|x| x.as_str()),
+                    Some("value")
+                );
+            }
+            ref other => panic!("unexected event in position 0: {:?}", other),
+        };
+        match events[1] {
+            Event::EndElement(_) => (),
+            ref other => panic!("unexected event in position 2: {:?}", other),
         };
     }
 }

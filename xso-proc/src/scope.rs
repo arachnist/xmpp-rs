@@ -9,6 +9,8 @@
 use proc_macro2::Span;
 use syn::*;
 
+use crate::types::ref_ty;
+
 /// Container struct for various identifiers used throughout the parser code.
 ///
 /// This struct is passed around from the [`crate::compound::Compound`]
@@ -80,18 +82,23 @@ impl FromEventsScope {
 /// same page about which identifiers are used for what.
 ///
 /// See [`FromEventsScope`] for recommendations on the usage.
-pub(crate) struct IntoEventsScope {
-    /// Accesses the `AttrMap` from code in
-    /// [`crate::field::FieldIteratorPart::Header`].
-    pub(crate) attrs: Ident,
+pub(crate) struct AsItemsScope {
+    /// Lifetime for data borrowed by the implementation.
+    pub(crate) lifetime: Lifetime,
 }
 
-impl IntoEventsScope {
+impl AsItemsScope {
     /// Create a fresh scope with all necessary identifiers.
-    pub(crate) fn new() -> Self {
+    pub(crate) fn new(lifetime: &Lifetime) -> Self {
         Self {
-            attrs: Ident::new("attrs", Span::call_site()),
+            lifetime: lifetime.clone(),
         }
+    }
+
+    /// Create a reference to `ty`, borrowed for the lifetime of the AsXml
+    /// impl.
+    pub(crate) fn borrow(&self, ty: Type) -> Type {
+        ref_ty(ty, self.lifetime.clone())
     }
 }
 

@@ -6,7 +6,7 @@
 
 use xso::{
     error::{Error, FromElementError},
-    FromXml, IntoXml,
+    AsXml, FromXml,
 };
 
 use crate::iq::{IqGetPayload, IqResultPayload};
@@ -14,7 +14,7 @@ use crate::ns;
 use crate::Element;
 
 /// Requesting a slot
-#[derive(FromXml, IntoXml, Debug, Clone, PartialEq)]
+#[derive(FromXml, AsXml, Debug, Clone, PartialEq)]
 #[xml(namespace = ns::HTTP_UPLOAD, name = "request")]
 pub struct SlotRequest {
     /// The filename to be uploaded.
@@ -97,7 +97,7 @@ generate_element!(
 );
 
 /// Get URL
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = ns::HTTP_UPLOAD, name = "get")]
 pub struct Get {
     /// URL

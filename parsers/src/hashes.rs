@@ -4,13 +4,15 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use xso::{error::Error, text::Base64, FromXml, FromXmlText, IntoXml, IntoXmlText};
-
-use base64::{engine::general_purpose::STANDARD as Base64Engine, Engine};
-use minidom::IntoAttributeValue;
+use std::borrow::Cow;
 use std::num::ParseIntError;
 use std::ops::{Deref, DerefMut};
 use std::str::FromStr;
+
+use xso::{error::Error, text::Base64, AsXml, AsXmlText, FromXml, FromXmlText};
+
+use base64::{engine::general_purpose::STANDARD as Base64Engine, Engine};
+use minidom::IntoAttributeValue;
 
 use crate::ns;
 
@@ -97,9 +99,9 @@ impl FromXmlText for Algo {
     }
 }
 
-impl IntoXmlText for Algo {
-    fn into_xml_text(self) -> Result<String, Error> {
-        Ok(String::from(match self {
+impl AsXmlText for Algo {
+    fn as_xml_text(&self) -> Result<Cow<'_, str>, Error> {
+        Ok(Cow::Borrowed(match self {
             Algo::Sha_1 => "sha-1",
             Algo::Sha_256 => "sha-256",
             Algo::Sha_512 => "sha-512",
@@ -107,7 +109,7 @@ impl IntoXmlText for Algo {
             Algo::Sha3_512 => "sha3-512",
             Algo::Blake2b_256 => "blake2b-256",
             Algo::Blake2b_512 => "blake2b-512",
-            Algo::Unknown(text) => return Ok(text),
+            Algo::Unknown(text) => text.as_str(),
         }))
     }
 }
@@ -120,7 +122,7 @@ impl IntoAttributeValue for Algo {
 
 /// This element represents a hash of some data, defined by the hash
 /// algorithm used and the computed value.
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = ns::HASHES, name = "hash")]
 pub struct Hash {
     /// The algorithm used to create this hash.
@@ -213,9 +215,9 @@ impl FromXmlText for Sha1HexAttribute {
     }
 }
 
-impl IntoXmlText for Sha1HexAttribute {
-    fn into_xml_text(self) -> Result<String, xso::error::Error> {
-        Ok(self.to_hex())
+impl AsXmlText for Sha1HexAttribute {
+    fn as_xml_text(&self) -> Result<Cow<'_, str>, xso::error::Error> {
+        Ok(Cow::Owned(self.to_hex()))
     }
 }
 

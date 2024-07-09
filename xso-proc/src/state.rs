@@ -82,7 +82,7 @@ impl State {
     /// the `advance` implementation of the state machine.
     ///
     /// See [`FromEventsStateMachine::advance_match_arms`] and
-    /// [`IntoEventsSubmachine::compile`] for the respective
+    /// [`AsItemsSubmachine::compile`] for the respective
     /// requirements on the implementations.
     pub(crate) fn with_impl(mut self, body: TokenStream) -> Self {
         self.advance_body = body;
@@ -171,12 +171,12 @@ impl FromEventsSubmachine {
     }
 }
 
-/// A partial [`IntoEventsStateMachine`] which only covers the builder for a
+/// A partial [`AsItemsStateMachine`] which only covers the builder for a
 /// single compound.
 ///
-/// See [`IntoEventsStateMachine`] for more information on the state machines
+/// See [`AsItemsStateMachine`] for more information on the state machines
 /// in general.
-pub(crate) struct IntoEventsSubmachine {
+pub(crate) struct AsItemsSubmachine {
     /// Additional items necessary for the statemachine.
     pub(crate) defs: TokenStream,
 
@@ -194,7 +194,7 @@ pub(crate) struct IntoEventsSubmachine {
     pub(crate) init: TokenStream,
 }
 
-impl IntoEventsSubmachine {
+impl AsItemsSubmachine {
     /// Convert a partial state machine into a full state machine.
     ///
     /// This converts the abstract [`State`] items into token
@@ -202,13 +202,13 @@ impl IntoEventsSubmachine {
     /// definitions and the match arms), rendering them effectively immutable.
     ///
     /// This requires that the [`State::advance_body`] token streams evaluate
-    /// to an `Option<rxml::Event>`. If it evaluates to `Some(.)`, that is
+    /// to an `Option<Item>`. If it evaluates to `Some(.)`, that is
     /// emitted from the iterator. If it evaluates to `None`, the `advance`
     /// implementation is called again.
     ///
     /// Each state implementation is augmented to also enter the next state,
     /// causing the iterator to terminate eventually.
-    pub(crate) fn compile(self) -> IntoEventsStateMachine {
+    pub(crate) fn compile(self) -> AsItemsStateMachine {
         let mut state_defs = TokenStream::default();
         let mut advance_match_arms = TokenStream::default();
 
@@ -227,13 +227,13 @@ impl IntoEventsSubmachine {
                     ..
                 }) => {
                     quote! {
-                        ::core::result::Result::Ok((::core::option::Option::Some(Self::#next_name { #construct_next }), event))
+                        ::core::result::Result::Ok((::core::option::Option::Some(Self::#next_name { #construct_next }), item))
                     }
                 }
                 // final state -> exit the state machine
                 None => {
                     quote! {
-                        ::core::result::Result::Ok((::core::option::Option::None, event))
+                        ::core::result::Result::Ok((::core::option::Option::None, item))
                     }
                 }
             };
@@ -244,17 +244,17 @@ impl IntoEventsSubmachine {
 
             advance_match_arms.extend(quote! {
                 Self::#name { #destructure } => {
-                    let event = #advance_body;
+                    let item = #advance_body;
                     #footer
                 }
             });
         }
 
-        IntoEventsStateMachine {
+        AsItemsStateMachine {
             defs: self.defs,
             state_defs,
             advance_match_arms,
-            variants: vec![IntoEventsEntryPoint {
+            variants: vec![AsItemsEntryPoint {
                 init: self.init,
                 destructure: self.destructure,
             }],
@@ -281,7 +281,7 @@ pub(crate) struct FromEventsEntryPoint {
 }
 
 /// A single variant's entrypoint into the event iterator.
-pub(crate) struct IntoEventsEntryPoint {
+pub(crate) struct AsItemsEntryPoint {
     /// A pattern match which destructures the target type into its parts, for
     /// use by `init`.
     destructure: TokenStream,
@@ -468,7 +468,7 @@ impl FromEventsStateMachine {
 /// method. That method consumes the enum value and returns either a new enum
 /// value, an error, or the output type of the state machine.
 #[derive(Default)]
-pub(crate) struct IntoEventsStateMachine {
+pub(crate) struct AsItemsStateMachine {
     /// Extra items which are needed for the state machine implementation.
     defs: TokenStream,
 
@@ -480,7 +480,7 @@ pub(crate) struct IntoEventsStateMachine {
     /// enumeration type.
     ///
     /// Each match arm must either diverge or evaluate to a
-    /// `Result<(Option<State>, Option<Event>), xso::error::Error>`, where
+    /// `Result<(Option<State>, Option<Item>), xso::error::Error>`, where
     /// where `State` is the state enumeration.
     ///
     /// If `Some(.)` is returned for the event, that event is emitted. If
@@ -489,7 +489,7 @@ pub(crate) struct IntoEventsStateMachine {
     /// field.
     ///
     /// If `None` is returned for the `Option<State>`, the iterator
-    /// terminates yielding the `Option<Event>` value directly (even if it is
+    /// terminates yielding the `Option<Item>` value directly (even if it is
     /// `None`). After the iterator has terminated, it yields `None`
     /// indefinitely.
     advance_match_arms: TokenStream,
@@ -498,10 +498,10 @@ pub(crate) struct IntoEventsStateMachine {
     ///
     /// This may only contain more than one element if an enumeration is being
     /// serialised by the resulting state machine.
-    variants: Vec<IntoEventsEntryPoint>,
+    variants: Vec<AsItemsEntryPoint>,
 }
 
-impl IntoEventsStateMachine {
+impl AsItemsStateMachine {
     /// Render the state machine as a token stream.
     ///
     /// The token stream contains the following pieces:
@@ -515,7 +515,8 @@ impl IntoEventsStateMachine {
         vis: &Visibility,
         input_ty: &Type,
         state_ty_ident: &Ident,
-        event_iter_ty_ident: &Ident,
+        item_iter_ty_lifetime: &Lifetime,
+        item_iter_ty: &Type,
     ) -> Result<TokenStream> {
         let Self {
             defs,
@@ -525,10 +526,10 @@ impl IntoEventsStateMachine {
         } = self;
 
         let input_ty_ref = make_ty_ref(input_ty);
-        let docstr = format!("Convert a {0} into XML events.\n\nThis type is generated using the [`macro@xso::IntoXml`] derive macro and implements [`std::iter:Iterator`] for {0}.", input_ty_ref);
+        let docstr = format!("Convert a {0} into XML events.\n\nThis type is generated using the [`macro@xso::AsXml`] derive macro and implements [`std::iter:Iterator`] for {0}.", input_ty_ref);
 
         let init_body = if variants.len() == 1 {
-            let IntoEventsEntryPoint { destructure, init } = variants.remove(0);
+            let AsItemsEntryPoint { destructure, init } = variants.remove(0);
             quote! {
                 {
                     let #destructure = value;
@@ -537,7 +538,7 @@ impl IntoEventsStateMachine {
             }
         } else {
             let mut match_arms = TokenStream::default();
-            for IntoEventsEntryPoint { destructure, init } in variants {
+            for AsItemsEntryPoint { destructure, init } in variants {
                 match_arms.extend(quote! {
                     #destructure => #init,
                 });
@@ -553,40 +554,40 @@ impl IntoEventsStateMachine {
         Ok(quote! {
             #defs
 
-            enum #state_ty_ident {
+            enum #state_ty_ident<#item_iter_ty_lifetime> {
                 #state_defs
             }
 
-            impl #state_ty_ident {
-                fn advance(mut self) -> ::core::result::Result<(::core::option::Option<Self>, ::core::option::Option<::xso::exports::rxml::Event>), ::xso::error::Error> {
+            impl<#item_iter_ty_lifetime> #state_ty_ident<#item_iter_ty_lifetime> {
+                fn advance(mut self) -> ::core::result::Result<(::core::option::Option<Self>, ::core::option::Option<::xso::Item<#item_iter_ty_lifetime>>), ::xso::error::Error> {
                     match self {
                         #advance_match_arms
                     }
                 }
 
                 fn new(
-                    value: #input_ty,
+                    value: &#item_iter_ty_lifetime #input_ty,
                 ) -> ::core::result::Result<Self, ::xso::error::Error> {
                     ::core::result::Result::Ok(#init_body)
                 }
             }
 
             #[doc = #docstr]
-            #vis struct #event_iter_ty_ident(::core::option::Option<#state_ty_ident>);
+            #vis struct #item_iter_ty(::core::option::Option<#state_ty_ident<#item_iter_ty_lifetime>>);
 
-            impl ::std::iter::Iterator for #event_iter_ty_ident {
-                type Item = ::core::result::Result<::xso::exports::rxml::Event, ::xso::error::Error>;
+            impl<#item_iter_ty_lifetime> ::std::iter::Iterator for #item_iter_ty {
+                type Item = ::core::result::Result<::xso::Item<#item_iter_ty_lifetime>, ::xso::error::Error>;
 
                 fn next(&mut self) -> ::core::option::Option<Self::Item> {
                     let mut state = self.0.take()?;
                     loop {
-                        let (next_state, ev) = match state.advance() {
+                        let (next_state, item) = match state.advance() {
                             ::core::result::Result::Ok(v) => v,
                             ::core::result::Result::Err(e) => return ::core::option::Option::Some(::core::result::Result::Err(e)),
                         };
-                        if let ::core::option::Option::Some(ev) = ev {
+                        if let ::core::option::Option::Some(item) = item {
                             self.0 = next_state;
-                            return ::core::option::Option::Some(::core::result::Result::Ok(ev));
+                            return ::core::option::Option::Some(::core::result::Result::Ok(item));
                         }
                         // no event, do we have a state?
                         if let ::core::option::Option::Some(st) = next_state {
@@ -602,8 +603,8 @@ impl IntoEventsStateMachine {
                 }
             }
 
-            impl #event_iter_ty_ident {
-                fn new(value: #input_ty) -> ::core::result::Result<Self, ::xso::error::Error> {
+            impl<#item_iter_ty_lifetime> #item_iter_ty {
+                fn new(value: &#item_iter_ty_lifetime #input_ty) -> ::core::result::Result<Self, ::xso::error::Error> {
                     #state_ty_ident::new(value).map(|ok| Self(::core::option::Option::Some(ok)))
                 }
             }

@@ -4,14 +4,14 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use xso::{FromXml, IntoXml};
+use xso::{AsXml, FromXml};
 
 use crate::message::MessagePayload;
 use crate::ns;
 
 /// Defines that the message containing this payload should replace a
 /// previous message, identified by the id.
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = ns::MESSAGE_CORRECT, name = "replace")]
 pub struct Replace {
     /// The 'id' attribute of the message getting corrected.

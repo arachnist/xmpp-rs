@@ -4,7 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use xso::{FromXml, IntoXml};
+use xso::{AsXml, FromXml};
 
 use crate::message::MessagePayload;
 use crate::ns;
@@ -14,7 +14,7 @@ use crate::presence::PresencePayload;
 ///
 /// It allows clients to identify a MUC participant across reconnects and
 /// renames. It thus prevents impersonification of anonymous users.
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = ns::OID, name = "occupant-id")]
 pub struct OccupantId {
     /// The id associated to the sending user by the MUC service.

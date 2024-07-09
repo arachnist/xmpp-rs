@@ -13,7 +13,7 @@
 //! For vCard updates defined in [XEP-0153](https://xmpp.org/extensions/xep-0153.html),
 //! see [`vcard_update`][crate::vcard_update] module.
 
-use xso::{FromXml, IntoXml};
+use xso::{AsXml, FromXml};
 
 use crate::iq::{IqGetPayload, IqResultPayload, IqSetPayload};
 use crate::util::text_node_codecs::{Codec, WhitespaceAwareBase64};
@@ -33,7 +33,7 @@ generate_element!(
 );
 
 /// The type of the photo.
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = ns::VCARD, name = "TYPE")]
 pub struct Type {
     /// The type as a plain text string; at least "image/jpeg", "image/gif" and "image/png" SHOULD be supported.

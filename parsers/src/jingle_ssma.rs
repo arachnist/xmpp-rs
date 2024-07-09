@@ -4,7 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use xso::{FromXml, IntoXml};
+use xso::{AsXml, FromXml};
 
 use crate::ns;
 
@@ -32,7 +32,7 @@ impl Source {
 }
 
 /// Parameter associated with a ssrc.
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = ns::JINGLE_SSMA, name = "parameter")]
 pub struct Parameter {
     /// The name of the parameter.

@@ -13,7 +13,7 @@ use std::collections::BTreeMap;
 use std::str::FromStr;
 use xso::{
     error::{Error, FromElementError},
-    FromXml, IntoXml,
+    AsXml, FromXml,
 };
 
 generate_element!(
@@ -323,7 +323,7 @@ impl From<Checksum> for Element {
 }
 
 /// A notice that the file transfer has been completed.
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = ns::JINGLE_FT, name = "received")]
 pub struct Received {
     /// The content identifier of this Jingle session.

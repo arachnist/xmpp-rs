@@ -7,7 +7,7 @@
 
 use xso::{
     error::{Error, FromElementError},
-    FromXml, IntoXml,
+    AsXml, FromXml,
 };
 
 use crate::message::MessagePayload;
@@ -131,7 +131,7 @@ impl From<Actor> for Element {
 
 /// Used to continue a one-to-one discussion in a room, with more than one
 /// participant.
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = ns::MUC_USER, name = "continue")]
 pub struct Continue {
     /// The thread to continue in this room.

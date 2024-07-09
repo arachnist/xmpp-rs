@@ -4,7 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use xso::{FromXml, IntoXml};
+use xso::{AsXml, FromXml};
 
 use crate::data_forms::DataForm;
 use crate::date::DateTime;
@@ -101,7 +101,7 @@ generate_element!(
 impl IqGetPayload for Service {}
 
 /// Structure representing a `<services xmlns='urn:xmpp:extdisco:2'/>` element.
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = ns::EXT_DISCO, name = "services")]
 pub struct ServicesQuery {
     /// TODO

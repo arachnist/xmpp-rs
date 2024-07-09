@@ -14,9 +14,9 @@ use rxml_validation::NcName;
 
 use crate::error_message::{self, ParentRef};
 use crate::meta::{Flag, NameRef, NamespaceRef, XmlFieldMeta};
-use crate::scope::{FromEventsScope, IntoEventsScope};
+use crate::scope::FromEventsScope;
 use crate::types::{
-    default_fn, from_xml_text_fn, into_optional_xml_text_fn, into_xml_text_fn, string_ty,
+    as_optional_xml_text_fn, as_xml_text_fn, default_fn, from_xml_text_fn, string_ty,
     text_codec_decode_fn, text_codec_encode_fn,
 };
 
@@ -69,13 +69,12 @@ pub(crate) enum FieldBuilderPart {
 pub(crate) enum FieldIteratorPart {
     /// The field is emitted as part of StartElement.
     Header {
-        /// A sequence of statements which updates the temporary variables
-        /// during the StartElement event's construction, consuming the
-        /// field's value.
-        setter: TokenStream,
+        /// An expression which consumes the field's value and returns a
+        /// `Item`.
+        generator: TokenStream,
     },
 
-    /// The field is emitted as text event.
+    /// The field is emitted as text item.
     Text {
         /// An expression which consumes the field's value and returns a
         /// String, which is then emitted as text data.
@@ -295,19 +294,13 @@ impl FieldDef {
     ///
     /// `bound_name` must be the name to which the field's value is bound in
     /// the iterator code.
-    pub(crate) fn make_iterator_part(
-        &self,
-        scope: &IntoEventsScope,
-        bound_name: &Ident,
-    ) -> Result<FieldIteratorPart> {
+    pub(crate) fn make_iterator_part(&self, bound_name: &Ident) -> Result<FieldIteratorPart> {
         match self.kind {
             FieldKind::Attribute {
                 ref xml_name,
                 ref xml_namespace,
                 ..
             } => {
-                let IntoEventsScope { ref attrs, .. } = scope;
-
                 let xml_namespace = match xml_namespace {
                     Some(v) => quote! { ::xso::exports::rxml::Namespace::from(#v) },
                     None => quote! {
@@ -315,16 +308,13 @@ impl FieldDef {
                     },
                 };
 
-                let into_optional_xml_text = into_optional_xml_text_fn(self.ty.clone());
+                let as_optional_xml_text = as_optional_xml_text_fn(self.ty.clone());
 
                 Ok(FieldIteratorPart::Header {
-                    // This is a neat little trick:
-                    // Option::from(x) converts x to an Option<T> *unless* it
-                    // already is an Option<_>.
-                    setter: quote! {
-                        #into_optional_xml_text(#bound_name)?.and_then(|#bound_name| #attrs.insert(
+                    generator: quote! {
+                        #as_optional_xml_text(#bound_name)?.map(|#bound_name| ::xso::Item::Attribute(
                             #xml_namespace,
-                            #xml_name.to_owned(),
+                            ::std::borrow::Cow::Borrowed(#xml_name),
                             #bound_name,
                         ));
                     },
@@ -338,8 +328,8 @@ impl FieldDef {
                         quote! { #encode(#bound_name)? }
                     }
                     None => {
-                        let into_xml_text = into_xml_text_fn(self.ty.clone());
-                        quote! { ::core::option::Option::Some(#into_xml_text(#bound_name)?) }
+                        let as_xml_text = as_xml_text_fn(self.ty.clone());
+                        quote! { ::core::option::Option::Some(#as_xml_text(#bound_name)?) }
                     }
                 };
 

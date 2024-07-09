@@ -94,9 +94,13 @@ macro_rules! generate_attribute {
                 })
             }
         }
-        impl ::xso::IntoXmlText for $elem {
-            fn into_xml_text(self) -> Result<String, xso::error::Error> {
-                Ok(self.to_string())
+        impl ::xso::AsXmlText for $elem {
+            fn as_xml_text(&self) -> Result<::std::borrow::Cow<'_, str>, xso::error::Error> {
+                match self {
+                    $(
+                        $elem::$a => Ok(::std::borrow::Cow::Borrowed($b))
+                    ),+
+                }
             }
         }
         impl ::minidom::IntoAttributeValue for $elem {
@@ -130,16 +134,16 @@ macro_rules! generate_attribute {
                 s.parse().map_err(xso::error::Error::text_parse_error)
             }
         }
-        impl ::xso::IntoXmlText for $elem {
-            fn into_xml_text(self) -> Result<String, xso::error::Error> {
-                Ok(String::from(match self {
+        impl ::xso::AsXmlText for $elem {
+            fn as_xml_text(&self) -> Result<std::borrow::Cow<'_, str>, xso::error::Error> {
+                Ok(std::borrow::Cow::Borrowed(match self {
                     $($elem::$a => $b),+
                 }))
             }
 
             #[allow(unreachable_patterns)]
-            fn into_optional_xml_text(self) -> Result<Option<String>, xso::error::Error> {
-                Ok(Some(String::from(match self {
+            fn as_optional_xml_text(&self) -> Result<Option<std::borrow::Cow<'_, str>>, xso::error::Error> {
+                Ok(Some(std::borrow::Cow::Borrowed(match self {
                     $elem::$default => return Ok(None),
                     $($elem::$a => $b),+
                 })))
@@ -219,17 +223,17 @@ macro_rules! generate_attribute {
                 }
             }
         }
-        impl ::xso::IntoXmlText for $elem {
-            fn into_xml_text(self) -> Result<String, xso::error::Error> {
+        impl ::xso::AsXmlText for $elem {
+            fn as_xml_text(&self) -> Result<::std::borrow::Cow<'_, str>, xso::error::Error> {
                 match self {
-                    Self::True => Ok("true".to_owned()),
-                    Self::False => Ok("false".to_owned()),
+                    Self::True => Ok(::std::borrow::Cow::Borrowed("true")),
+                    Self::False => Ok(::std::borrow::Cow::Borrowed("false")),
                 }
             }
 
-            fn into_optional_xml_text(self) -> Result<Option<String>, xso::error::Error> {
+            fn as_optional_xml_text(&self) -> Result<Option<::std::borrow::Cow<'_, str>>, xso::error::Error> {
                 match self {
-                    Self::True => Ok(Some("true".to_owned())),
+                    Self::True => Ok(Some(::std::borrow::Cow::Borrowed("true"))),
                     Self::False => Ok(None),
                 }
             }
@@ -435,9 +439,9 @@ macro_rules! generate_id {
                 Ok(Self(s))
             }
         }
-        impl ::xso::IntoXmlText for $elem {
-            fn into_xml_text(self) ->Result<String, xso::error::Error> {
-                Ok(self.0)
+        impl ::xso::AsXmlText for $elem {
+            fn as_xml_text(&self) ->Result<::std::borrow::Cow<'_, str>, xso::error::Error> {
+                Ok(::std::borrow::Cow::Borrowed(self.0.as_str()))
             }
         }
         impl ::minidom::IntoAttributeValue for $elem {
@@ -803,11 +807,11 @@ macro_rules! generate_element {
             }
         }
 
-        impl ::xso::IntoXml for $elem {
-            type EventIter = ::xso::minidom_compat::IntoEventsViaElement;
+        impl ::xso::AsXml for $elem {
+            type ItemIter<'x> = ::xso::minidom_compat::AsItemsViaElement<'x>;
 
-            fn into_event_iter(self) -> Result<Self::EventIter, ::xso::error::Error> {
-                Self::EventIter::new(self)
+            fn as_xml_iter(&self) -> Result<Self::ItemIter<'_>, ::xso::error::Error> {
+                ::xso::minidom_compat::AsItemsViaElement::new(self.clone())
             }
         }
     );

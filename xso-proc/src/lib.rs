@@ -111,26 +111,27 @@ pub fn from_xml(input: RawTokenStream) -> RawTokenStream {
     }
 }
 
-/// Generate a `xso::IntoXml` implementation for the given item, or fail with
+/// Generate a `xso::AsXml` implementation for the given item, or fail with
 /// a proper compiler error.
-fn into_xml_impl(input: Item) -> Result<TokenStream> {
+fn as_xml_impl(input: Item) -> Result<TokenStream> {
     let (vis, ident, def) = parse_struct(input)?;
 
-    let structs::IntoXmlParts {
+    let structs::AsXmlParts {
         defs,
-        into_event_iter_body,
-        event_iter_ty_ident,
-    } = def.make_into_event_iter(&vis)?;
+        as_xml_iter_body,
+        item_iter_ty_lifetime,
+        item_iter_ty,
+    } = def.make_as_xml_iter(&vis)?;
 
     #[cfg_attr(not(feature = "minidom"), allow(unused_mut))]
     let mut result = quote! {
         #defs
 
-        impl ::xso::IntoXml for #ident {
-            type EventIter = #event_iter_ty_ident;
+        impl ::xso::AsXml for #ident {
+            type ItemIter<#item_iter_ty_lifetime> = #item_iter_ty;
 
-            fn into_event_iter(self) -> ::core::result::Result<Self::EventIter, ::xso::error::Error> {
-                #into_event_iter_body
+            fn as_xml_iter(&self) -> ::core::result::Result<Self::ItemIter<'_>, ::xso::error::Error> {
+                #as_xml_iter_body
             }
         }
     };
@@ -162,15 +163,15 @@ fn into_xml_impl(input: Item) -> Result<TokenStream> {
     Ok(result)
 }
 
-/// Macro to derive a `xso::IntoXml` implementation on a type.
+/// Macro to derive a `xso::AsXml` implementation on a type.
 ///
 /// The user-facing documentation for this macro lives in the `xso` crate.
-#[proc_macro_derive(IntoXml, attributes(xml))]
-pub fn into_xml(input: RawTokenStream) -> RawTokenStream {
-    // Shim wrapper around `into_xml_impl` which converts any errors into
+#[proc_macro_derive(AsXml, attributes(xml))]
+pub fn as_xml(input: RawTokenStream) -> RawTokenStream {
+    // Shim wrapper around `as_xml_impl` which converts any errors into
     // actual compiler errors within the resulting token stream.
     let item = syn::parse_macro_input!(input as Item);
-    match into_xml_impl(item) {
+    match as_xml_impl(item) {
         Ok(v) => v.into(),
         Err(e) => e.into_compile_error().into(),
     }

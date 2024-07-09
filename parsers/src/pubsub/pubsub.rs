@@ -6,7 +6,7 @@
 
 use xso::{
     error::{Error, FromElementError},
-    FromXml, IntoXml,
+    AsXml, FromXml,
 };
 
 use crate::data_forms::DataForm;
@@ -34,7 +34,7 @@ generate_element!(
 );
 
 /// An affiliation element.
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = ns::PUBSUB, name = "affiliation")]
 pub struct Affiliation {
     /// The node this affiliation pertains to.
@@ -56,7 +56,7 @@ generate_element!(
 );
 
 /// Request to create a new node.
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = ns::PUBSUB, name = "create")]
 pub struct Create {
     /// The node name to create, if `None` the service will generate one.
@@ -222,7 +222,7 @@ impl From<SubscribeOptions> for Element {
 }
 
 /// A request to subscribe a JID to a node.
-#[derive(FromXml, IntoXml, Debug, PartialEq, Clone)]
+#[derive(FromXml, AsXml, Debug, PartialEq, Clone)]
 #[xml(namespace = ns::PUBSUB, name = "subscribe")]
 pub struct Subscribe {
     /// The JID being subscribed.
@@ -270,7 +270,7 @@ generate_element!(
 );
 
 /// An unsubscribe request.
-#[derive(FromXml, IntoXml, Debug, PartialEq, Clone)]
+#[derive(FromXml, AsXml, Debug, PartialEq, Clone)]
 #[xml(namespace = ns::PUBSUB, name = "unsubscribe")]
 pub struct Unsubscribe {
     /// The JID affected by this request.

@@ -4,7 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use xso::{text::Base64, FromXml, IntoXml};
+use xso::{text::Base64, AsXml, FromXml};
 
 use crate::iq::IqSetPayload;
 use crate::ns;
@@ -44,7 +44,7 @@ attributes: [
 impl IqSetPayload for Open {}
 
 /// Exchange a chunk of data in an open stream.
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = ns::IBB, name = "data")]
 pub struct Data {
     /// Sequence number of this chunk, must wraparound after 65535.
@@ -63,7 +63,7 @@ pub struct Data {
 impl IqSetPayload for Data {}
 
 /// Close an open stream.
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = ns::IBB, name = "close")]
 pub struct Close {
     /// The identifier of the stream to be closed.

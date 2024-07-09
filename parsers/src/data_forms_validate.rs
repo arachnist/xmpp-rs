@@ -8,7 +8,7 @@ use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
 use minidom::{Element, IntoAttributeValue};
-use xso::{error::FromElementError, FromXml, IntoXml};
+use xso::{error::FromElementError, AsXml, FromXml};
 
 use crate::ns::{self, XDATA_VALIDATE};
 use crate::Error;
@@ -67,7 +67,7 @@ pub enum Method {
 }
 
 /// Selection Ranges in "list-multi"
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = ns::XDATA_VALIDATE, name = "list-range")]
 pub struct ListRange {
     /// The 'min' attribute specifies the minimum allowable number of selected/entered values.

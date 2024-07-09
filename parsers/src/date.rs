@@ -4,9 +4,10 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use std::borrow::Cow;
 use std::str::FromStr;
 
-use xso::{error::Error, FromXmlText, IntoXmlText};
+use xso::{error::Error, AsXmlText, FromXmlText};
 
 use chrono::{DateTime as ChronoDateTime, FixedOffset};
 use minidom::{IntoAttributeValue, Node};
@@ -48,9 +49,9 @@ impl FromXmlText for DateTime {
     }
 }
 
-impl IntoXmlText for DateTime {
-    fn into_xml_text(self) -> Result<String, Error> {
-        Ok(self.0.to_rfc3339())
+impl AsXmlText for DateTime {
+    fn as_xml_text(&self) -> Result<Cow<'_, str>, Error> {
+        Ok(Cow::Owned(self.0.to_rfc3339()))
     }
 }
 

@@ -5,7 +5,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use xso::{FromXml, IntoXml};
+use xso::{AsXml, FromXml};
 
 use crate::data_forms::DataForm;
 use crate::iq::{IqGetPayload, IqResultPayload, IqSetPayload};
@@ -29,7 +29,7 @@ generate_element!(
 );
 
 /// An affiliation element.
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = ns::PUBSUB_OWNER, name = "affiliation")]
 pub struct Affiliation {
     /// The node this affiliation pertains to.
@@ -77,7 +77,7 @@ generate_element!(
 );
 
 /// A redirect element.
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = ns::PUBSUB_OWNER, name = "redirect")]
 pub struct Redirect {
     /// The node this node will be redirected to.
@@ -86,7 +86,7 @@ pub struct Redirect {
 }
 
 /// Request to clear a node.
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = ns::PUBSUB_OWNER, name = "purge")]
 pub struct Purge {
     /// The node to be cleared.
@@ -108,7 +108,7 @@ generate_element!(
 );
 
 /// A subscription element, describing the state of a subscription.
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = ns::PUBSUB_OWNER, name = "subscription")]
 pub struct SubscriptionElem {
     /// The JID affected by this subscription.

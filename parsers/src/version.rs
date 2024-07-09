@@ -4,7 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use xso::{FromXml, IntoXml};
+use xso::{AsXml, FromXml};
 
 use crate::iq::{IqGetPayload, IqResultPayload};
 use crate::ns;
@@ -13,7 +13,7 @@ use crate::ns;
 ///
 /// It should only be used in an `<iq type='get'/>`, as it can only
 /// represent the request, and not a result.
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = ns::VERSION, name = "query")]
 pub struct VersionQuery;
 

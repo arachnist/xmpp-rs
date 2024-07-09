@@ -6,7 +6,7 @@
 
 use xso::{
     error::{Error, FromElementError},
-    FromXml, IntoXml,
+    AsXml, FromXml,
 };
 
 use crate::data_forms::{DataForm, DataFormType};
@@ -20,7 +20,7 @@ use jid::Jid;
 ///
 /// It should only be used in an `<iq type='get'/>`, as it can only represent
 /// the request, and not a result.
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = ns::DISCO_INFO, name = "query")]
 pub struct DiscoInfoQuery {
     /// Node on which we are doing the discovery.
@@ -31,7 +31,7 @@ pub struct DiscoInfoQuery {
 impl IqGetPayload for DiscoInfoQuery {}
 
 /// Structure representing a `<feature xmlns='http://jabber.org/protocol/disco#info'/>` element.
-#[derive(FromXml, IntoXml, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(FromXml, AsXml, Debug, Clone, PartialEq, Eq, Hash)]
 #[xml(namespace = ns::DISCO_INFO, name = "feature")]
 pub struct Feature {
     /// Namespace of the feature we want to represent.
@@ -203,7 +203,7 @@ children: [
 impl IqGetPayload for DiscoItemsQuery {}
 
 /// Structure representing an `<item xmlns='http://jabber.org/protocol/disco#items'/>` element.
-#[derive(FromXml, IntoXml, Debug, Clone, PartialEq)]
+#[derive(FromXml, AsXml, Debug, Clone, PartialEq)]
 #[xml(namespace = ns::DISCO_ITEMS, name = "item")]
 pub struct Item {
     /// JID of the entity pointed by this item.

@@ -49,14 +49,14 @@ pub use xso_proc::FromXml;
 
 /// # Make a struct or enum serialisable to XML
 ///
-/// This derives the [`IntoXml`] trait on a struct or enum. It is the
+/// This derives the [`AsXml`] trait on a struct or enum. It is the
 /// counterpart to [`macro@FromXml`].
 ///
 /// The attributes necessary and available for the derivation to work are
 /// documented on [`macro@FromXml`].
 #[doc(inline)]
 #[cfg(feature = "macros")]
-pub use xso_proc::IntoXml;
+pub use xso_proc::AsXml;
 
 /// Trait allowing to consume a struct and iterate its contents as
 /// serialisable [`rxml::Event`] items.
@@ -369,10 +369,10 @@ impl<T: AsXmlText> AsOptionalXmlText for Option<T> {
     }
 }
 
-/// Attempt to transform a type implementing [`IntoXml`] into another
+/// Attempt to transform a type implementing [`AsXml`] into another
 /// type which implements [`FromXml`].
-pub fn transform<T: FromXml, F: IntoXml>(from: F) -> Result<T, self::error::Error> {
-    let mut iter = from.into_event_iter()?;
+pub fn transform<T: FromXml, F: AsXml>(from: F) -> Result<T, self::error::Error> {
+    let mut iter = self::rxml_util::ItemToEvent::new(from.as_xml_iter()?);
     let (qname, attrs) = match iter.next() {
         Some(Ok(rxml::Event::StartElement(_, qname, attrs))) => (qname, attrs),
         Some(Err(e)) => return Err(e),
@@ -418,8 +418,24 @@ pub fn try_from_element<T: FromXml>(
         }
     };
 
-    let mut iter = from.into_event_iter()?;
-    iter.next().expect("first event from minidom::Element")?;
+    let mut iter = from.as_xml_iter()?;
+    // consume the element header
+    for item in &mut iter {
+        let item = item?;
+        match item {
+            // discard the element header
+            Item::XmlDeclaration(..) => (),
+            Item::ElementHeadStart(..) => (),
+            Item::Attribute(..) => (),
+            Item::ElementHeadEnd => {
+                // now that the element header is over, we break out
+                break;
+            }
+            Item::Text(..) => panic!("text before end of element header"),
+            Item::ElementFoot => panic!("element foot before end of element header"),
+        }
+    }
+    let iter = self::rxml_util::ItemToEvent::new(iter);
     for event in iter {
         let event = event?;
         if let Some(v) = sink.feed(event)? {

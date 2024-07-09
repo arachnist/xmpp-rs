@@ -4,7 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use xso::{text::EmptyAsNone, FromXml, IntoXml};
+use xso::{text::EmptyAsNone, AsXml, FromXml};
 
 use crate::date::DateTime;
 use crate::message::MessagePayload;
@@ -13,7 +13,7 @@ use crate::presence::PresencePayload;
 use jid::Jid;
 
 /// Notes when and by whom a message got stored for later delivery.
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = ns::DELAY, name = "delay")]
 pub struct Delay {
     /// The entity which delayed this message.

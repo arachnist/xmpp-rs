@@ -4,12 +4,14 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use xso::{error::Error, text::Base64, FromXml, FromXmlText, IntoXml, IntoXmlText};
+use std::borrow::Cow;
+use std::str::FromStr;
+
+use xso::{error::Error, text::Base64, AsXml, AsXmlText, FromXml, FromXmlText};
 
 use crate::hashes::{Algo, Hash};
 use crate::ns;
 use minidom::IntoAttributeValue;
-use std::str::FromStr;
 
 /// A Content-ID, as defined in RFC2111.
 ///
@@ -56,14 +58,18 @@ impl FromXmlText for ContentId {
     }
 }
 
-impl IntoXmlText for ContentId {
-    fn into_xml_text(self) -> Result<String, Error> {
+impl AsXmlText for ContentId {
+    fn as_xml_text(&self) -> Result<Cow<'_, str>, Error> {
         let algo = match self.hash.algo {
             Algo::Sha_1 => "sha1",
             Algo::Sha_256 => "sha256",
             _ => unimplemented!(),
         };
-        Ok(format!("{}+{}@bob.xmpp.org", algo, self.hash.to_hex()))
+        Ok(Cow::Owned(format!(
+            "{}+{}@bob.xmpp.org",
+            algo,
+            self.hash.to_hex()
+        )))
     }
 }
 
@@ -79,7 +85,7 @@ impl IntoAttributeValue for ContentId {
 }
 
 /// Request for an uncached cid file.
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = ns::BOB, name = "data")]
 pub struct Data {
     /// The cid in question.

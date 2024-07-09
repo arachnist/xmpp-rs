@@ -16,7 +16,7 @@
 //!
 //! The [`Conference`][crate::bookmarks::Conference] struct used in [`private::Query`][`crate::private::Query`] is the one from this module. Only the querying mechanism changes from a legacy PubSub implementation here, to a legacy Private XML Query implementation in that other module. The [`Conference`][crate::bookmarks2::Conference] element from the [`bookmarks2`][crate::bookmarks2] module is a different structure, but conversion is possible from [`bookmarks::Conference`][crate::bookmarks::Conference] to [`bookmarks2::Conference`][crate::bookmarks2::Conference] via the [`Conference::into_bookmarks2`][crate::bookmarks::Conference::into_bookmarks2] method.
 
-use xso::{FromXml, IntoXml};
+use xso::{AsXml, FromXml};
 
 use jid::BareJid;
 
@@ -63,7 +63,7 @@ impl Conference {
 }
 
 /// An URL bookmark.
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = ns::BOOKMARKS, name = "url")]
 pub struct Url {
     /// A user-defined name for this URL.

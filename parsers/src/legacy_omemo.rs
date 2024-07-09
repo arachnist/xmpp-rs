@@ -4,14 +4,14 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use xso::{text::Base64, FromXml, IntoXml};
+use xso::{text::Base64, AsXml, FromXml};
 
 use crate::message::MessagePayload;
 use crate::ns;
 use crate::pubsub::PubSubPayload;
 
 /// Element of the device list
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = ns::LEGACY_OMEMO, name = "device")]
 pub struct Device {
     /// Device id
@@ -33,7 +33,7 @@ impl PubSubPayload for DeviceList {}
 
 /// SignedPreKey public key
 /// Part of a device's bundle
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = ns::LEGACY_OMEMO, name = "signedPreKeyPublic")]
 pub struct SignedPreKeyPublic {
     /// SignedPreKey id
@@ -47,7 +47,7 @@ pub struct SignedPreKeyPublic {
 
 /// SignedPreKey signature
 /// Part of a device's bundle
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = ns::LEGACY_OMEMO, name = "signedPreKeySignature")]
 pub struct SignedPreKeySignature {
     /// Signature bytes
@@ -56,7 +56,7 @@ pub struct SignedPreKeySignature {
 }
 
 /// Part of a device's bundle
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = ns::LEGACY_OMEMO, name = "identityKey")]
 pub struct IdentityKey {
     /// Serialized PublicKey
@@ -76,7 +76,7 @@ generate_element!(
 
 /// PreKey public key
 /// Part of a device's bundle
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = ns::LEGACY_OMEMO, name = "preKeyPublic")]
 pub struct PreKeyPublic {
     /// PreKey id
@@ -123,7 +123,7 @@ generate_element!(
 );
 
 /// IV used for payload encryption
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = ns::LEGACY_OMEMO, name = "iv")]
 pub struct IV {
     /// IV bytes
@@ -139,7 +139,7 @@ generate_attribute!(
 );
 
 /// Part of the OMEMO element header
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = ns::LEGACY_OMEMO, name = "key")]
 pub struct Key {
     /// The device id this key is encrypted for.
@@ -159,7 +159,7 @@ pub struct Key {
 }
 
 /// The encrypted message body
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = ns::LEGACY_OMEMO, name = "payload")]
 pub struct Payload {
     /// Encrypted with AES-128 in Galois/Counter Mode (GCM)

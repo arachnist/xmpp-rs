@@ -4,13 +4,13 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use xso::{FromXml, IntoXml};
+use xso::{AsXml, FromXml};
 
 use crate::message::MessagePayload;
 use crate::ns;
 
 /// Structure representing an `<encryption xmlns='urn:xmpp:eme:0'/>` element.
-#[derive(FromXml, IntoXml, Debug, Clone, PartialEq)]
+#[derive(FromXml, AsXml, Debug, Clone, PartialEq)]
 #[xml(namespace = ns::EME, name = "encryption")]
 pub struct ExplicitMessageEncryption {
     /// Namespace of the encryption scheme used.

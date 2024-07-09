@@ -6,7 +6,7 @@
 
 use xso::{
     error::{Error, FromElementError},
-    FromXml, IntoXml,
+    AsXml, FromXml,
 };
 
 use crate::data_forms::DataForm;
@@ -165,7 +165,7 @@ generate_element!(
 impl IqResultPayload for Fin {}
 
 /// Metadata of the first message in the archive.
-#[derive(FromXml, IntoXml, Debug, Clone, PartialEq)]
+#[derive(FromXml, AsXml, Debug, Clone, PartialEq)]
 #[xml(namespace = ns::MAM, name = "start")]
 pub struct Start {
     /// The id of the first message in the archive.
@@ -178,7 +178,7 @@ pub struct Start {
 }
 
 /// Metadata of the last message in the archive.
-#[derive(FromXml, IntoXml, Debug, Clone, PartialEq)]
+#[derive(FromXml, AsXml, Debug, Clone, PartialEq)]
 #[xml(namespace = ns::MAM, name = "end")]
 pub struct End {
     /// The id of the last message in the archive.
@@ -191,7 +191,7 @@ pub struct End {
 }
 
 /// Request an archive for its metadata.
-#[derive(FromXml, IntoXml, Debug, Clone, PartialEq)]
+#[derive(FromXml, AsXml, Debug, Clone, PartialEq)]
 #[xml(namespace = ns::MAM, name = "metadata")]
 pub struct MetadataQuery;
 

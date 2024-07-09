@@ -134,7 +134,7 @@ convert_via_fromstr_and_display! {
 /// Represent a way to encode/decode text data into a Rust type.
 ///
 /// This trait can be used in scenarios where implementing [`FromXmlText`]
-/// and/or [`IntoXmlText`] on a type is not feasible or sensible, such as the
+/// and/or [`AsXmlText`] on a type is not feasible or sensible, such as the
 /// following:
 ///
 /// 1. The type originates in a foreign crate, preventing the implementation
@@ -143,7 +143,7 @@ convert_via_fromstr_and_display! {
 /// 2. There is more than one way to convert a value to/from XML.
 ///
 /// The codec to use for a text can be specified in the attributes understood
-/// by `FromXml` and `IntoXml` derive macros. See the documentation of the
+/// by `FromXml` and `AsXml` derive macros. See the documentation of the
 /// [`FromXml`][`macro@crate::FromXml`] derive macro for details.
 pub trait TextCodec<T> {
     /// Decode a string value into the type.
@@ -152,7 +152,7 @@ pub trait TextCodec<T> {
     /// Encode the type as string value.
     ///
     /// If this returns `None`, the string value is not emitted at all.
-    fn encode(value: T) -> Result<Option<String>, Error>;
+    fn encode(value: &T) -> Result<Option<Cow<'_, str>>, Error>;
 }
 
 /// Text codec which does no transform.
@@ -163,8 +163,8 @@ impl TextCodec<String> for Plain {
         Ok(s)
     }
 
-    fn encode(value: String) -> Result<Option<String>, Error> {
-        Ok(Some(value))
+    fn encode(value: &String) -> Result<Option<Cow<'_, str>>, Error> {
+        Ok(Some(Cow::Borrowed(value.as_str())))
     }
 }
 
@@ -180,9 +180,9 @@ impl TextCodec<Option<String>> for EmptyAsNone {
         }
     }
 
-    fn encode(value: Option<String>) -> Result<Option<String>, Error> {
-        Ok(match value {
-            Some(v) if !v.is_empty() => Some(v),
+    fn encode(value: &Option<String>) -> Result<Option<Cow<'_, str>>, Error> {
+        Ok(match value.as_ref() {
+            Some(v) if !v.is_empty() => Some(Cow::Borrowed(v.as_str())),
             Some(_) | None => None,
         })
     }
@@ -237,8 +237,8 @@ impl<Filter: TextFilter> TextCodec<Vec<u8>> for Base64<Filter> {
             .map_err(Error::text_parse_error)
     }
 
-    fn encode(value: Vec<u8>) -> Result<Option<String>, Error> {
-        Ok(Some(StandardBase64Engine.encode(&value)))
+    fn encode(value: &Vec<u8>) -> Result<Option<Cow<'_, str>>, Error> {
+        Ok(Some(Cow::Owned(StandardBase64Engine.encode(&value))))
     }
 }
 
@@ -252,7 +252,11 @@ impl<Filter: TextFilter> TextCodec<Option<Vec<u8>>> for Base64<Filter> {
         Ok(Some(Self::decode(s)?))
     }
 
-    fn encode(decoded: Option<Vec<u8>>) -> Result<Option<String>, Error> {
-        decoded.map(Self::encode).transpose().map(Option::flatten)
+    fn encode(decoded: &Option<Vec<u8>>) -> Result<Option<Cow<'_, str>>, Error> {
+        decoded
+            .as_ref()
+            .map(Self::encode)
+            .transpose()
+            .map(Option::flatten)
     }
 }

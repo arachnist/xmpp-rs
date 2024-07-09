@@ -4,7 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use xso::{FromXml, IntoXml};
+use xso::{AsXml, FromXml};
 
 use crate::date::DateTime;
 use crate::iq::{IqGetPayload, IqResultPayload};
@@ -15,7 +15,7 @@ use std::str::FromStr;
 use xso::error::{Error, FromElementError};
 
 /// An entity time query.
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = ns::TIME, name = "time")]
 pub struct TimeQuery;
 

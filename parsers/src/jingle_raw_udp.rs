@@ -6,7 +6,7 @@
 
 use std::net::IpAddr;
 
-use xso::{FromXml, IntoXml};
+use xso::{AsXml, FromXml};
 
 use crate::jingle_ice_udp::Type;
 use crate::ns;
@@ -35,7 +35,7 @@ impl Transport {
 }
 
 /// A candidate for an ICE-UDP session.
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = ns::JINGLE_RAW_UDP, name = "candidate")]
 pub struct Candidate {
     /// A Component ID as defined in ICE-CORE.

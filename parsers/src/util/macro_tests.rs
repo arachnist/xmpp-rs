@@ -19,9 +19,9 @@ mod helpers {
     // this is to ensure that the macros do not have hidden dependencies on
     // any specific names being imported.
     use minidom::Element;
-    use xso::{error::FromElementError, transform, try_from_element, FromXml, IntoXml};
+    use xso::{error::FromElementError, transform, try_from_element, AsXml, FromXml};
 
-    pub(super) fn roundtrip_full<T: IntoXml + FromXml + PartialEq + std::fmt::Debug + Clone>(
+    pub(super) fn roundtrip_full<T: AsXml + FromXml + PartialEq + std::fmt::Debug + Clone>(
         s: &str,
     ) {
         let initial: Element = s.parse().unwrap();
@@ -47,7 +47,7 @@ mod helpers {
 
 use self::helpers::{parse_str, roundtrip_full};
 
-use xso::{FromXml, IntoXml};
+use xso::{AsXml, FromXml};
 
 // these are adverserial local names in order to trigger any issues with
 // unqualified names in the macro expansions.
@@ -81,7 +81,7 @@ static BAR_NAME: &::xso::exports::rxml::strings::NcNameStr = {
     }
 };
 
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = NS1, name = "foo")]
 struct Empty;
 
@@ -164,7 +164,7 @@ fn empty_qname_check_has_precedence_over_attr_check() {
     }
 }
 
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = NS1, name = BAR_NAME)]
 struct NamePath;
 
@@ -178,7 +178,7 @@ fn name_path_roundtrip() {
     roundtrip_full::<NamePath>("<bar xmlns='urn:example:ns1'/>");
 }
 
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = "urn:example:ns2", name = "baz")]
 struct NamespaceLit;
 
@@ -192,7 +192,7 @@ fn namespace_lit_roundtrip() {
     roundtrip_full::<NamespaceLit>("<baz xmlns='urn:example:ns2'/>");
 }
 
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = NS1, name = "attr")]
 struct RequiredAttribute {
     #[xml(attribute)]
@@ -237,7 +237,7 @@ fn required_attribute_missing() {
     }
 }
 
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = NS1, name = "attr")]
 struct RenamedAttribute {
     #[xml(attribute = "a1")]
@@ -256,7 +256,7 @@ fn renamed_attribute_roundtrip() {
     roundtrip_full::<RenamedAttribute>("<attr xmlns='urn:example:ns1' a1='bar' bar='baz'/>");
 }
 
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = NS1, name = "attr")]
 struct NamespacedAttribute {
     #[xml(attribute(namespace = "urn:example:ns1", name = FOO_NAME))]
@@ -297,7 +297,7 @@ fn namespaced_attribute_roundtrip_b() {
     );
 }
 
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = NS1, name = "attr")]
 struct PrefixedAttribute {
     #[xml(attribute = "xml:lang")]
@@ -314,7 +314,7 @@ fn prefixed_attribute_roundtrip() {
     roundtrip_full::<PrefixedAttribute>("<attr xmlns='urn:example:ns1' xml:lang='foo'/>");
 }
 
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = NS1, name = "attr")]
 struct RequiredNonStringAttribute {
     #[xml(attribute)]
@@ -331,7 +331,7 @@ fn required_non_string_attribute_roundtrip() {
     roundtrip_full::<RequiredNonStringAttribute>("<attr xmlns='urn:example:ns1' foo='-16'/>");
 }
 
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = NS1, name = "attr")]
 struct DefaultAttribute {
     #[xml(attribute(default))]
@@ -381,7 +381,7 @@ fn default_attribute_roundtrip_pp() {
     roundtrip_full::<DefaultAttribute>("<attr xmlns='urn:example:ns1' foo='xyz' bar='16'/>");
 }
 
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = NS1, name = "text")]
 struct TextString {
     #[xml(text)]
@@ -409,7 +409,7 @@ fn text_string_positive_preserves_whitespace() {
     assert_eq!(el.text, " \t\n");
 }
 
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = NS1, name = "text")]
 struct TextNonString {
     #[xml(text)]
@@ -426,7 +426,7 @@ fn text_non_string_roundtrip() {
     roundtrip_full::<TextNonString>("<text xmlns='urn:example:ns1'>123456</text>");
 }
 
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = NS1, name = "elem")]
 struct IgnoresWhitespaceWithoutTextConsumer;
 
@@ -443,7 +443,7 @@ fn ignores_whitespace_without_text_consumer_positive() {
     .unwrap();
 }
 
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = NS1, name = "elem")]
 struct FailsTextWithoutTextConsumer;
 
@@ -465,7 +465,7 @@ fn fails_text_without_text_consumer_positive() {
     }
 }
 
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = NS1, name = "text")]
 struct TextWithCodec {
     #[xml(text(codec = xso::text::EmptyAsNone))]

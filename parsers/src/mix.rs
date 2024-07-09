@@ -7,7 +7,7 @@
 // TODO: validate nicks by applying the “nickname” profile of the PRECIS OpaqueString class, as
 // defined in RFC 7700.
 
-use xso::{FromXml, IntoXml};
+use xso::{AsXml, FromXml};
 
 use crate::iq::{IqResultPayload, IqSetPayload};
 use crate::message::MessagePayload;
@@ -59,7 +59,7 @@ impl Participant {
 }
 
 /// A node to subscribe to.
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = ns::MIX_CORE, name = "subscribe")]
 pub struct Subscribe {
     /// The PubSub node to subscribe to.
@@ -151,7 +151,7 @@ impl UpdateSubscription {
 
 /// Request to leave a given MIX channel.  It will automatically unsubscribe the user from all
 /// nodes on this channel.
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = ns::MIX_CORE, name = "leave")]
 pub struct Leave;
 
@@ -204,7 +204,7 @@ impl Mix {
 }
 
 /// Create a new MIX channel.
-#[derive(FromXml, IntoXml, PartialEq, Clone, Debug, Default)]
+#[derive(FromXml, AsXml, PartialEq, Clone, Debug, Default)]
 #[xml(namespace = ns::MIX_CORE, name = "create")]
 pub struct Create {
     /// The requested channel identifier.
@@ -230,7 +230,7 @@ impl Create {
 }
 
 /// Destroy a given MIX channel.
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = ns::MIX_CORE, name = "destroy")]
 pub struct Destroy {
     /// The channel identifier to be destroyed.

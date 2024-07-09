@@ -6,7 +6,7 @@
 
 //! Handling of structs
 
-use proc_macro2::TokenStream;
+use proc_macro2::{Span, TokenStream};
 use quote::quote;
 use syn::*;
 
@@ -25,16 +25,19 @@ pub(crate) struct FromXmlParts {
     pub(crate) builder_ty_ident: Ident,
 }
 
-/// Parts necessary to construct a `::xso::IntoXml` implementation.
-pub(crate) struct IntoXmlParts {
+/// Parts necessary to construct a `::xso::AsXml` implementation.
+pub(crate) struct AsXmlParts {
     /// Additional items necessary for the implementation.
     pub(crate) defs: TokenStream,
 
-    /// The body of the `::xso::IntoXml::into_event_iter` function.
-    pub(crate) into_event_iter_body: TokenStream,
+    /// The body of the `::xso::AsXml::as_xml_iter` function.
+    pub(crate) as_xml_iter_body: TokenStream,
 
-    /// The name of the type which is the `::xso::IntoXml::EventIter`.
-    pub(crate) event_iter_ty_ident: Ident,
+    /// The type which is the `::xso::AsXml::ItemIter`.
+    pub(crate) item_iter_ty: Type,
+
+    /// The lifetime name used in `item_iter_ty`.
+    pub(crate) item_iter_ty_lifetime: Lifetime,
 }
 
 /// Definition of a struct and how to parse it.
@@ -55,7 +58,7 @@ pub(crate) struct StructDef {
     builder_ty_ident: Ident,
 
     /// Name of the iterator type.
-    event_iter_ty_ident: Ident,
+    item_iter_ty_ident: Ident,
 
     /// Flag whether debug mode is enabled.
     debug: bool,
@@ -78,7 +81,7 @@ impl StructDef {
             inner: Compound::from_fields(fields)?,
             target_ty_ident: ident.clone(),
             builder_ty_ident: quote::format_ident!("{}FromXmlBuilder", ident),
-            event_iter_ty_ident: quote::format_ident!("{}IntoXmlIterator", ident),
+            item_iter_ty_ident: quote::format_ident!("{}AsXmlIterator", ident),
             debug: meta.debug.is_set(),
         })
     }
@@ -136,22 +139,53 @@ impl StructDef {
         })
     }
 
-    pub(crate) fn make_into_event_iter(&self, vis: &Visibility) -> Result<IntoXmlParts> {
+    pub(crate) fn make_as_xml_iter(&self, vis: &Visibility) -> Result<AsXmlParts> {
         let xml_namespace = &self.namespace;
         let xml_name = &self.name;
 
         let target_ty_ident = &self.target_ty_ident;
-        let event_iter_ty_ident = &self.event_iter_ty_ident;
-        let state_ty_ident = quote::format_ident!("{}State", event_iter_ty_ident);
+        let item_iter_ty_ident = &self.item_iter_ty_ident;
+        let item_iter_ty_lifetime = Lifetime {
+            apostrophe: Span::call_site(),
+            ident: Ident::new("xso_proc_as_xml_iter_lifetime", Span::call_site()),
+        };
+        let item_iter_ty = Type::Path(TypePath {
+            qself: None,
+            path: Path {
+                leading_colon: None,
+                segments: [PathSegment {
+                    ident: item_iter_ty_ident.clone(),
+                    arguments: PathArguments::AngleBracketed(AngleBracketedGenericArguments {
+                        colon2_token: None,
+                        lt_token: token::Lt {
+                            spans: [Span::call_site()],
+                        },
+                        args: [GenericArgument::Lifetime(item_iter_ty_lifetime.clone())]
+                            .into_iter()
+                            .collect(),
+                        gt_token: token::Gt {
+                            spans: [Span::call_site()],
+                        },
+                    }),
+                }]
+                .into_iter()
+                .collect(),
+            },
+        });
+        let state_ty_ident = quote::format_ident!("{}State", item_iter_ty_ident);
 
         let defs = self
             .inner
-            .make_into_event_iter_statemachine(&target_ty_ident.clone().into(), "Struct")?
+            .make_as_item_iter_statemachine(
+                &target_ty_ident.clone().into(),
+                "Struct",
+                &item_iter_ty_lifetime,
+            )?
             .with_augmented_init(|init| {
                 quote! {
                     let name = (
                         ::xso::exports::rxml::Namespace::from(#xml_namespace),
-                        #xml_name.into(),
+                        ::std::borrow::Cow::Borrowed(#xml_name),
                     );
                     #init
                 }
@@ -165,15 +199,17 @@ impl StructDef {
                 }
                 .into(),
                 &state_ty_ident,
-                event_iter_ty_ident,
+                &item_iter_ty_lifetime,
+                &item_iter_ty,
             )?;
 
-        Ok(IntoXmlParts {
+        Ok(AsXmlParts {
             defs,
-            into_event_iter_body: quote! {
-                #event_iter_ty_ident::new(self)
+            as_xml_iter_body: quote! {
+                #item_iter_ty_ident::new(self)
             },
-            event_iter_ty_ident: event_iter_ty_ident.clone(),
+            item_iter_ty,
+            item_iter_ty_lifetime,
         })
     }
 

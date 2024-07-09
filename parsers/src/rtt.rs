@@ -4,7 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use xso::{text::EmptyAsNone, FromXml, IntoXml};
+use xso::{text::EmptyAsNone, AsXml, FromXml};
 
 use crate::ns;
 use crate::Element;
@@ -31,7 +31,7 @@ generate_attribute!(
 );
 
 /// Supports the transmission of text, including key presses, and text block inserts.
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = ns::RTT, name = "t")]
 pub struct Insert {
     /// Position in the message to start inserting from.  If None, this means to start from the
@@ -113,7 +113,7 @@ impl TryFrom<Action> for Erase {
 
 /// Allow for the transmission of intervals, between real-time text actions, to recreate the
 /// pauses between key presses.
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = ns::RTT, name = "w")]
 pub struct Wait {
     /// Amount of milliseconds to wait before the next action.

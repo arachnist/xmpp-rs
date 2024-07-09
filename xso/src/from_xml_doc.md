@@ -1,7 +1,7 @@
 # Make a struct or enum parseable from XML
 
 This derives the [`FromXml`] trait on a struct or enum. It is the counterpart
-to [`macro@IntoXml`].
+to [`macro@AsXml`].
 
 ## Example
 
@@ -75,7 +75,7 @@ The following mapping types are defined:
 
 The `attribute` meta causes the field to be mapped to an XML attribute of the
 same name. For `FromXml`, the field's type must implement [`FromXmlText`] and
-for `IntoXml`, the field's type must implement [`IntoOptionalXmlText`].
+for `AsXml`, the field's type must implement [`AsOptionalXmlText`].
 
 The following keys can be used inside the `#[xml(attribute(..))]` meta:
 
@@ -99,7 +99,7 @@ otherwise).
 If `default` is specified and the attribute is absent in the source, the value
 is generated using [`std::default::Default`], requiring the field type to
 implement the `Default` trait for a `FromXml` derivation. `default` has no
-influence on `IntoXml`.
+influence on `AsXml`.
 
 ##### Example
 
@@ -148,14 +148,14 @@ If `codec` is given, the given `codec` must implement
 [`TextCodec<T>`][`TextCodec`] where `T` is the type of the field.
 
 If `codec` is *not* given, the field's type must implement [`FromXmlText`] for
-`FromXml` and for `IntoXml`, the field's type must implement [`IntoXmlText`].
+`FromXml` and for `AsXml`, the field's type must implement [`AsXmlText`].
 
 The `text` meta also supports a shorthand syntax, `#[xml(text = ..)]`, where
 the value is treated as the value for the `codec` key (with optional prefix as
 described above, and unnamespaced otherwise).
 
 Only a single field per struct may be annotated with `#[xml(text)]` at a time,
-to avoid parsing ambiguities. This is also true if only `IntoXml` is derived on
+to avoid parsing ambiguities. This is also true if only `AsXml` is derived on
 a field, for consistency.
 
 ##### Example without codec

@@ -4,7 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use xso::{FromXml, IntoXml};
+use xso::{AsXml, FromXml};
 
 use crate::jingle::ContentId;
 use crate::ns;
@@ -21,7 +21,7 @@ generate_attribute!(
 );
 
 /// Describes a content that should be grouped with other ones.
-#[derive(FromXml, IntoXml, PartialEq, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = ns::JINGLE_GROUPING, name = "content")]
 pub struct Content {
     /// The name of the matching [`Content`](crate::jingle::Content).
