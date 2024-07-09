@@ -5,6 +5,7 @@
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
+use std::borrow::Cow;
 use std::marker::PhantomData;
 use std::vec::IntoIter;
 
@@ -13,12 +14,13 @@ use minidom::{Element, Node};
 use rxml::{
     parser::EventMetrics,
     writer::{SimpleNamespaces, TrackNamespace},
-    AttrMap, Event, Name, Namespace, NcName,
+    AttrMap, Event, Name, NameStr, Namespace, NcName, NcNameStr,
 };
 
 use crate::{
     error::{Error, FromEventsError},
-    FromEventsBuilder, FromXml, IntoXml,
+    rxml_util::Item,
+    AsXml, FromEventsBuilder, FromXml, IntoXml,
 };
 
 /// State machine for converting a minidom Element into rxml events.
@@ -149,6 +151,153 @@ impl IntoXml for Element {
 
     fn into_event_iter(self) -> Result<Self::EventIter, Error> {
         Ok(IntoEvents(IntoEventsInner::Header(self)))
+    }
+}
+
+enum AsXmlState<'a> {
+    /// Element header: we need to generate the
+    /// [`Item::ElementHeadStart`] item from the namespace and name.
+    Header { element: &'a Element },
+
+    /// Element header: we now generate the attributes.
+    Attributes {
+        /// The element (needed for the contents later and to access the
+        /// prefix mapping).
+        element: &'a Element,
+
+        /// Attribute iterator.
+        attributes: minidom::element::Attrs<'a>,
+    },
+
+    /// Content: The contents of the element are streamed as events.
+    Nodes {
+        /// Remaining child nodes (text and/or children) to emit.
+        nodes: minidom::element::Nodes<'a>,
+
+        /// When emitting a child element, this is a nested [`IntoEvents`]
+        /// instance for that child element.
+        nested: Option<Box<ElementAsXml<'a>>>,
+    },
+}
+
+/// Convert a [`minidom::Element`] to [`Item`][`crate::rxml_util::Item`]s.
+///
+/// This can be constructed from the
+/// [`AsXml::as_xml_iter`][`crate::AsXml::as_xml_iter`]
+/// implementation on [`minidom::Element`].
+pub struct ElementAsXml<'a>(Option<AsXmlState<'a>>);
+
+impl<'a> Iterator for ElementAsXml<'a> {
+    type Item = Result<Item<'a>, Error>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.0 {
+            None => None,
+            Some(AsXmlState::Header { ref element }) => {
+                let item = Item::ElementHeadStart(
+                    Namespace::from(element.ns()),
+                    Cow::Borrowed(match <&NcNameStr>::try_from(element.name()) {
+                        Ok(v) => v,
+                        Err(e) => {
+                            self.0 = None;
+                            return Some(Err(e.into()));
+                        }
+                    }),
+                );
+                self.0 = Some(AsXmlState::Attributes {
+                    element,
+                    attributes: element.attrs(),
+                });
+                Some(Ok(item))
+            }
+            Some(AsXmlState::Attributes {
+                ref mut attributes,
+                ref element,
+            }) => {
+                if let Some((name, value)) = attributes.next() {
+                    let name = match <&NameStr>::try_from(name) {
+                        Ok(v) => v,
+                        Err(e) => {
+                            self.0 = None;
+                            return Some(Err(e.into()));
+                        }
+                    };
+                    let (prefix, name) = match name.split_name() {
+                        Ok(v) => v,
+                        Err(e) => {
+                            self.0 = None;
+                            return Some(Err(e.into()));
+                        }
+                    };
+                    let namespace = if let Some(prefix) = prefix {
+                        if prefix == "xml" {
+                            Namespace::XML
+                        } else {
+                            let ns = match element.prefixes.get(&Some(prefix.as_str().to_owned())) {
+                                Some(v) => v,
+                                None => {
+                                    panic!("undeclared xml namespace prefix in minidom::Element")
+                                }
+                            };
+                            Namespace::from(ns.to_owned())
+                        }
+                    } else {
+                        Namespace::NONE
+                    };
+                    Some(Ok(Item::Attribute(
+                        namespace,
+                        Cow::Borrowed(name),
+                        Cow::Borrowed(value),
+                    )))
+                } else {
+                    self.0 = Some(AsXmlState::Nodes {
+                        nodes: element.nodes(),
+                        nested: None,
+                    });
+                    Some(Ok(Item::ElementHeadEnd))
+                }
+            }
+            Some(AsXmlState::Nodes {
+                ref mut nodes,
+                ref mut nested,
+            }) => {
+                if let Some(nested) = nested.as_mut() {
+                    if let Some(next) = nested.next() {
+                        return Some(next);
+                    }
+                }
+                *nested = None;
+                match nodes.next() {
+                    None => {
+                        self.0 = None;
+                        Some(Ok(Item::ElementFoot))
+                    }
+                    Some(minidom::Node::Text(ref text)) => {
+                        Some(Ok(Item::Text(Cow::Borrowed(text))))
+                    }
+                    Some(minidom::Node::Element(ref element)) => {
+                        let mut iter = match element.as_xml_iter() {
+                            Ok(v) => v,
+                            Err(e) => {
+                                self.0 = None;
+                                return Some(Err(e.into()));
+                            }
+                        };
+                        let item = iter.next().unwrap();
+                        *nested = Some(Box::new(iter));
+                        Some(item)
+                    }
+                }
+            }
+        }
+    }
+}
+
+impl AsXml for minidom::Element {
+    type ItemIter<'a> = ElementAsXml<'a>;
+
+    fn as_xml_iter(&self) -> Result<Self::ItemIter<'_>, Error> {
+        Ok(ElementAsXml(Some(AsXmlState::Header { element: self })))
     }
 }
 
