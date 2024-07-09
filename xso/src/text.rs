@@ -9,7 +9,9 @@
 #[cfg(feature = "base64")]
 use core::marker::PhantomData;
 
-use crate::{error::Error, FromXmlText, IntoXmlText};
+use std::borrow::Cow;
+
+use crate::{error::Error, AsXmlText, FromXmlText, IntoXmlText};
 
 #[cfg(feature = "base64")]
 use base64::engine::{general_purpose::STANDARD as StandardBase64Engine, Engine as _};
@@ -40,6 +42,16 @@ macro_rules! convert_via_fromstr_and_display {
                     Ok(self.to_string())
                 }
             }
+
+            $(
+                #[cfg(feature = $feature)]
+                #[cfg_attr(docsrs, doc(cfg(feature = $feature)))]
+            )?
+            impl AsXmlText for $t {
+                fn as_xml_text(&self) -> Result<Cow<'_, str>, Error> {
+                    Ok(Cow::Owned(self.to_string()))
+                }
+            }
         )+
     }
 }
@@ -61,6 +73,16 @@ impl FromXmlText for bool {
 impl IntoXmlText for bool {
     fn into_xml_text(self) -> Result<String, Error> {
         Ok(self.to_string())
+    }
+}
+
+/// This provides an implementation compliant with xsd::bool.
+impl AsXmlText for bool {
+    fn as_xml_text(&self) -> Result<Cow<'_, str>, Error> {
+        match self {
+            true => Ok(Cow::Borrowed("true")),
+            false => Ok(Cow::Borrowed("false")),
+        }
     }
 }
 

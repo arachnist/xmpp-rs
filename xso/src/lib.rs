@@ -285,6 +285,90 @@ impl<T: IntoOptionalXmlText> IntoOptionalXmlText for Option<T> {
     }
 }
 
+/// Trait to convert a value to an XML text string.
+///
+/// This trait is implemented for many standard library types implementing
+/// [`std::fmt::Display`]. In addition, the following feature flags can enable
+/// more implementations:
+///
+/// - `jid`: `jid::Jid`, `jid::BareJid`, `jid::FullJid`
+/// - `uuid`: `uuid::Uuid`
+///
+/// Because of the unfortunate situation as described in [`FromXmlText`], we
+/// are **extremely liberal** with accepting optional dependencies for this
+/// purpose. You are very welcome to make merge requests against this crate
+/// adding support for parsing third-party crates.
+pub trait AsXmlText {
+    /// Convert the value to an XML string in a context where an absent value
+    /// cannot be represented.
+    fn as_xml_text(&self) -> Result<Cow<'_, str>, self::error::Error>;
+
+    /// Convert the value to an XML string in a context where an absent value
+    /// can be represented.
+    ///
+    /// The provided implementation will always return the result of
+    /// [`Self::as_xml_text`] wrapped into `Some(.)`. By re-implementing
+    /// this method, implementors can customize the behaviour for certain
+    /// values.
+    fn as_optional_xml_text(&self) -> Result<Option<Cow<'_, str>>, self::error::Error> {
+        Ok(Some(self.as_xml_text()?))
+    }
+}
+
+impl AsXmlText for String {
+    fn as_xml_text(&self) -> Result<Cow<'_, str>, self::error::Error> {
+        Ok(Cow::Borrowed(self.as_str()))
+    }
+}
+
+impl AsXmlText for &str {
+    fn as_xml_text(&self) -> Result<Cow<'_, str>, self::error::Error> {
+        Ok(Cow::Borrowed(&**self))
+    }
+}
+
+impl<T: AsXmlText> AsXmlText for Box<T> {
+    fn as_xml_text(&self) -> Result<Cow<'_, str>, self::error::Error> {
+        T::as_xml_text(&*self)
+    }
+}
+
+impl<B: AsXmlText + ToOwned> AsXmlText for Cow<'_, B> {
+    fn as_xml_text(&self) -> Result<Cow<'_, str>, self::error::Error> {
+        B::as_xml_text(self.as_ref())
+    }
+}
+
+/// Specialized variant of [`AsXmlText`].
+///
+/// Do **not** implement this unless you cannot implement [`AsXmlText`]:
+/// implementing [`AsXmlText`] is more versatile and an
+/// [`AsOptionalXmlText`] implementation is automatically provided.
+///
+/// If you need to customize the behaviour of the [`AsOptionalXmlText`]
+/// blanket implementation, implement a custom
+/// [`AsXmlText::as_optional_xml_text`] instead.
+pub trait AsOptionalXmlText {
+    /// Convert the value to an XML string in a context where an absent value
+    /// can be represented.
+    fn as_optional_xml_text(&self) -> Result<Option<Cow<'_, str>>, self::error::Error>;
+}
+
+impl<T: AsXmlText> AsOptionalXmlText for T {
+    fn as_optional_xml_text(&self) -> Result<Option<Cow<'_, str>>, self::error::Error> {
+        <Self as AsXmlText>::as_optional_xml_text(self)
+    }
+}
+
+impl<T: AsXmlText> AsOptionalXmlText for Option<T> {
+    fn as_optional_xml_text(&self) -> Result<Option<Cow<'_, str>>, self::error::Error> {
+        self.as_ref()
+            .map(T::as_optional_xml_text)
+            .transpose()
+            .map(Option::flatten)
+    }
+}
+
 /// Attempt to transform a type implementing [`IntoXml`] into another
 /// type which implements [`FromXml`].
 pub fn transform<T: FromXml, F: IntoXml>(from: F) -> Result<T, self::error::Error> {
