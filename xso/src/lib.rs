@@ -24,6 +24,7 @@ pub mod error;
 #[cfg(feature = "minidom")]
 #[cfg_attr(docsrs, doc(cfg(feature = "minidom")))]
 pub mod minidom_compat;
+mod rxml_util;
 pub mod text;
 
 #[doc(hidden)]
@@ -37,6 +38,9 @@ use std::borrow::Cow;
 
 #[doc(inline)]
 pub use text::TextCodec;
+
+#[doc(inline)]
+pub use rxml_util::Item;
 
 #[doc = include_str!("from_xml_doc.md")]
 #[doc(inline)]
@@ -73,6 +77,29 @@ pub trait IntoXml {
     /// Return an iterator which emits the contents of the struct or enum as
     /// serialisable [`rxml::Event`] items.
     fn into_event_iter(self) -> Result<Self::EventIter, self::error::Error>;
+}
+
+/// Trait allowing to iterate a struct's contents as serialisable
+/// [`Item`]s.
+///
+/// **Important:** Changing the [`ItemIter`][`Self::ItemIter`] associated
+/// type is considered a non-breaking change for any given implementation of
+/// this trait. Always refer to a type's iterator type using fully-qualified
+/// notation, for example: `<T as xso::AsXml>::ItemIter`.
+pub trait AsXml {
+    /// The iterator type.
+    ///
+    /// **Important:** Changing this type is considered a non-breaking change
+    /// for any given implementation of this trait. Always refer to a type's
+    /// iterator type using fully-qualified notation, for example:
+    /// `<T as xso::AsXml>::ItemIter`.
+    type ItemIter<'x>: Iterator<Item = Result<Item<'x>, self::error::Error>>
+    where
+        Self: 'x;
+
+    /// Return an iterator which emits the contents of the struct or enum as
+    /// serialisable [`Item`] items.
+    fn as_xml_iter(&self) -> Result<Self::ItemIter<'_>, self::error::Error>;
 }
 
 /// Trait for a temporary object allowing to construct a struct from
