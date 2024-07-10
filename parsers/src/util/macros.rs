@@ -278,68 +278,6 @@ macro_rules! generate_attribute {
     );
 }
 
-macro_rules! generate_element_enum {
-    ($(#[$meta:meta])* $elem:ident, $name:tt, $ns:ident, {$($(#[$enum_meta:meta])* $enum:ident => $enum_name:tt),+$(,)?}) => (
-        $(#[$meta])*
-        #[derive(Debug, Clone, PartialEq)]
-        pub enum $elem {
-            $(
-                $(#[$enum_meta])*
-                $enum
-            ),+
-        }
-        impl ::std::convert::TryFrom<minidom::Element> for $elem {
-            type Error = xso::error::FromElementError;
-            fn try_from(elem: minidom::Element) -> Result<$elem, xso::error::FromElementError> {
-                check_ns_only!(elem, $name, $ns);
-                check_no_children!(elem, $name);
-                check_no_attributes!(elem, $name);
-                Ok(match elem.name() {
-                    $($enum_name => $elem::$enum,)+
-                    _ => return Err(xso::error::Error::Other(concat!("This is not a ", $name, " element.")).into()),
-                })
-            }
-        }
-
-        impl ::xso::FromXml for $elem {
-            type Builder = ::xso::minidom_compat::FromEventsViaElement<$elem>;
-
-            fn from_events(
-                qname: ::xso::exports::rxml::QName,
-                attrs: ::xso::exports::rxml::AttrMap,
-            ) -> Result<Self::Builder, ::xso::error::FromEventsError> {
-                if qname.0 != crate::ns::$ns || qname.1 != $name {
-                    return Err(::xso::error::FromEventsError::Mismatch {
-                        name: qname,
-                        attrs,
-                    })
-                }
-                Self::Builder::new(qname, attrs)
-            }
-        }
-
-        impl From<$elem> for minidom::Element {
-            fn from(elem: $elem) -> minidom::Element {
-                minidom::Element::builder(
-                    match elem {
-                        $($elem::$enum => $enum_name,)+
-                    },
-                    crate::ns::$ns,
-                )
-                    .build()
-            }
-        }
-
-        impl ::xso::AsXml for $elem {
-            type ItemIter<'x> = ::xso::minidom_compat::AsItemsViaElement<'x>;
-
-            fn as_xml_iter(&self) -> Result<Self::ItemIter<'_>, ::xso::error::Error> {
-                ::xso::minidom_compat::AsItemsViaElement::new(self.clone())
-            }
-        }
-    );
-}
-
 macro_rules! generate_attribute_enum {
     ($(#[$meta:meta])* $elem:ident, $name:tt, $ns:ident, $attr:tt, {$($(#[$enum_meta:meta])* $enum:ident => $enum_name:tt),+$(,)?}) => (
         $(#[$meta])*
