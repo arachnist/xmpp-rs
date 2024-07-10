@@ -40,12 +40,14 @@ impl NameVariant {
             span: meta_span,
             namespace,
             name,
+            exhaustive,
             debug,
             builder,
             iterator,
         } = XmlCompoundMeta::parse_from_attributes(&decl.attrs)?;
 
         reject_key!(debug flag not on "enum variants" only on "enums and structs");
+        reject_key!(exhaustive flag not on "enum variants" only on "enums");
         reject_key!(namespace not on "enum variants" only on "enums and structs");
         reject_key!(builder not on "enum variants" only on "enums and structs");
         reject_key!(iterator not on "enum variants" only on "enums and structs");
@@ -142,6 +144,9 @@ pub(crate) struct EnumDef {
     /// The variants of the enum.
     variants: Vec<NameVariant>,
 
+    /// Flag indicating whether the enum is exhaustive.
+    exhaustive: bool,
+
     /// Name of the target type.
     target_ty_ident: Ident,
 
@@ -169,6 +174,7 @@ impl EnumDef {
             span: meta_span,
             namespace,
             name,
+            exhaustive,
             debug,
             builder,
             iterator,
@@ -210,6 +216,7 @@ impl EnumDef {
         Ok(Self {
             namespace,
             variants,
+            exhaustive: exhaustive.is_set(),
             target_ty_ident: ident.clone(),
             builder_ty_ident,
             item_iter_ty_ident,
@@ -244,6 +251,15 @@ impl ItemDef for EnumDef {
                 })
             }
         });
+
+        if self.exhaustive {
+            let mismatch_err = format!("This is not a {} element.", target_ty_ident);
+            statemachine.set_fallback(quote! {
+                ::core::result::Result::Err(::xso::error::FromEventsError::Invalid(
+                    ::xso::error::Error::Other(#mismatch_err),
+                ))
+            })
+        }
 
         let defs = statemachine.render(
             vis,

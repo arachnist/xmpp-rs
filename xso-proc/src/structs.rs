@@ -12,7 +12,7 @@ use syn::*;
 
 use crate::common::{AsXmlParts, FromXmlParts, ItemDef};
 use crate::compound::Compound;
-use crate::meta::{NameRef, NamespaceRef, XmlCompoundMeta};
+use crate::meta::{reject_key, Flag, NameRef, NamespaceRef, XmlCompoundMeta};
 
 /// Definition of a struct and how to parse it.
 pub(crate) struct StructDef {
@@ -48,10 +48,13 @@ impl StructDef {
             span: meta_span,
             namespace,
             name,
+            exhaustive,
             debug,
             builder,
             iterator,
         } = meta;
+
+        reject_key!(exhaustive flag not on "structs" only on "enums");
 
         let Some(namespace) = namespace else {
             return Err(Error::new(meta_span, "`namespace` is required on structs"));

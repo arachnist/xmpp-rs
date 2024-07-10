@@ -235,6 +235,9 @@ pub(crate) struct XmlCompoundMeta {
 
     /// The value assigned to `iterator` inside `#[xml(..)]`, if any.
     pub(crate) iterator: Option<Ident>,
+
+    /// The exhaustive flag.
+    pub(crate) exhaustive: Flag,
 }
 
 impl XmlCompoundMeta {
@@ -248,6 +251,7 @@ impl XmlCompoundMeta {
         let mut builder = None;
         let mut iterator = None;
         let mut debug = Flag::Absent;
+        let mut exhaustive = Flag::Absent;
 
         attr.parse_nested_meta(|meta| {
             if meta.path.is_ident("name") {
@@ -280,6 +284,12 @@ impl XmlCompoundMeta {
                 }
                 iterator = Some(meta.value()?.parse()?);
                 Ok(())
+            } else if meta.path.is_ident("exhaustive") {
+                if exhaustive.is_set() {
+                    return Err(Error::new_spanned(meta.path, "duplicate `exhaustive` key"));
+                }
+                exhaustive = (&meta.path).into();
+                Ok(())
             } else {
                 Err(Error::new_spanned(meta.path, "unsupported key"))
             }
@@ -292,6 +302,7 @@ impl XmlCompoundMeta {
             debug,
             builder,
             iterator,
+            exhaustive,
         })
     }
 

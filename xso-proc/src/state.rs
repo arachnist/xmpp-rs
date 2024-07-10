@@ -177,6 +177,7 @@ impl FromEventsSubmachine {
             advance_match_arms,
             variants: vec![FromEventsEntryPoint { init: self.init }],
             pre_init: TokenStream::default(),
+            fallback: None,
         }
     }
 
@@ -373,6 +374,12 @@ pub(crate) struct FromEventsStateMachine {
     /// Extra code run during pre-init phase.
     pre_init: TokenStream,
 
+    /// Code to run as fallback if none of the branches matched the start
+    /// event.
+    ///
+    /// If absent, a `FromEventsError::Mismatch` is generated.
+    fallback: Option<TokenStream>,
+
     /// A sequence of enum variant declarations, separated and terminated by
     /// commas.
     state_defs: TokenStream,
@@ -402,6 +409,7 @@ impl FromEventsStateMachine {
             advance_match_arms: TokenStream::default(),
             pre_init: TokenStream::default(),
             variants: Vec::new(),
+            fallback: None,
         }
     }
 
@@ -409,6 +417,7 @@ impl FromEventsStateMachine {
     ///
     /// This *discards* the other state machine's pre-init code.
     pub(crate) fn merge(&mut self, other: FromEventsStateMachine) {
+        assert!(other.fallback.is_none());
         self.defs.extend(other.defs);
         self.state_defs.extend(other.state_defs);
         self.advance_match_arms.extend(other.advance_match_arms);
@@ -422,6 +431,14 @@ impl FromEventsStateMachine {
     /// specifically-formed init codes on the variants.
     pub(crate) fn set_pre_init(&mut self, code: TokenStream) {
         self.pre_init = code;
+    }
+
+    /// Set the fallback code to use if none of the branches matches the start
+    /// event.
+    ///
+    /// By default, a `FromEventsError::Mismatch` is generated.
+    pub(crate) fn set_fallback(&mut self, code: TokenStream) {
+        self.fallback = Some(code);
     }
 
     /// Render the state machine as a token stream.
@@ -446,6 +463,7 @@ impl FromEventsStateMachine {
             advance_match_arms,
             variants,
             pre_init,
+            fallback,
         } = self;
 
         let mut init_body = pre_init;
@@ -459,6 +477,12 @@ impl FromEventsStateMachine {
                 };
             })
         }
+
+        let fallback = fallback.unwrap_or_else(|| {
+            quote! {
+                ::core::result::Result::Err(::xso::error::FromEventsError::Mismatch { name, attrs })
+            }
+        });
 
         let output_ty_ref = make_ty_ref(output_ty);
 
@@ -520,7 +544,7 @@ impl FromEventsStateMachine {
                 ) -> ::core::result::Result<Self, ::xso::error::FromEventsError> {
                     #init_body
                     { let _ = &mut attrs; }
-                    ::core::result::Result::Err(::xso::error::FromEventsError::Mismatch { name, attrs })
+                    #fallback
                 }
             }
         })

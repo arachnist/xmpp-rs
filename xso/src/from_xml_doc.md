@@ -81,11 +81,21 @@ The following keys are defined on enums:
 | `namespace` | *string literal* or *path* | The XML element namespace to match for this enum. If it is a *path*, it must point at a `&'static str`. |
 | `builder` | optional *ident* | The name to use for the generated builder type. |
 | `iterator` | optional *ident* | The name to use for the generated iterator type. |
+| `exhaustive` | *flag* | If present, the enum considers itself authoritative for its namespace; unknown elements within the namespace are rejected instead of treated as mismatch. |
 
 All variants of an enum live within the same namespace and are distinguished
 exclusively by their XML name within that namespace. The contents of the XML
 element (including attributes) is not inspected before selecting the variant
 when parsing XML.
+
+If *exhaustive* is set and an element is encountered which matches the
+namespace of the enum, but matches none of its variants, parsing will fail
+with an error. If *exhaustive* is *not* set, in such a situation, parsing
+would attempt to continue with other siblings of the enum, attempting to find
+a handler for that element.
+
+Note that the *exhaustive* flag is orthogonal to the Rust attribute
+`#[non_exhaustive]`.
 
 For details on `builder` and `iterator`, see the [Struct meta](#struct-meta)
 documentation above.

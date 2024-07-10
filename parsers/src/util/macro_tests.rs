@@ -734,3 +734,64 @@ fn renamed_enum_types_get_renamed() {
     assert!(std::mem::size_of::<RenamedEnumBuilder>() >= 0);
     assert!(std::mem::size_of::<RenamedEnumIter>() >= 0);
 }
+
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = NS1, exhaustive)]
+enum ExhaustiveNameSwitchedEnum {
+    #[xml(name = "a")]
+    Variant1 {
+        #[xml(attribute)]
+        foo: String,
+    },
+    #[xml(name = "b")]
+    Variant2 {
+        #[xml(text)]
+        foo: String,
+    },
+}
+
+#[test]
+fn exhaustive_name_switched_enum_negative_name_mismatch() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    match parse_str::<ExhaustiveNameSwitchedEnum>("<x xmlns='urn:example:ns1'>hello</x>") {
+        Err(xso::error::FromElementError::Invalid { .. }) => (),
+        other => panic!("unexpected result: {:?}", other),
+    }
+}
+
+#[test]
+fn exhaustive_name_switched_enum_negative_namespace_mismatch() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    match parse_str::<ExhaustiveNameSwitchedEnum>("<b xmlns='urn:example:ns2'>hello</b>") {
+        Err(xso::error::FromElementError::Mismatch { .. }) => (),
+        other => panic!("unexpected result: {:?}", other),
+    }
+}
+
+#[test]
+fn exhaustive_name_switched_enum_roundtrip_variant_1() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<ExhaustiveNameSwitchedEnum>("<a xmlns='urn:example:ns1' foo='hello'/>")
+}
+
+#[test]
+fn exhaustive_name_switched_enum_roundtrip_variant_2() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<ExhaustiveNameSwitchedEnum>("<b xmlns='urn:example:ns1'>hello</b>")
+}
