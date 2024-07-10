@@ -22,6 +22,44 @@ pub const XMLNS_XML: &str = "http://www.w3.org/XML/1998/namespace";
 /// XML namespace URI (for the `xmlns:` prefix)
 pub const XMLNS_XMLNS: &str = "http://www.w3.org/2000/xmlns/";
 
+macro_rules! reject_key {
+    ($key:ident not on $not_allowed_on:literal only on $only_allowed_on:literal) => {
+        if let Some($key) = $key {
+            return Err(Error::new_spanned(
+                $key,
+                concat!(
+                    "`",
+                    stringify!($key),
+                    "` is not allowed on ",
+                    $not_allowed_on,
+                    " (only on ",
+                    $only_allowed_on,
+                    ")"
+                ),
+            ));
+        }
+    };
+
+    ($key:ident flag not on $not_allowed_on:literal only on $only_allowed_on:literal) => {
+        if let Flag::Present($key) = $key {
+            return Err(Error::new(
+                $key,
+                concat!(
+                    "`",
+                    stringify!($key),
+                    "` is not allowed on ",
+                    $not_allowed_on,
+                    " (only on ",
+                    $only_allowed_on,
+                    ")"
+                ),
+            ));
+        }
+    };
+}
+
+pub(crate) use reject_key;
+
 /// Value for the `#[xml(namespace = ..)]` attribute.
 #[derive(Debug)]
 pub(crate) enum NamespaceRef {

@@ -15,7 +15,7 @@ use syn::*;
 use crate::common::{AsXmlParts, FromXmlParts, ItemDef};
 use crate::compound::Compound;
 use crate::error_message::ParentRef;
-use crate::meta::{NameRef, NamespaceRef, XmlCompoundMeta};
+use crate::meta::{reject_key, Flag, NameRef, NamespaceRef, XmlCompoundMeta};
 use crate::state::{AsItemsStateMachine, FromEventsStateMachine};
 
 /// The definition of an enum variant, switched on the XML element's name.
@@ -33,17 +33,25 @@ struct NameVariant {
 impl NameVariant {
     /// Construct a new name-selected variant from its declaration.
     fn new(decl: &Variant) -> Result<Self> {
-        let meta = XmlCompoundMeta::parse_from_attributes(&decl.attrs)?;
+        // We destructure here so that we get informed when new fields are
+        // added and can handle them, either by processing them or raising
+        // an error if they are present.
+        let XmlCompoundMeta {
+            span: meta_span,
+            namespace,
+            name,
+            debug,
+            builder,
+            iterator,
+        } = XmlCompoundMeta::parse_from_attributes(&decl.attrs)?;
 
-        if let Some(namespace) = meta.namespace {
-            return Err(Error::new_spanned(
-                namespace,
-                "`namespace` is not allowed on enum variants (only on enums and structs)",
-            ));
-        }
+        reject_key!(debug flag not on "enum variants" only on "enums and structs");
+        reject_key!(namespace not on "enum variants" only on "enums and structs");
+        reject_key!(builder not on "enum variants" only on "enums and structs");
+        reject_key!(iterator not on "enum variants" only on "enums and structs");
 
-        let Some(name) = meta.name else {
-            return Err(Error::new(meta.span, "`name` is required on enum variants"));
+        let Some(name) = name else {
+            return Err(Error::new(meta_span, "`name` is required on enum variants"));
         };
 
         Ok(Self {
@@ -154,15 +162,22 @@ impl EnumDef {
         meta: XmlCompoundMeta,
         variant_iter: I,
     ) -> Result<Self> {
-        if let Some(name) = meta.name {
-            return Err(Error::new_spanned(
-                name,
-                "`name` is not allowed on enums (only on their variants)",
-            ));
-        }
+        // We destructure here so that we get informed when new fields are
+        // added and can handle them, either by processing them or raising
+        // an error if they are present.
+        let XmlCompoundMeta {
+            span: meta_span,
+            namespace,
+            name,
+            debug,
+            builder,
+            iterator,
+        } = meta;
 
-        let Some(namespace) = meta.namespace else {
-            return Err(Error::new(meta.span, "`namespace` is required on enums"));
+        reject_key!(name not on "enums" only on "their variants");
+
+        let Some(namespace) = namespace else {
+            return Err(Error::new(meta_span, "`namespace` is required on enums"));
         };
 
         let mut variants = Vec::new();
@@ -182,12 +197,12 @@ impl EnumDef {
             variants.push(variant);
         }
 
-        let builder_ty_ident = match meta.builder {
+        let builder_ty_ident = match builder {
             Some(v) => v,
             None => quote::format_ident!("{}FromXmlBuilder", ident.to_string()),
         };
 
-        let item_iter_ty_ident = match meta.iterator {
+        let item_iter_ty_ident = match iterator {
             Some(v) => v,
             None => quote::format_ident!("{}AsXmlIterator", ident.to_string()),
         };
@@ -198,7 +213,7 @@ impl EnumDef {
             target_ty_ident: ident.clone(),
             builder_ty_ident,
             item_iter_ty_ident,
-            debug: meta.debug.is_set(),
+            debug: debug.is_set(),
         })
     }
 }

@@ -41,20 +41,32 @@ pub(crate) struct StructDef {
 impl StructDef {
     /// Create a new struct from its name, meta, and fields.
     pub(crate) fn new(ident: &Ident, meta: XmlCompoundMeta, fields: &Fields) -> Result<Self> {
-        let Some(namespace) = meta.namespace else {
-            return Err(Error::new(meta.span, "`namespace` is required on structs"));
+        // We destructure here so that we get informed when new fields are
+        // added and can handle them, either by processing them or raising
+        // an error if they are present.
+        let XmlCompoundMeta {
+            span: meta_span,
+            namespace,
+            name,
+            debug,
+            builder,
+            iterator,
+        } = meta;
+
+        let Some(namespace) = namespace else {
+            return Err(Error::new(meta_span, "`namespace` is required on structs"));
         };
 
-        let Some(name) = meta.name else {
-            return Err(Error::new(meta.span, "`name` is required on structs"));
+        let Some(name) = name else {
+            return Err(Error::new(meta_span, "`name` is required on structs"));
         };
 
-        let builder_ty_ident = match meta.builder {
+        let builder_ty_ident = match builder {
             Some(v) => v,
             None => quote::format_ident!("{}FromXmlBuilder", ident.to_string()),
         };
 
-        let item_iter_ty_ident = match meta.iterator {
+        let item_iter_ty_ident = match iterator {
             Some(v) => v,
             None => quote::format_ident!("{}AsXmlIterator", ident.to_string()),
         };
@@ -66,7 +78,7 @@ impl StructDef {
             target_ty_ident: ident.clone(),
             builder_ty_ident,
             item_iter_ty_ident,
-            debug: meta.debug.is_set(),
+            debug: debug.is_set(),
         })
     }
 }
