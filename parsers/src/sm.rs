@@ -159,7 +159,7 @@ mod tests {
         assert_size!(Enable, 12);
         assert_size!(StreamId, 12);
         assert_size!(Enabled, 36);
-        assert_size!(Failed, 12);
+        assert_size!(Failed, 24);
         assert_size!(R, 0);
         assert_size!(Resume, 16);
         assert_size!(Resumed, 16);
@@ -174,7 +174,7 @@ mod tests {
         assert_size!(Enable, 12);
         assert_size!(StreamId, 24);
         assert_size!(Enabled, 64);
-        assert_size!(Failed, 12);
+        assert_size!(Failed, 40);
         assert_size!(R, 0);
         assert_size!(Resume, 32);
         assert_size!(Resumed, 32);

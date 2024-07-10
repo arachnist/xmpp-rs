@@ -97,47 +97,58 @@ pub struct Success {
     pub data: Vec<u8>,
 }
 
-generate_element_enum!(
-    /// List of possible failure conditions for SASL.
-    DefinedCondition, "defined-condition", SASL, {
-        /// The client aborted the authentication with
-        /// [abort](struct.Abort.html).
-        Aborted => "aborted",
+/// List of possible failure conditions for SASL.
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::SASL, exhaustive)]
+pub enum DefinedCondition {
+    /// The client aborted the authentication with
+    /// [abort](struct.Abort.html).
+    #[xml(name = "aborted")]
+    Aborted,
 
-        /// The account the client is trying to authenticate against has been
-        /// disabled.
-        AccountDisabled => "account-disabled",
+    /// The account the client is trying to authenticate against has been
+    /// disabled.
+    #[xml(name = "account-disabled")]
+    AccountDisabled,
 
-        /// The credentials for this account have expired.
-        CredentialsExpired => "credentials-expired",
+    /// The credentials for this account have expired.
+    #[xml(name = "credentials-expired")]
+    CredentialsExpired,
 
-        /// You must enable StartTLS or use direct TLS before using this
-        /// authentication mechanism.
-        EncryptionRequired => "encryption-required",
+    /// You must enable StartTLS or use direct TLS before using this
+    /// authentication mechanism.
+    #[xml(name = "encryption-required")]
+    EncryptionRequired,
 
-        /// The base64 data sent by the client is invalid.
-        IncorrectEncoding => "incorrect-encoding",
+    /// The base64 data sent by the client is invalid.
+    #[xml(name = "incorrect-encoding")]
+    IncorrectEncoding,
 
-        /// The authzid provided by the client is invalid.
-        InvalidAuthzid => "invalid-authzid",
+    /// The authzid provided by the client is invalid.
+    #[xml(name = "invalid-authzid")]
+    InvalidAuthzid,
 
-        /// The client tried to use an invalid mechanism, or none.
-        InvalidMechanism => "invalid-mechanism",
+    /// The client tried to use an invalid mechanism, or none.
+    #[xml(name = "invalid-mechanism")]
+    InvalidMechanism,
 
-        /// The client sent a bad request.
-        MalformedRequest => "malformed-request",
+    /// The client sent a bad request.
+    #[xml(name = "malformed-request")]
+    MalformedRequest,
 
-        /// The mechanism selected is weaker than what the server allows.
-        MechanismTooWeak => "mechanism-too-weak",
+    /// The mechanism selected is weaker than what the server allows.
+    #[xml(name = "mechanism-too-weak")]
+    MechanismTooWeak,
 
-        /// The credentials provided are invalid.
-        NotAuthorized => "not-authorized",
+    /// The credentials provided are invalid.
+    #[xml(name = "not-authorized")]
+    NotAuthorized,
 
-        /// The server encountered an issue which may be fixed later, the
-        /// client should retry at some point.
-        TemporaryAuthFailure => "temporary-auth-failure",
-    }
-);
+    /// The server encountered an issue which may be fixed later, the
+    /// client should retry at some point.
+    #[xml(name = "temporary-auth-failure")]
+    TemporaryAuthFailure,
+}
 
 type Lang = String;
 

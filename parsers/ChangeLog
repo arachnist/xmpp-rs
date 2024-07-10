@@ -1,5 +1,10 @@
 Version NEXT:
 XXXX-YY-ZZ RELEASER <admin@example.com>
+    * Breaking
+      - The `alternate_address` field of
+        `xmpp_parsers::stanza_error::StanzaError` has been moved into the
+        corresponding enum variants of the
+        `xmpp_parsers::stanza_error::DefinedCondition` where it may occur.
     * New parsers/serialisers:
         - Stream Features (RFC 6120) (!400)
 
