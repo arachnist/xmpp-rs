@@ -622,3 +622,126 @@ pub(crate) fn item_iter_ty(of_ty: Type, lifetime: Lifetime) -> Type {
     });
     Type::Path(ty)
 }
+
+/// Construct a [`syn::TypePath`] referring to `<#of_ty as IntoIterator>`.
+fn into_iterator_of(of_ty: Type) -> (Span, TypePath) {
+    let span = of_ty.span();
+    (
+        span,
+        TypePath {
+            qself: Some(QSelf {
+                lt_token: syn::token::Lt { spans: [span] },
+                ty: Box::new(of_ty),
+                position: 3,
+                as_token: Some(syn::token::As { span }),
+                gt_token: syn::token::Gt { spans: [span] },
+            }),
+            path: Path {
+                leading_colon: Some(syn::token::PathSep {
+                    spans: [span, span],
+                }),
+                segments: [
+                    PathSegment {
+                        ident: Ident::new("std", span),
+                        arguments: PathArguments::None,
+                    },
+                    PathSegment {
+                        ident: Ident::new("iter", span),
+                        arguments: PathArguments::None,
+                    },
+                    PathSegment {
+                        ident: Ident::new("IntoIterator", span),
+                        arguments: PathArguments::None,
+                    },
+                ]
+                .into_iter()
+                .collect(),
+            },
+        },
+    )
+}
+
+/// Construct a [`syn::Type`] referring to
+/// `<#of_ty as IntoIterator>::IntoIter`.
+pub(crate) fn into_iterator_iter_ty(of_ty: Type) -> Type {
+    let (span, mut ty) = into_iterator_of(of_ty);
+    ty.path.segments.push(PathSegment {
+        ident: Ident::new("IntoIter", span),
+        arguments: PathArguments::None,
+    });
+    Type::Path(ty)
+}
+
+/// Construct a [`syn::Type`] referring to
+/// `<#of_ty as IntoIterator>::Item`.
+pub(crate) fn into_iterator_item_ty(of_ty: Type) -> Type {
+    let (span, mut ty) = into_iterator_of(of_ty);
+    ty.path.segments.push(PathSegment {
+        ident: Ident::new("Item", span),
+        arguments: PathArguments::None,
+    });
+    Type::Path(ty)
+}
+
+/// Construct a [`syn::Expr`] referring to
+/// `<#of_ty as IntoIterator>::into_iter`.
+pub(crate) fn into_iterator_into_iter_fn(of_ty: Type) -> Expr {
+    let (span, mut ty) = into_iterator_of(of_ty);
+    ty.path.segments.push(PathSegment {
+        ident: Ident::new("into_iter", span),
+        arguments: PathArguments::None,
+    });
+    Expr::Path(ExprPath {
+        attrs: Vec::new(),
+        qself: ty.qself,
+        path: ty.path,
+    })
+}
+
+/// Construct a [`syn::Expr`] referring to
+/// `<#of_ty as ::std::iter::Extend>::extend`.
+pub(crate) fn extend_fn(of_ty: Type, item_ty: Type) -> Expr {
+    let span = of_ty.span();
+    Expr::Path(ExprPath {
+        attrs: Vec::new(),
+        qself: Some(QSelf {
+            lt_token: syn::token::Lt { spans: [span] },
+            ty: Box::new(of_ty),
+            position: 3,
+            as_token: Some(syn::token::As { span }),
+            gt_token: syn::token::Gt { spans: [span] },
+        }),
+        path: Path {
+            leading_colon: Some(syn::token::PathSep {
+                spans: [span, span],
+            }),
+            segments: [
+                PathSegment {
+                    ident: Ident::new("std", span),
+                    arguments: PathArguments::None,
+                },
+                PathSegment {
+                    ident: Ident::new("iter", span),
+                    arguments: PathArguments::None,
+                },
+                PathSegment {
+                    ident: Ident::new("Extend", span),
+                    arguments: PathArguments::AngleBracketed(AngleBracketedGenericArguments {
+                        colon2_token: Some(syn::token::PathSep {
+                            spans: [span, span],
+                        }),
+                        lt_token: syn::token::Lt { spans: [span] },
+                        args: [GenericArgument::Type(item_ty)].into_iter().collect(),
+                        gt_token: syn::token::Gt { spans: [span] },
+                    }),
+                },
+                PathSegment {
+                    ident: Ident::new("extend", span),
+                    arguments: PathArguments::None,
+                },
+            ]
+            .into_iter()
+            .collect(),
+        },
+    })
+}

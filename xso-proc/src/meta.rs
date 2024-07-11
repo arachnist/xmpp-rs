@@ -180,6 +180,53 @@ impl quote::ToTokens for NameRef {
     }
 }
 
+/// Represents the amount constraint used with child elements.
+///
+/// Currently, this only supports "one" (literal `1`) or "any amount" (`..`).
+/// In the future, we might want to add support for any range pattern for
+/// `usize` and any positive integer literal.
+#[derive(Debug)]
+pub(crate) enum AmountConstraint {
+    /// Equivalent to `1`
+    #[allow(dead_code)]
+    FixedSingle(Span),
+
+    /// Equivalent to `..`.
+    Any(Span),
+}
+
+impl syn::parse::Parse for AmountConstraint {
+    fn parse(input: syn::parse::ParseStream<'_>) -> Result<Self> {
+        if input.peek(LitInt) && !input.peek2(token::DotDot) && !input.peek2(token::DotDotEq) {
+            let lit: LitInt = input.parse()?;
+            let value: usize = lit.base10_parse()?;
+            if value == 1 {
+                Ok(Self::FixedSingle(lit.span()))
+            } else {
+                Err(Error::new(lit.span(), "only `1` and `..` are allowed here"))
+            }
+        } else {
+            let p: PatRange = input.parse()?;
+            if let Some(attr) = p.attrs.first() {
+                return Err(Error::new_spanned(attr, "attributes not allowed here"));
+            }
+            if let Some(start) = p.start.as_ref() {
+                return Err(Error::new_spanned(
+                    start,
+                    "only full ranges (`..`) are allowed here",
+                ));
+            }
+            if let Some(end) = p.end.as_ref() {
+                return Err(Error::new_spanned(
+                    end,
+                    "only full ranges (`..`) are allowed here",
+                ));
+            }
+            Ok(Self::Any(p.span()))
+        }
+    }
+}
+
 /// Represents a boolean flag from a `#[xml(..)]` attribute meta.
 #[derive(Clone, Copy, Debug)]
 pub(crate) enum Flag {
@@ -558,6 +605,9 @@ pub(crate) enum XmlFieldMeta {
     Child {
         /// The `default` flag.
         default_: Flag,
+
+        /// The `n` flag.
+        amount: Option<AmountConstraint>,
     },
 }
 
@@ -694,6 +744,7 @@ impl XmlFieldMeta {
     fn child_from_meta(meta: ParseNestedMeta<'_>) -> Result<Self> {
         if meta.input.peek(syn::token::Paren) {
             let mut default_ = Flag::Absent;
+            let mut amount = None;
             meta.parse_nested_meta(|meta| {
                 if meta.path.is_ident("default") {
                     if default_.is_set() {
@@ -701,14 +752,21 @@ impl XmlFieldMeta {
                     }
                     default_ = (&meta.path).into();
                     Ok(())
+                } else if meta.path.is_ident("n") {
+                    if amount.is_some() {
+                        return Err(Error::new_spanned(meta.path, "duplicate `n` key"));
+                    }
+                    amount = Some(meta.value()?.parse()?);
+                    Ok(())
                 } else {
                     Err(Error::new_spanned(meta.path, "unsupported key"))
                 }
             })?;
-            Ok(Self::Child { default_ })
+            Ok(Self::Child { default_, amount })
         } else {
             Ok(Self::Child {
                 default_: Flag::Absent,
+                amount: None,
             })
         }
     }

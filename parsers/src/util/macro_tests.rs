@@ -795,3 +795,22 @@ fn exhaustive_name_switched_enum_roundtrip_variant_2() {
     };
     roundtrip_full::<ExhaustiveNameSwitchedEnum>("<b xmlns='urn:example:ns1'>hello</b>")
 }
+
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = NS1, name = "parent")]
+struct Children {
+    #[xml(child(n = ..))]
+    foo: Vec<RequiredAttribute>,
+}
+
+#[test]
+fn children_roundtrip() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<Children>(
+        "<parent xmlns='urn:example:ns1'><attr foo='X'/><attr foo='Y'/><attr foo='Z'/></parent>",
+    )
+}

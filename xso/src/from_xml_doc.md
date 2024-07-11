@@ -219,17 +219,29 @@ assert_eq!(foo, Foo {
 The `child` meta causes the field to be mapped to a child element of the
 element.
 
+The following keys can be used inside the `#[xml(child(..))]` meta:
+
 | Key | Value type | Description |
 | --- | --- | --- |
 | `default` | flag | If present, an absent child will substitute the default value instead of raising an error. |
+| `n` | `1` or `..` | If `1`, a single element is parsed. If `..`, a collection is parsed. Defaults to `1`. |
 
-The field's type must implement [`FromXml`] in order to derive `FromXml` and
+When parsing a single child element (i.e. `n = 1` or no `n` value set at all),
+the field's type must implement [`FromXml`] in order to derive `FromXml` and
 [`AsXml`] in order to derive `AsXml`.
+
+When parsing a collection (with `n = ..`), the field's type must implement
+[`IntoIterator<Item = T>`][`std::iter::IntoIterator`], where `T` must
+implement [`FromXml`] in order to derive `FromXml` and [`AsXml`] in order to
+derive `AsXml`. In addition, the field's type must implement
+[`Extend<T>`][`std::iter::Extend`] to derive `FromXml` and the field's
+reference type must implement `IntoIterator<Item = &'_ T>` to derive `AsXml`.
 
 If `default` is specified and the child is absent in the source, the value
 is generated using [`std::default::Default`], requiring the field type to
 implement the `Default` trait for a `FromXml` derivation. `default` has no
-influence on `AsXml`.
+influence on `AsXml`. Combining `default` and `n` where `n` is not set to `1`
+is not supported and will cause a compile-time error.
 
 ##### Example
 
@@ -243,6 +255,13 @@ struct Child {
 }
 
 #[derive(FromXml, Debug, PartialEq)]
+#[xml(namespace = "urn:example", name = "other-child")]
+struct OtherChild {
+    #[xml(attribute = "some-attr")]
+    some_attr: String,
+}
+
+#[derive(FromXml, Debug, PartialEq)]
 #[xml(namespace = "urn:example", name = "parent")]
 struct Parent {
     #[xml(attribute)]
@@ -250,15 +269,28 @@ struct Parent {
 
     #[xml(child)]
     bar: Child,
+
+    #[xml(child(n = ..))]
+    baz: Vec<OtherChild>,
 }
 
 let parent: Parent = xso::from_bytes(b"<parent
     xmlns='urn:example'
     foo='hello world!'
-><child some-attr='within'/></parent>").unwrap();
+><child
+    some-attr='within'
+/><other-child
+    some-attr='c1'
+/><other-child
+    some-attr='c2'
+/></parent>").unwrap();
 assert_eq!(parent, Parent {
     foo: "hello world!".to_owned(),
     bar: Child { some_attr: "within".to_owned() },
+    baz: vec! [
+        OtherChild { some_attr: "c1".to_owned() },
+        OtherChild { some_attr: "c2".to_owned() },
+    ],
 });
 ```
 

@@ -13,12 +13,13 @@ use syn::{spanned::Spanned, *};
 use rxml_validation::NcName;
 
 use crate::error_message::{self, ParentRef};
-use crate::meta::{Flag, NameRef, NamespaceRef, XmlFieldMeta};
+use crate::meta::{AmountConstraint, Flag, NameRef, NamespaceRef, XmlFieldMeta};
 use crate::scope::{AsItemsScope, FromEventsScope};
 use crate::types::{
-    as_optional_xml_text_fn, as_xml_iter_fn, as_xml_text_fn, default_fn, from_events_fn,
-    from_xml_builder_ty, from_xml_text_fn, item_iter_ty, option_ty, string_ty,
-    text_codec_decode_fn, text_codec_encode_fn,
+    as_optional_xml_text_fn, as_xml_iter_fn, as_xml_text_fn, default_fn, extend_fn, from_events_fn,
+    from_xml_builder_ty, from_xml_text_fn, into_iterator_into_iter_fn, into_iterator_item_ty,
+    into_iterator_iter_ty, item_iter_ty, option_ty, ref_ty, string_ty, text_codec_decode_fn,
+    text_codec_encode_fn,
 };
 
 /// Code slices necessary for declaring and initializing a temporary variable
@@ -140,8 +141,8 @@ enum FieldKind {
         /// The XML name of the attribute.
         xml_name: NameRef,
 
-        // Flag indicating whether the value should be defaulted if the
-        // attribute is absent.
+        /// Flag indicating whether the value should be defaulted if the
+        /// attribute is absent.
         default_: Flag,
     },
 
@@ -153,9 +154,12 @@ enum FieldKind {
 
     /// The field maps to a child
     Child {
-        // Flag indicating whether the value should be defaulted if the
-        // child is absent.
+        /// Flag indicating whether the value should be defaulted if the
+        /// child is absent.
         default_: Flag,
+
+        /// Number of child elements allowed.
+        amount: AmountConstraint,
     },
 }
 
@@ -203,7 +207,26 @@ impl FieldKind {
 
             XmlFieldMeta::Text { codec } => Ok(Self::Text { codec }),
 
-            XmlFieldMeta::Child { default_ } => Ok(Self::Child { default_ }),
+            XmlFieldMeta::Child { default_, amount } => {
+                if let Some(AmountConstraint::Any(ref amount_span)) = amount {
+                    if let Flag::Present(ref flag_span) = default_ {
+                        let mut err = Error::new(
+                            *flag_span,
+                            "`default` has no meaning for child collections",
+                        );
+                        err.combine(Error::new(
+                            *amount_span,
+                            "the field is treated as a collection because of this `n` value",
+                        ));
+                        return Err(err);
+                    }
+                }
+
+                Ok(Self::Child {
+                    default_,
+                    amount: amount.unwrap_or(AmountConstraint::FixedSingle(Span::call_site())),
+                })
+            }
         }
     }
 }
@@ -345,49 +368,79 @@ impl FieldDef {
                 })
             }
 
-            FieldKind::Child { ref default_ } => {
+            FieldKind::Child {
+                ref default_,
+                ref amount,
+            } => {
                 let FromEventsScope {
                     ref substate_result,
                     ..
                 } = scope;
                 let field_access = scope.access_field(&self.member);
 
-                let missing_msg = error_message::on_missing_child(container_name, &self.member);
-
-                let from_events = from_events_fn(self.ty.clone());
-                let from_xml_builder = from_xml_builder_ty(self.ty.clone());
-
-                let on_absent = match default_ {
-                    Flag::Absent => quote! {
-                        return ::core::result::Result::Err(::xso::error::Error::Other(#missing_msg).into())
-                    },
-                    Flag::Present(_) => {
-                        let default_ = default_fn(self.ty.clone());
-                        quote! {
-                            #default_()
-                        }
-                    }
+                let element_ty = match amount {
+                    AmountConstraint::FixedSingle(_) => self.ty.clone(),
+                    AmountConstraint::Any(_) => into_iterator_item_ty(self.ty.clone()),
                 };
 
-                Ok(FieldBuilderPart::Nested {
-                    value: FieldTempInit {
-                        init: quote! { ::std::option::Option::None },
-                        ty: option_ty(self.ty.clone()),
-                    },
-                    matcher: quote! {
-                        #from_events(name, attrs)
-                    },
-                    builder: from_xml_builder,
-                    collect: quote! {
-                        #field_access = ::std::option::Option::Some(#substate_result);
-                    },
-                    finalize: quote! {
-                        match #field_access {
-                            ::std::option::Option::Some(value) => value,
-                            ::std::option::Option::None => #on_absent,
-                        }
-                    },
-                })
+                let from_events = from_events_fn(element_ty.clone());
+                let from_xml_builder = from_xml_builder_ty(element_ty.clone());
+
+                let matcher = quote! { #from_events(name, attrs) };
+                let builder = from_xml_builder;
+
+                match amount {
+                    AmountConstraint::FixedSingle(_) => {
+                        let missing_msg =
+                            error_message::on_missing_child(container_name, &self.member);
+
+                        let on_absent = match default_ {
+                            Flag::Absent => quote! {
+                                return ::core::result::Result::Err(::xso::error::Error::Other(#missing_msg).into())
+                            },
+                            Flag::Present(_) => {
+                                let default_ = default_fn(self.ty.clone());
+                                quote! {
+                                    #default_()
+                                }
+                            }
+                        };
+
+                        Ok(FieldBuilderPart::Nested {
+                            value: FieldTempInit {
+                                init: quote! { ::std::option::Option::None },
+                                ty: option_ty(self.ty.clone()),
+                            },
+                            matcher,
+                            builder,
+                            collect: quote! {
+                                #field_access = ::std::option::Option::Some(#substate_result);
+                            },
+                            finalize: quote! {
+                                match #field_access {
+                                    ::std::option::Option::Some(value) => value,
+                                    ::std::option::Option::None => #on_absent,
+                                }
+                            },
+                        })
+                    }
+                    AmountConstraint::Any(_) => {
+                        let ty_extend = extend_fn(self.ty.clone(), element_ty.clone());
+                        let ty_default = default_fn(self.ty.clone());
+                        Ok(FieldBuilderPart::Nested {
+                            value: FieldTempInit {
+                                init: quote! { #ty_default() },
+                                ty: self.ty.clone(),
+                            },
+                            matcher,
+                            builder,
+                            collect: quote! {
+                                #ty_extend(&mut #field_access, [#substate_result]);
+                            },
+                            finalize: quote! { #field_access },
+                        })
+                    }
+                }
             }
         }
     }
@@ -442,7 +495,10 @@ impl FieldDef {
                 Ok(FieldIteratorPart::Text { generator })
             }
 
-            FieldKind::Child { default_: _ } => {
+            FieldKind::Child {
+                default_: _,
+                amount: AmountConstraint::FixedSingle(_),
+            } => {
                 let AsItemsScope { ref lifetime, .. } = scope;
 
                 let as_xml_iter = as_xml_iter_fn(self.ty.clone());
@@ -457,6 +513,63 @@ impl FieldDef {
                     },
                     generator: quote! {
                         #bound_name.next().transpose()
+                    },
+                })
+            }
+
+            FieldKind::Child {
+                default_: _,
+                amount: AmountConstraint::Any(_),
+            } => {
+                let AsItemsScope { ref lifetime, .. } = scope;
+
+                // This should give us the type of element stored in the
+                // collection.
+                let element_ty = into_iterator_item_ty(self.ty.clone());
+
+                // And this is the collection type we actually work with --
+                // as_xml_iter uses references after all.
+                let ty = ref_ty(self.ty.clone(), lifetime.clone());
+
+                // as_xml_iter is called on the bare type (not the ref type)
+                let as_xml_iter = as_xml_iter_fn(element_ty.clone());
+
+                // And thus the iterator associated with AsXml is also derived
+                // from the bare type.
+                let item_iter = item_iter_ty(element_ty.clone(), lifetime.clone());
+
+                // But the iterator for iterating over the elements inside the
+                // collection must use the ref type.
+                let element_iter = into_iterator_iter_ty(ty.clone());
+
+                // And likewise the into_iter impl.
+                let into_iter = into_iterator_into_iter_fn(ty.clone());
+
+                let state_ty = Type::Tuple(TypeTuple {
+                    paren_token: token::Paren::default(),
+                    elems: [element_iter, option_ty(item_iter)].into_iter().collect(),
+                });
+
+                Ok(FieldIteratorPart::Content {
+                    value: FieldTempInit {
+                        init: quote! {
+                            (#into_iter(#bound_name), ::core::option::Option::None)
+                        },
+                        ty: state_ty,
+                    },
+                    generator: quote! {
+                        loop {
+                            if let ::core::option::Option::Some(current) = #bound_name.1.as_mut() {
+                                if let ::core::option::Option::Some(item) = current.next() {
+                                    break ::core::option::Option::Some(item).transpose();
+                                }
+                            }
+                            if let ::core::option::Option::Some(item) = #bound_name.0.next() {
+                                #bound_name.1 = ::core::option::Option::Some(#as_xml_iter(item)?)
+                            } else {
+                                break ::core::result::Result::Ok(::core::option::Option::None)
+                            }
+                        }
                     },
                 })
             }
