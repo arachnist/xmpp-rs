@@ -687,25 +687,18 @@ impl FullJid {
         domain: &DomainRef,
         resource: &ResourceRef,
     ) -> FullJid {
-        let (at, slash, normalized) = if let Some(node) = node {
+        let (at, slash, normalized);
+
+        if let Some(node) = node {
             // Parts are never empty so len > 0 for NonZeroU16::new is always Some
-            (
-                NonZeroU16::new(node.len() as u16),
-                NonZeroU16::new((node.len() + 1 + domain.len()) as u16),
-                format!(
-                    "{}@{}/{}",
-                    node.as_str(),
-                    domain.as_str(),
-                    resource.as_str()
-                ),
-            )
+            at = NonZeroU16::new(node.len() as u16);
+            slash = NonZeroU16::new((node.len() + 1 + domain.len()) as u16);
+            normalized = format!("{node}@{domain}/{resource}");
         } else {
-            (
-                None,
-                NonZeroU16::new(domain.len() as u16),
-                format!("{}/{}", domain.as_str(), resource.as_str()),
-            )
-        };
+            at = None;
+            slash = NonZeroU16::new(domain.len() as u16);
+            normalized = format!("{domain}/{resource}");
+        }
 
         let inner = Jid {
             normalized,
@@ -778,15 +771,16 @@ impl BareJid {
     /// allocation if `node` is known to be `None` and `domain` is owned, you
     /// can use `domain.into()`.
     pub fn from_parts(node: Option<&NodeRef>, domain: &DomainRef) -> Self {
-        let (at, normalized) = if let Some(node) = node {
+        let (at, normalized);
+
+        if let Some(node) = node {
             // Parts are never empty so len > 0 for NonZeroU16::new is always Some
-            (
-                NonZeroU16::new(node.len() as u16),
-                format!("{}@{}", node.as_str(), domain.as_str()),
-            )
+            at = NonZeroU16::new(node.len() as u16);
+            normalized = format!("{node}@{domain}");
         } else {
-            (None, domain.to_string())
-        };
+            at = None;
+            normalized = domain.to_string();
+        }
 
         let inner = Jid {
             normalized,
