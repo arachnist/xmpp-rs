@@ -1,5 +1,7 @@
-Version xxx, release xxx:
+Version 0.11.0, release 2024-07-23:
   * Breaking:
+    - Move InnerJid into Jid and reformulate BareJid and FullJid in terms of
+      Jid.
     - With the addition of `str`-like types for `DomainPart`, `NodePart` and
       `ResourcePart`, the functions on `Jid`, `BareJid` and `FullJid` which
       return the respective types have been changed to return references
@@ -21,6 +23,15 @@ Version xxx, release xxx:
       `impl From<DomainPart> for Jid`, both of which are (unlike
       `::from_parts`) copy-free.
     - `as_str` methods have been added on all Jid types.
+    - Derive PartialOrd/Ord for Jid types.
+    - Implement `Borrow<Jid>` on `FullJid` and `BareJid`.
+    - Make the crate no_std
+    - Update to edition 2021.
+    - Use debug_tuple instead of string formatting to get standard-like
+      output.
+    - Improve perfs of comparison operators (#123)
+    - Add more test cases
+    - Fix clippy lints, cargo doc, and other warnings
 
 Version 0.10.0, release 2023-08-17:
   * Breaking
