@@ -22,8 +22,8 @@ sha3 = "0.10"
 blake2 = "0.10.4"
 chrono = { version = "0.4.5", default-features = false, features = ["std"] }
 # same repository dependencies
-jid = { version = "0.10", features = ["minidom"], path = "../jid" }
-minidom = { version = "0.15", path = "../minidom" }
+jid = { version = "0.10", features = ["minidom"] }
+minidom = { version = "0.15" }
 xso = { version = "0.0.2", features = ["macros", "minidom", "panicking-into-impl", "jid", "base64"] }
 
 [features]
