@@ -1,3 +1,15 @@
+Version 0.16, released 2024-07-23:
+	* Breaking
+		* Element comparison returns unequal when number of nodes is unequal.
+	* Changed
+		* New `Element::append_text` method.
+		* Update rxml to 0.11.0
+	* Fixes
+		* Prevent splitting of text nodes in TreeBuilder when there is no element
+		  in between.
+		* Update to edition 2021.
+		* Fix clippy lints, and other compiler warnings.
+
 Version 0.15.2, released 2023-05-13:
   * Changes
     * Fix a memory corruption on closing tags for elements with a name longer
