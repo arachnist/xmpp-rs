@@ -1,4 +1,4 @@
-Version 0.11.0, release 2024-07-23:
+Version 0.11.1, release 2024-07-23:
   * Breaking:
     - Move InnerJid into Jid and reformulate BareJid and FullJid in terms of
       Jid.
@@ -32,6 +32,8 @@ Version 0.11.0, release 2024-07-23:
     - Improve perfs of comparison operators (#123)
     - Add more test cases
     - Fix clippy lints, cargo doc, and other warnings
+
+Version 0.11.0, release 2024-07-23 [YANKED]
 
 Version 0.10.0, release 2023-08-17:
   * Breaking
