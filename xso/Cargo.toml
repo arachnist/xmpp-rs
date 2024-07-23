@@ -11,7 +11,7 @@ license = "MPL-2.0"
 
 [dependencies]
 rxml = { version = "0.11.0", default-features = false }
-minidom = { version = "^0.15" }
+minidom = { version = "^0.16" }
 xso_proc = { version = "0.0.2", optional = true }
 
 # optional dependencies to provide text conversion to/from types from/using
