@@ -4,12 +4,14 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use xso::{AsXml, FromXml};
+use xso::{
+    text::{Base64, StripWhitespace},
+    AsXml, FromXml,
+};
 
 use crate::hashes::Sha1HexAttribute;
 use crate::ns;
 use crate::pubsub::PubSubPayload;
-use crate::util::text_node_codecs::{Codec, WhitespaceAwareBase64};
 
 generate_element!(
     /// Communicates information about an avatar.
@@ -51,14 +53,14 @@ pub struct Info {
     pub url: Option<String>,
 }
 
-generate_element!(
-    /// The actual avatar data.
-    Data, "data", AVATAR_DATA,
-    text: (
-        /// Vector of bytes representing the avatar’s image.
-        data: WhitespaceAwareBase64
-    )
-);
+/// The actual avatar data.
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::AVATAR_DATA, name = "data")]
+pub struct Data {
+    /// Vector of bytes representing the avatar’s image.
+    #[xml(text(codec = Base64<StripWhitespace>))]
+    pub data: Vec<u8>,
+}
 
 impl PubSubPayload for Data {}
 
@@ -130,6 +132,6 @@ mod tests {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Unknown attribute in data element.")
+        assert_eq!(message, "Unknown attribute in Data element.")
     }
 }
