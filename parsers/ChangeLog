@@ -1,11 +1,47 @@
-Version xxx:
-0000-00-00 Authors
+Version 0.21.0:
+2024-07-25 Emmanuel Gil Peyrot <linkmauve@linkmauve.fr>
     * New parsers/serialisers:
-        - Bind 2 (XEP-0386)
-        - Fast Authentication Streamlining Tokens (XEP-0484)
+        - Private XML Storage (XEP-0049), only enough for bookmarks.
+        - vcard-temp (XEP-0054), only enough for the PHOTO element.
+        - Out of Band Data (XEP-0066), only the annotation part used for file
+          sharing in Conversations.
+        - Data Forms Validation (XEP-0122).
+        - vCard-Based Avatars (XEP-0153).
+        - Jingle Content Thumbnails (XEP-264).
+        - Bind 2 (XEP-0386).
+        - Fast Authentication Streamlining Tokens (XEP-0484).
     * Improvements:
-      - Re-export the jid module entirely.
-      - Add serde feature, passed to jid crate
+        - Replace many usages of our custom macros with the new xso crate,
+          which will ultimately allow streaming directly from the rxml XML
+          parser (in a SAX way) into our parsed structs, without going through
+          minidom in the middle.
+        - Re-export the jid and minidom modules, not their inner symbols.
+        - Use edition 2021, no more use TryFrom/TryInto! \o/
+        - Add serde feature, passed to jid crate
+        - Update XEP-0084 avatars to 1.1.4, which allows for avatars bigger
+          than 64 KiB.
+        - Make it easy to convert from bookmarks1 to bookmarks2.
+        - Ignore the 'code' attribute on errors, deprecated with XEP-0086 in
+          2007 but still sent by some legacy clients or servers it seems.
+        - Implement flip-page and metadata for XEP-0313 (Message Archive
+          Management).
+        - Add support for XEP-0059 (Result Set Management) for XEP-0030
+          disco#items.
+        - When disable-validation is enable, stop validating XEP-0030 rules.
+        - Make TryFrom<Element> chainable.
+        - Add a Message::extract_payload() function.
+        - Add a PubSubEvent::node_name() function, to simplify matching on the
+          node name from any of the enum variants.
+        - PubSub elements can now be compared for equality.
+        - Ignore incorrect FORM_TYPE fields as per XEP-0068.
+        - Allow fixed fields and desc in XEP-0004 (Data Forms).
+        - Add constructors for DataForm and Field, to simplify their creation.
+        - Make it possible to specify an alternate JID on <gone/> and
+          <redirect/> stanza errors.
+    * Bugfixes:
+        - Fix XEP-0257 serialisation
+        - Fix stanza error parsing of multiple languages.
+        - Fix all typos in the codebase found by codespell.
 
 Version 0.20.0:
 2023-08-17 Maxime “pep” Buquet <pep@bouah.net>, Emmanuel Gil Peyrot <linkmauve@linkmauve.fr>
