@@ -256,15 +256,34 @@ impl<Filter: TextFilter> TextCodec<Vec<u8>> for Base64<Filter> {
 
 #[cfg(feature = "base64")]
 #[cfg_attr(docsrs, doc(cfg(feature = "base64")))]
-impl<Filter: TextFilter> TextCodec<Option<Vec<u8>>> for Base64<Filter> {
-    fn decode(s: String) -> Result<Option<Vec<u8>>, Error> {
+impl<'x, Filter: TextFilter> TextCodec<Cow<'x, [u8]>> for Base64<Filter> {
+    fn decode(s: String) -> Result<Cow<'x, [u8]>, Error> {
+        let value = Filter::preprocess(s);
+        StandardBase64Engine
+            .decode(value.as_bytes())
+            .map_err(Error::text_parse_error)
+            .map(Cow::Owned)
+    }
+
+    fn encode<'a>(value: &'a Cow<'x, [u8]>) -> Result<Option<Cow<'a, str>>, Error> {
+        Ok(Some(Cow::Owned(StandardBase64Engine.encode(&value))))
+    }
+}
+
+#[cfg(feature = "base64")]
+#[cfg_attr(docsrs, doc(cfg(feature = "base64")))]
+impl<T, Filter: TextFilter> TextCodec<Option<T>> for Base64<Filter>
+where
+    Base64<Filter>: TextCodec<T>,
+{
+    fn decode(s: String) -> Result<Option<T>, Error> {
         if s.is_empty() {
             return Ok(None);
         }
         Ok(Some(Self::decode(s)?))
     }
 
-    fn encode(decoded: &Option<Vec<u8>>) -> Result<Option<Cow<'_, str>>, Error> {
+    fn encode(decoded: &Option<T>) -> Result<Option<Cow<'_, str>>, Error> {
         decoded
             .as_ref()
             .map(Self::encode)
