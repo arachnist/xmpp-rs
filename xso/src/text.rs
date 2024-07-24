@@ -91,6 +91,7 @@ convert_via_fromstr_and_display! {
     isize,
     f32,
     f64,
+    char,
     std::net::IpAddr,
     std::net::Ipv4Addr,
     std::net::Ipv6Addr,
