@@ -32,19 +32,19 @@ generate_attribute!(
     bool
 );
 
-generate_element!(
-    /// Client request for enabling stream management.
-    #[derive(Default)]
-    Enable, "enable", SM,
-    attributes: [
-        /// The preferred resumption time in seconds by the client.
-        // TODO: should be the infinite integer set ≥ 1.
-        max: Option<u32> = "max",
+/// Client request for enabling stream management.
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone, Default)]
+#[xml(namespace = ns::SM, name = "enable")]
+pub struct Enable {
+    /// The preferred resumption time in seconds by the client.
+    // TODO: should be the infinite integer set ≥ 1.
+    #[xml(attribute(default))]
+    pub max: Option<u32>,
 
-        /// Whether the client wants to be allowed to resume the stream.
-        resume: Default<ResumeAttr> = "resume",
-    ]
-);
+    /// Whether the client wants to be allowed to resume the stream.
+    #[xml(attribute(default))]
+    pub resume: ResumeAttr,
+}
 
 impl Enable {
     /// Generates a new `<enable/>` element.
@@ -70,25 +70,28 @@ generate_id!(
     StreamId
 );
 
-generate_element!(
-    /// Server response once stream management is enabled.
-    Enabled, "enabled", SM,
-    attributes: [
-        /// A random identifier used for stream resumption.
-        id: Option<StreamId> = "id",
+/// Server response once stream management is enabled.
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::SM, name = "enabled")]
+pub struct Enabled {
+    /// A random identifier used for stream resumption.
+    #[xml(attribute(default))]
+    pub id: Option<StreamId>,
 
-        /// The preferred IP, domain, IP:port or domain:port location for
-        /// resumption.
-        location: Option<String> = "location",
+    /// The preferred IP, domain, IP:port or domain:port location for
+    /// resumption.
+    #[xml(attribute(default))]
+    pub location: Option<String>,
 
-        /// The preferred resumption time in seconds by the server.
-        // TODO: should be the infinite integer set ≥ 1.
-        max: Option<u32> = "max",
+    /// The preferred resumption time in seconds by the server.
+    // TODO: should be the infinite integer set ≥ 1.
+    #[xml(attribute(default))]
+    pub max: Option<u32>,
 
-        /// Whether stream resumption is allowed.
-        resume: Default<ResumeAttr> = "resume",
-    ]
-);
+    /// Whether stream resumption is allowed.
+    #[xml(attribute(default))]
+    pub resume: ResumeAttr,
+}
 
 generate_element!(
     /// A stream management error happened.
