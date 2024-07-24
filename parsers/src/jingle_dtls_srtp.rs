@@ -4,8 +4,10 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use xso::{text::ColonSeparatedHex, AsXml, FromXml};
+
 use crate::hashes::{Algo, Hash};
-use crate::util::text_node_codecs::{Codec, ColonSeparatedHex};
+use crate::ns;
 use xso::error::Error;
 
 generate_attribute!(
@@ -31,21 +33,22 @@ generate_attribute!(
 );
 
 // TODO: use a hashes::Hash instead of two different fields here.
-generate_element!(
-    /// Fingerprint of the key used for a DTLS handshake.
-    Fingerprint, "fingerprint", JINGLE_DTLS,
-    attributes: [
-        /// The hash algorithm used for this fingerprint.
-        hash: Required<Algo> = "hash",
+/// Fingerprint of the key used for a DTLS handshake.
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::JINGLE_DTLS, name = "fingerprint")]
+pub struct Fingerprint {
+    /// The hash algorithm used for this fingerprint.
+    #[xml(attribute)]
+    pub hash: Algo,
 
-        /// Indicates which of the end points should initiate the TCP connection establishment.
-        setup: Required<Setup> = "setup"
-    ],
-    text: (
-        /// Hash value of this fingerprint.
-        value: ColonSeparatedHex
-    )
-);
+    /// Indicates which of the end points should initiate the TCP connection establishment.
+    #[xml(attribute)]
+    pub setup: Setup,
+
+    /// Hash value of this fingerprint.
+    #[xml(text(codec = ColonSeparatedHex))]
+    pub value: Vec<u8>,
+}
 
 impl Fingerprint {
     /// Create a new Fingerprint from a Setup and a Hash.
