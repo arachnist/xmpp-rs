@@ -4,22 +4,28 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use crate::ibb::{Stanza, StreamId};
+use xso::{AsXml, FromXml};
 
-generate_element!(
+use crate::ibb::{Stanza, StreamId};
+use crate::ns;
+
 /// Describes an [In-Band Bytestream](https://xmpp.org/extensions/xep-0047.html)
 /// Jingle transport, see also the [IBB module](../ibb.rs).
-Transport, "transport", JINGLE_IBB,
-attributes: [
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::JINGLE_IBB, name = "transport")]
+pub struct Transport {
     /// Maximum size in bytes for each chunk.
-    block_size: Required<u16> = "block-size",
+    #[xml(attribute(name = "block-size"))]
+    pub block_size: u16,
 
     /// The identifier to be used to create a stream.
-    sid: Required<StreamId> = "sid",
+    #[xml(attribute)]
+    pub sid: StreamId,
 
     /// Which stanza type to use to exchange data.
-    stanza: Default<Stanza> = "stanza",
-]);
+    #[xml(attribute(default))]
+    pub stanza: Stanza,
+}
 
 #[cfg(test)]
 mod tests {
@@ -61,7 +67,10 @@ mod tests {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Required attribute 'block-size' missing.");
+        assert_eq!(
+            message,
+            "Required attribute field 'block_size' on Transport element missing."
+        );
 
         let elem: Element =
             "<transport xmlns='urn:xmpp:jingle:transports:ibb:1' block-size='65536'/>"
@@ -104,7 +113,10 @@ mod tests {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Required attribute 'sid' missing.");
+        assert_eq!(
+            message,
+            "Required attribute field 'sid' on Transport element missing."
+        );
     }
 
     #[test]
