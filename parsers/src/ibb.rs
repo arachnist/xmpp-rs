@@ -27,19 +27,22 @@ Stanza, "stanza", {
     Message => "message",
 }, Default = Iq);
 
-generate_element!(
 /// Starts an In-Band Bytestream session with the given parameters.
-Open, "open", IBB,
-attributes: [
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::IBB, name = "open")]
+pub struct Open {
     /// Maximum size in bytes for each chunk.
-    block_size: Required<u16> = "block-size",
+    #[xml(attribute(name = "block-size"))]
+    pub block_size: u16,
 
     /// The identifier to be used to create a stream.
-    sid: Required<StreamId> = "sid",
+    #[xml(attribute)]
+    pub sid: StreamId,
 
     /// Which stanza type to use to exchange data.
-    stanza: Default<Stanza> = "stanza",
-]);
+    #[xml(attribute(default))]
+    pub stanza: Stanza,
+}
 
 impl IqSetPayload for Open {}
 
@@ -138,7 +141,10 @@ mod tests {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Required attribute 'block-size' missing.");
+        assert_eq!(
+            message,
+            "Required attribute field 'block_size' on Open element missing."
+        );
 
         let elem: Element = "<open xmlns='http://jabber.org/protocol/ibb' block-size='-5'/>"
             .parse()
@@ -162,7 +168,10 @@ mod tests {
             FromElementError::Invalid(Error::Other(error)) => error,
             _ => panic!(),
         };
-        assert_eq!(message, "Required attribute 'sid' missing.");
+        assert_eq!(
+            message,
+            "Required attribute field 'sid' on Open element missing."
+        );
     }
 
     #[test]
