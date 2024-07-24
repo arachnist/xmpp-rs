@@ -41,8 +41,8 @@ impl MessagePayload for OriginId {}
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::Element;
     use jid::BareJid;
+    use minidom::Element;
     use xso::error::{Error, FromElementError};
 
     #[cfg(target_pointer_width = "32")]

@@ -27,7 +27,7 @@ pub struct Active;
 mod tests {
     use super::*;
     use crate::ns;
-    use crate::Element;
+    use minidom::Element;
 
     #[test]
     fn test_size() {

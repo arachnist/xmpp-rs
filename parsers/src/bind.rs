@@ -6,8 +6,8 @@
 
 use crate::iq::{IqResultPayload, IqSetPayload};
 use crate::ns;
-use crate::Element;
 use jid::{FullJid, Jid};
+use minidom::Element;
 use std::str::FromStr;
 use xso::error::{Error, FromElementError};
 

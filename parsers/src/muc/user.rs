@@ -13,7 +13,7 @@ use xso::{
 use crate::message::MessagePayload;
 use crate::ns;
 use crate::presence::PresencePayload;
-use crate::Element;
+use minidom::Element;
 
 use jid::FullJid;
 
@@ -310,7 +310,7 @@ mod tests {
     use super::*;
     use crate::message::Message;
     use crate::presence::{Presence, Type as PresenceType};
-    use crate::Jid;
+    use jid::Jid;
 
     #[test]
     fn test_simple() {

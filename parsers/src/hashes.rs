@@ -244,7 +244,7 @@ impl Deref for Sha1HexAttribute {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::Element;
+    use minidom::Element;
     use xso::error::FromElementError;
 
     #[cfg(target_pointer_width = "32")]

@@ -254,7 +254,7 @@ impl Destroy {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::Element;
+    use minidom::Element;
 
     #[test]
     fn participant() {

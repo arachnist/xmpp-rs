@@ -128,7 +128,7 @@ mod tests {
     use super::*;
     use crate::hashes::Algo;
     use crate::jingle_dtls_srtp::Setup;
-    use crate::Element;
+    use minidom::Element;
 
     #[cfg(target_pointer_width = "32")]
     #[test]

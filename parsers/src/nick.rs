@@ -14,7 +14,7 @@ generate_elem_id!(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::Element;
+    use minidom::Element;
     #[cfg(not(feature = "disable-validation"))]
     use xso::error::{Error, FromElementError};
 

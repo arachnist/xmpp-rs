@@ -6,7 +6,7 @@
 
 use crate::ns;
 use crate::pubsub::PubSubPayload;
-use crate::Element;
+use minidom::Element;
 use xso::error::{Error, FromElementError};
 
 generate_elem_id!(

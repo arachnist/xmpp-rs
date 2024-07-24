@@ -23,15 +23,17 @@
 
 #![warn(missing_docs)]
 
-pub use xso::error::{Error, FromElementError};
-// TODO: only export top-level module on the next major release
-pub use jid::{self, BareJid, Error as JidParseError, FullJid, Jid};
-pub use minidom::Element;
-
 pub use blake2;
+pub use jid;
+pub use minidom;
 pub use sha1;
 pub use sha2;
 pub use sha3;
+
+// We normally only reexport entire crates, but xso is a special case since it uses proc macros
+// which require it to be directly imported as a crate.  The only useful symbol we have to reexport
+// is its error type, which we expose in all of our return types.
+pub use xso::error::Error;
 
 /// XML namespace definitions used through XMPP.
 pub mod ns;

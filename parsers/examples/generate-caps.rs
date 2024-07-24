@@ -11,7 +11,8 @@ use xmpp_parsers::{
     disco::DiscoInfoResult,
     ecaps2::{compute_disco as compute_disco_ecaps2, hash_ecaps2, ECaps2},
     hashes::Algo,
-    Element, Error,
+    minidom::Element,
+    Error,
 };
 
 fn get_caps(disco: &DiscoInfoResult, node: String) -> Result<Caps, String> {

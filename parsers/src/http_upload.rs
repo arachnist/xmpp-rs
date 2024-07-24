@@ -11,7 +11,7 @@ use xso::{
 
 use crate::iq::{IqGetPayload, IqResultPayload};
 use crate::ns;
-use crate::Element;
+use minidom::Element;
 
 /// Requesting a slot
 #[derive(FromXml, AsXml, Debug, Clone, PartialEq)]

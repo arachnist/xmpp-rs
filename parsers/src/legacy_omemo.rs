@@ -184,7 +184,7 @@ impl MessagePayload for Encrypted {}
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::Element;
+    use minidom::Element;
 
     #[test]
     fn parse_bundle() {

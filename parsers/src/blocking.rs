@@ -8,8 +8,8 @@ use xso::{AsXml, FromXml};
 
 use crate::iq::{IqGetPayload, IqResultPayload, IqSetPayload};
 use crate::ns;
-use crate::Element;
 use jid::Jid;
+use minidom::Element;
 use xso::error::FromElementError;
 
 /// The element requesting the blocklist, the result iq will contain a

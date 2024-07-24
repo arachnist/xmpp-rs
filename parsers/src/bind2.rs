@@ -6,7 +6,7 @@
 
 use crate::mam;
 use crate::ns;
-use crate::Element;
+use minidom::Element;
 use xso::error::{Error, FromElementError};
 
 /// Represents the `<bind/>` element, as sent by the server in SASL 2 to advertise which features
@@ -180,7 +180,6 @@ impl From<Bound> for Element {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use minidom::Element;
 
     #[cfg(target_pointer_width = "32")]
     #[test]

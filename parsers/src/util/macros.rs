@@ -288,9 +288,9 @@ macro_rules! generate_element_enum {
                 $enum
             ),+
         }
-        impl ::std::convert::TryFrom<crate::Element> for $elem {
+        impl ::std::convert::TryFrom<minidom::Element> for $elem {
             type Error = xso::error::FromElementError;
-            fn try_from(elem: crate::Element) -> Result<$elem, xso::error::FromElementError> {
+            fn try_from(elem: minidom::Element) -> Result<$elem, xso::error::FromElementError> {
                 check_ns_only!(elem, $name, $ns);
                 check_no_children!(elem, $name);
                 check_no_attributes!(elem, $name);
@@ -300,9 +300,9 @@ macro_rules! generate_element_enum {
                 })
             }
         }
-        impl From<$elem> for crate::Element {
-            fn from(elem: $elem) -> crate::Element {
-                crate::Element::builder(
+        impl From<$elem> for minidom::Element {
+            fn from(elem: $elem) -> minidom::Element {
+                minidom::Element::builder(
                     match elem {
                         $($elem::$enum => $enum_name,)+
                     },
@@ -324,9 +324,9 @@ macro_rules! generate_attribute_enum {
                 $enum
             ),+
         }
-        impl ::std::convert::TryFrom<crate::Element> for $elem {
+        impl ::std::convert::TryFrom<minidom::Element> for $elem {
             type Error = xso::error::FromElementError;
-            fn try_from(elem: crate::Element) -> Result<$elem, xso::error::FromElementError> {
+            fn try_from(elem: minidom::Element) -> Result<$elem, xso::error::FromElementError> {
                 check_ns_only!(elem, $name, $ns);
                 check_no_children!(elem, $name);
                 check_no_unknown_attributes!(elem, $name, [$attr]);
@@ -336,9 +336,9 @@ macro_rules! generate_attribute_enum {
                 })
             }
         }
-        impl From<$elem> for crate::Element {
-            fn from(elem: $elem) -> crate::Element {
-                crate::Element::builder($name, crate::ns::$ns)
+        impl From<$elem> for minidom::Element {
+            fn from(elem: $elem) -> minidom::Element {
+                minidom::Element::builder($name, crate::ns::$ns)
                     .attr($attr, match elem {
                          $($elem::$enum => $enum_name,)+
                      })
@@ -467,9 +467,9 @@ macro_rules! generate_elem_id {
         $(#[$meta])*
         #[derive(Debug, Clone, PartialEq, Eq, Hash)]
         pub struct $elem(pub $type);
-        impl ::std::convert::TryFrom<crate::Element> for $elem {
+        impl ::std::convert::TryFrom<minidom::Element> for $elem {
             type Error = xso::error::FromElementError;
-            fn try_from(elem: crate::Element) -> Result<$elem, xso::error::FromElementError> {
+            fn try_from(elem: minidom::Element) -> Result<$elem, xso::error::FromElementError> {
                 check_self!(elem, $name, $ns);
                 check_no_children!(elem, $name);
                 check_no_attributes!(elem, $name);
@@ -477,9 +477,9 @@ macro_rules! generate_elem_id {
                 Ok($elem(elem.text().parse().map_err(xso::error::Error::text_parse_error)?))
             }
         }
-        impl From<$elem> for crate::Element {
-            fn from(elem: $elem) -> crate::Element {
-                crate::Element::builder($name, crate::ns::$ns)
+        impl From<$elem> for minidom::Element {
+            fn from(elem: $elem) -> minidom::Element {
+                minidom::Element::builder($name, crate::ns::$ns)
                     .append(elem.0.to_string())
                     .build()
             }
@@ -637,27 +637,27 @@ macro_rules! finish_parse_elem {
 macro_rules! generate_serialiser {
     ($builder:ident, $parent:ident, $elem:ident, Required, String, ($name:tt, $ns:ident)) => {
         $builder.append(
-            crate::Element::builder($name, crate::ns::$ns)
+            minidom::Element::builder($name, crate::ns::$ns)
                 .append(::minidom::Node::Text($parent.$elem)),
         )
     };
     ($builder:ident, $parent:ident, $elem:ident, Option, String, ($name:tt, $ns:ident)) => {
         $builder.append_all($parent.$elem.map(|elem| {
-            crate::Element::builder($name, crate::ns::$ns).append(::minidom::Node::Text(elem))
+            minidom::Element::builder($name, crate::ns::$ns).append(::minidom::Node::Text(elem))
         }))
     };
     ($builder:ident, $parent:ident, $elem:ident, Option, $constructor:ident, ($name:tt, *)) => {
         $builder.append_all(
             $parent
                 .$elem
-                .map(|elem| ::minidom::Node::Element(crate::Element::from(elem))),
+                .map(|elem| ::minidom::Node::Element(minidom::Element::from(elem))),
         )
     };
     ($builder:ident, $parent:ident, $elem:ident, Option, $constructor:ident, ($name:tt, $ns:ident)) => {
         $builder.append_all(
             $parent
                 .$elem
-                .map(|elem| ::minidom::Node::Element(crate::Element::from(elem))),
+                .map(|elem| ::minidom::Node::Element(minidom::Element::from(elem))),
         )
     };
     ($builder:ident, $parent:ident, $elem:ident, Vec, $constructor:ident, ($name:tt, $ns:ident)) => {
@@ -667,11 +667,11 @@ macro_rules! generate_serialiser {
         $builder.append_all(
             $parent
                 .$elem
-                .then(|| crate::Element::builder($name, crate::ns::$ns)),
+                .then(|| minidom::Element::builder($name, crate::ns::$ns)),
         )
     };
     ($builder:ident, $parent:ident, $elem:ident, $_:ident, $constructor:ident, ($name:tt, $ns:ident)) => {
-        $builder.append(::minidom::Node::Element(crate::Element::from(
+        $builder.append(::minidom::Node::Element(minidom::Element::from(
             $parent.$elem,
         )))
     };
@@ -734,10 +734,10 @@ macro_rules! generate_element {
             }
         }
 
-        impl ::std::convert::TryFrom<crate::Element> for $elem {
+        impl ::std::convert::TryFrom<minidom::Element> for $elem {
             type Error = xso::error::FromElementError;
 
-            fn try_from(mut elem: crate::Element) -> Result<$elem, xso::error::FromElementError> {
+            fn try_from(mut elem: minidom::Element) -> Result<$elem, xso::error::FromElementError> {
                 check_self!(elem, $name, $ns);
                 check_no_unknown_attributes!(elem, $name, [$($attr_name),*]);
                 $(
@@ -790,9 +790,9 @@ macro_rules! generate_element {
             }
         }
 
-        impl From<$elem> for crate::Element {
-            fn from(elem: $elem) -> crate::Element {
-                let mut builder = crate::Element::builder($name, crate::ns::$ns);
+        impl From<$elem> for minidom::Element {
+            fn from(elem: $elem) -> minidom::Element {
+                let mut builder = minidom::Element::builder($name, crate::ns::$ns);
                 $(
                     builder = builder.attr($attr_name, elem.$attr);
                 )*
@@ -827,10 +827,10 @@ macro_rules! assert_size (
 // TODO: move that to src/pubsub/mod.rs, once we figure out how to use macros from there.
 macro_rules! impl_pubsub_item {
     ($item:ident, $ns:ident) => {
-        impl ::std::convert::TryFrom<crate::Element> for $item {
+        impl ::std::convert::TryFrom<minidom::Element> for $item {
             type Error = FromElementError;
 
-            fn try_from(mut elem: crate::Element) -> Result<$item, FromElementError> {
+            fn try_from(mut elem: minidom::Element) -> Result<$item, FromElementError> {
                 check_self!(elem, "item", $ns);
                 check_no_unknown_attributes!(elem, "item", ["id", "publisher"]);
                 let mut payloads = elem.take_contents_as_children().collect::<Vec<_>>();
@@ -846,9 +846,9 @@ macro_rules! impl_pubsub_item {
             }
         }
 
-        impl From<$item> for crate::Element {
-            fn from(item: $item) -> crate::Element {
-                crate::Element::builder("item", ns::$ns)
+        impl From<$item> for minidom::Element {
+            fn from(item: $item) -> minidom::Element {
+                minidom::Element::builder("item", ns::$ns)
                     .attr("id", item.0.id)
                     .attr("publisher", item.0.publisher)
                     .append_all(item.0.payload)

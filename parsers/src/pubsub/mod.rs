@@ -18,7 +18,8 @@ pub use self::event::PubSubEvent;
 pub use self::owner::PubSubOwner;
 pub use self::pubsub::PubSub;
 
-use crate::{Element, Jid};
+use jid::Jid;
+use minidom::Element;
 
 generate_id!(
     /// The name of a PubSub node, used to identify it on a JID.
@@ -105,4 +106,4 @@ impl Item {
 }
 
 /// This trait should be implemented on any element which can be included as a PubSub payload.
-pub trait PubSubPayload: ::std::convert::TryFrom<crate::Element> + Into<crate::Element> {}
+pub trait PubSubPayload: TryFrom<Element> + Into<Element> {}

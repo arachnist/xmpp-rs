@@ -28,7 +28,7 @@ impl MessagePayload for ExplicitMessageEncryption {}
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::Element;
+    use minidom::Element;
     use xso::error::{Error, FromElementError};
 
     #[cfg(target_pointer_width = "32")]

@@ -9,8 +9,8 @@ use xso::{AsXml, FromXml};
 use crate::date::DateTime;
 use crate::iq::{IqGetPayload, IqResultPayload};
 use crate::ns;
-use crate::Element;
 use chrono::FixedOffset;
+use minidom::Element;
 use std::str::FromStr;
 use xso::error::{Error, FromElementError};
 

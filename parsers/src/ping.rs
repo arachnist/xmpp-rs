@@ -21,7 +21,7 @@ impl IqGetPayload for Ping {}
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::Element;
+    use minidom::Element;
     #[cfg(not(feature = "disable-validation"))]
     use xso::error::{Error, FromElementError};
 

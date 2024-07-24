@@ -67,7 +67,7 @@ mod tests {
         pubsub::{Item as PubSubItem, Publish},
         Item, NodeName,
     };
-    use crate::Element;
+    use minidom::Element;
     use std::str::FromStr;
 
     #[test]

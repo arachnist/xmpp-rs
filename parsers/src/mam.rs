@@ -17,7 +17,7 @@ use crate::message::MessagePayload;
 use crate::ns;
 use crate::pubsub::NodeName;
 use crate::rsm::{SetQuery, SetResult};
-use crate::Element;
+use minidom::Element;
 use minidom::Node;
 
 generate_id!(

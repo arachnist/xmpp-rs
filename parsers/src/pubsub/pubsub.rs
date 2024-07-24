@@ -15,8 +15,8 @@ use crate::ns;
 use crate::pubsub::{
     AffiliationAttribute, Item as PubSubItem, NodeName, Subscription, SubscriptionId,
 };
-use crate::Element;
 use jid::Jid;
+use minidom::Element;
 
 // TODO: a better solution would be to split this into a query and a result elements, like for
 // XEP-0030.

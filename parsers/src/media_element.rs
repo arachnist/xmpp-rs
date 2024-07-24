@@ -46,7 +46,7 @@ generate_element!(
 mod tests {
     use super::*;
     use crate::data_forms::DataForm;
-    use crate::Element;
+    use minidom::Element;
     use xso::error::{Error, FromElementError};
 
     #[cfg(target_pointer_width = "32")]

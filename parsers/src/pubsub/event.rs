@@ -9,8 +9,8 @@ use crate::date::DateTime;
 use crate::message::MessagePayload;
 use crate::ns;
 use crate::pubsub::{Item as PubSubItem, ItemId, NodeName, Subscription, SubscriptionId};
-use crate::Element;
 use jid::Jid;
+use minidom::Element;
 use xso::error::{Error, FromElementError};
 
 /// Event wrapper for a PubSub `<item/>`.

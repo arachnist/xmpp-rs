@@ -6,7 +6,7 @@
 
 use crate::jingle::SessionId;
 use crate::ns;
-use crate::Element;
+use minidom::Element;
 use xso::error::{Error, FromElementError};
 
 /// Defines a protocol for broadcasting Jingle requests to all of the clients

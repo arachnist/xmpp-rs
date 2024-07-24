@@ -77,7 +77,7 @@ pub struct Token {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::Element;
+    use minidom::Element;
     use std::str::FromStr;
 
     #[test]

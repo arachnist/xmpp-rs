@@ -66,7 +66,7 @@ impl PubSubPayload for Data {}
 mod tests {
     use super::*;
     use crate::hashes::Algo;
-    use crate::Element;
+    use minidom::Element;
     #[cfg(not(feature = "disable-validation"))]
     use xso::error::{Error, FromElementError};
 

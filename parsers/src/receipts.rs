@@ -33,7 +33,7 @@ impl MessagePayload for Received {}
 mod tests {
     use super::*;
     use crate::ns;
-    use crate::Element;
+    use minidom::Element;
     use xso::error::{Error, FromElementError};
 
     #[cfg(target_pointer_width = "32")]

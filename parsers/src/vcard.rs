@@ -13,11 +13,11 @@
 //! For vCard updates defined in [XEP-0153](https://xmpp.org/extensions/xep-0153.html),
 //! see [`vcard_update`][crate::vcard_update] module.
 
-use xso::{AsXml, FromXml};
+use xso::{error::Error, AsXml, FromXml};
 
 use crate::iq::{IqGetPayload, IqResultPayload, IqSetPayload};
+use crate::ns;
 use crate::util::text_node_codecs::{Codec, WhitespaceAwareBase64};
-use crate::{ns, Error};
 use minidom::Element;
 
 generate_element!(

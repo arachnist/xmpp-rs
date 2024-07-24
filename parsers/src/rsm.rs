@@ -5,7 +5,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 use crate::ns;
-use crate::Element;
+use minidom::Element;
 use xso::error::{Error, FromElementError};
 
 /// Requests paging through a potentially big set of items (represented by an

@@ -120,7 +120,7 @@ impl IqSetPayload for Revoke {}
 mod tests {
     use super::*;
     use crate::ns;
-    use crate::Element;
+    use minidom::Element;
     use std::str::FromStr;
 
     #[cfg(target_pointer_width = "32")]

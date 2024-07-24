@@ -5,8 +5,8 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 use crate::ns;
-use crate::Element;
 use jid::Jid;
+use minidom::Element;
 use std::net::IpAddr;
 use xso::error::{Error, FromElementError};
 

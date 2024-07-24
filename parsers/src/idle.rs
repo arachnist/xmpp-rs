@@ -24,7 +24,7 @@ impl PresencePayload for Idle {}
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::Element;
+    use minidom::Element;
     use std::str::FromStr;
     use xso::error::{Error, FromElementError};
 

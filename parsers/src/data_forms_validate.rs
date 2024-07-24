@@ -8,10 +8,12 @@ use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
 use minidom::{Element, IntoAttributeValue};
-use xso::{error::FromElementError, AsXml, FromXml};
+use xso::{
+    error::{Error, FromElementError},
+    AsXml, FromXml,
+};
 
 use crate::ns::{self, XDATA_VALIDATE};
-use crate::Error;
 
 /// Validation Method
 #[derive(Debug, Clone, PartialEq)]

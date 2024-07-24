@@ -15,7 +15,7 @@
 //! This module exposes the [`Autojoin`][crate::bookmarks2::Autojoin] boolean flag, the [`Conference`][crate::bookmarks2::Conference] chatroom element, and the [BOOKMARKS2][crate::ns::BOOKMARKS2] XML namespace.
 
 use crate::ns;
-use crate::Element;
+use minidom::Element;
 use xso::error::{Error, FromElementError};
 
 generate_attribute!(

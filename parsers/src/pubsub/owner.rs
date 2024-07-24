@@ -11,8 +11,8 @@ use crate::data_forms::DataForm;
 use crate::iq::{IqGetPayload, IqResultPayload, IqSetPayload};
 use crate::ns;
 use crate::pubsub::{AffiliationAttribute, NodeName, Subscription};
-use crate::Element;
 use jid::Jid;
+use minidom::Element;
 use xso::error::{Error, FromElementError};
 
 generate_element!(

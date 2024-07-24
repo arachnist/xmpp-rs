@@ -7,8 +7,8 @@
 
 use crate::ns;
 use crate::stanza_error::StanzaError;
-use crate::Element;
 use jid::Jid;
+use minidom::Element;
 use minidom::IntoAttributeValue;
 use xso::error::{Error, FromElementError};
 

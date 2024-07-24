@@ -11,7 +11,7 @@ use xso::{
 };
 
 use crate::ns;
-use crate::Element;
+use minidom::Element;
 use std::collections::BTreeMap;
 
 generate_attribute!(

@@ -7,7 +7,7 @@
 use xso::{text::EmptyAsNone, AsXml, FromXml};
 
 use crate::ns;
-use crate::Element;
+use minidom::Element;
 use xso::error::{Error, FromElementError};
 
 generate_attribute!(

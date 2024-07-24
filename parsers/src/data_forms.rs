@@ -7,7 +7,7 @@
 use crate::data_forms_validate::Validate;
 use crate::media_element::MediaElement;
 use crate::ns;
-use crate::Element;
+use minidom::Element;
 use xso::error::{Error, FromElementError};
 
 generate_element!(

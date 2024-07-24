@@ -13,8 +13,8 @@ use crate::data_forms::{DataForm, DataFormType};
 use crate::iq::{IqGetPayload, IqResultPayload};
 use crate::ns;
 use crate::rsm::{SetQuery, SetResult};
-use crate::Element;
 use jid::Jid;
+use minidom::Element;
 
 /// Structure representing a `<query xmlns='http://jabber.org/protocol/disco#info'/>` element.
 ///
