@@ -77,15 +77,13 @@ impl Item<'_> {
     }
 
     /// Return an [`rxml::Item`], which borrows data from this item.
-    pub fn as_rxml_item<'x>(&'x self) -> rxml::Item<'x> {
+    pub fn as_rxml_item(&self) -> rxml::Item<'_> {
         match self {
             Self::XmlDeclaration(ref v) => rxml::Item::XmlDeclaration(*v),
-            Self::ElementHeadStart(ref ns, ref name) => rxml::Item::ElementHeadStart(ns, &**name),
-            Self::Attribute(ref ns, ref name, ref value) => {
-                rxml::Item::Attribute(ns, &**name, &**value)
-            }
+            Self::ElementHeadStart(ref ns, ref name) => rxml::Item::ElementHeadStart(ns, name),
+            Self::Attribute(ref ns, ref name, ref value) => rxml::Item::Attribute(ns, name, value),
             Self::ElementHeadEnd => rxml::Item::ElementHeadEnd,
-            Self::Text(ref value) => rxml::Item::Text(&**value),
+            Self::Text(ref value) => rxml::Item::Text(value),
             Self::ElementFoot => rxml::Item::ElementFoot,
         }
     }
@@ -185,7 +183,7 @@ impl<'x, I: Iterator<Item = Result<Item<'x>, crate::error::Error>>> ItemToEvent<
 }
 
 impl<I> ItemToEvent<I> {
-    fn update<'x>(&mut self, item: Item<'x>) -> Result<Option<Event>, crate::error::Error> {
+    fn update(&mut self, item: Item<'_>) -> Result<Option<Event>, crate::error::Error> {
         assert!(self.event_buffer.is_none());
         match item {
             Item::XmlDeclaration(v) => {
@@ -268,9 +266,8 @@ impl<'x, I: Iterator<Item = Result<Item<'x>, crate::error::Error>>> Iterator for
                 Some(Err(e)) => return Some(Err(e)),
                 None => return None,
             };
-            match self.update(item).transpose() {
-                Some(v) => return Some(v),
-                None => (),
+            if let Some(v) = self.update(item).transpose() {
+                return Some(v);
             }
         }
     }

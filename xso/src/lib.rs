@@ -231,7 +231,7 @@ impl AsXmlText for &str {
 
 impl<T: AsXmlText> AsXmlText for Box<T> {
     fn as_xml_text(&self) -> Result<Cow<'_, str>, self::error::Error> {
-        T::as_xml_text(&*self)
+        T::as_xml_text(self)
     }
 }
 
