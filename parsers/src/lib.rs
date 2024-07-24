@@ -4,7 +4,7 @@
 //! minidom [`Element`] and returns a `Result` whose value is `Ok` if the
 //! element parsed correctly, `Err(error::Error)` otherwise.
 //!
-//! The returned structure can be manipuled as any Rust structure, with each
+//! The returned structure can be manipulated as any Rust structure, with each
 //! field being public.  You can also create the same structure manually, with
 //! some having `new()` and `with_*()` helper methods to create them.
 //!

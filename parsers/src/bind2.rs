@@ -132,7 +132,7 @@ impl From<BindQuery> for Element {
 /// requests.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Bound {
-    /// Indicates which messages got missed by this particuliar device, start is the oldest message
+    /// Indicates which messages got missed by this particular device, start is the oldest message
     /// and end is the newest, before this connection.
     pub mam_metadata: Option<mam::MetadataResponse>,
 

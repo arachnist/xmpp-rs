@@ -12,7 +12,8 @@ generate_element!(
     children: [
         /// The associated URL.
         url: Required<String> = ("url", OOB) => String,
-        /// An optionnal description of the out of band data.
+
+        /// An optional description of the out of band data.
         desc: Option<String> = ("desc", OOB) => String,
     ]
 );
