@@ -1,4 +1,4 @@
-use xmpp_parsers::{ns, Jid};
+use xmpp_parsers::{jid::Jid, ns};
 
 use crate::connect::ServerConnector;
 use crate::{xmpp_stream::XMPPStream, Error};

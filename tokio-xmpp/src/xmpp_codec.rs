@@ -4,6 +4,7 @@ use crate::Error;
 use bytes::{BufMut, BytesMut};
 use log::debug;
 use minidom::tree_builder::TreeBuilder;
+use minidom::Element;
 use rxml::{Parse, RawParser};
 use std::collections::HashMap;
 use std::fmt::Write;
@@ -11,7 +12,6 @@ use std::io;
 #[cfg(feature = "syntax-highlighting")]
 use std::sync::OnceLock;
 use tokio_util::codec::{Decoder, Encoder};
-use xmpp_parsers::Element;
 
 #[cfg(feature = "syntax-highlighting")]
 static PS: OnceLock<syntect::parsing::SyntaxSet> = OnceLock::new();

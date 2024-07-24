@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use xmpp_parsers::Jid;
+use xmpp_parsers::jid::Jid;
 
 use crate::{AsyncClient, AsyncConfig, Error, SimpleClient};
 

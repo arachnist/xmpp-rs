@@ -1,5 +1,6 @@
 use super::Error;
-use xmpp_parsers::{Element, Jid};
+use minidom::Element;
+use xmpp_parsers::jid::Jid;
 
 /// High-level event on the Stream implemented by Client and Component
 #[derive(Debug)]

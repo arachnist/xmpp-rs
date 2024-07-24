@@ -1,5 +1,5 @@
 use sasl::common::Credentials;
-use xmpp_parsers::{ns, Jid};
+use xmpp_parsers::{jid::Jid, ns};
 
 use crate::client::auth::auth;
 use crate::client::bind::bind;

@@ -1,8 +1,9 @@
 use futures::{sink::SinkExt, Sink, Stream};
+use minidom::Element;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 use tokio_stream::StreamExt;
-use xmpp_parsers::{ns, Element, Jid};
+use xmpp_parsers::{jid::Jid, ns};
 
 use crate::connect::ServerConnector;
 use crate::stream_features::StreamFeatures;

@@ -38,7 +38,7 @@ impl ServerConnector for TcpServerConnector {
     type Error = Error;
     async fn connect(
         &self,
-        jid: &xmpp_parsers::Jid,
+        jid: &xmpp_parsers::jid::Jid,
         ns: &str,
     ) -> Result<XMPPStream<Self::Stream>, Self::Error> {
         let stream = TcpStream::connect(&*self.0)

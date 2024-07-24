@@ -1,4 +1,5 @@
 use futures::stream::StreamExt;
+use minidom::Element;
 use std::env::args;
 use std::fs::{create_dir_all, File};
 use std::io::{self, Write};
@@ -11,6 +12,7 @@ use xmpp_parsers::{
     disco::{DiscoInfoQuery, DiscoInfoResult, Feature, Identity},
     hashes::Algo,
     iq::{Iq, IqType},
+    jid::{BareJid, Jid},
     message::Message,
     ns,
     presence::{Presence, Type as PresenceType},
@@ -20,7 +22,6 @@ use xmpp_parsers::{
         NodeName,
     },
     stanza_error::{DefinedCondition, ErrorType, StanzaError},
-    BareJid, Element, Jid,
 };
 
 #[tokio::main]

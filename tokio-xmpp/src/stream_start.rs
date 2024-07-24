@@ -1,7 +1,8 @@
 use futures::{sink::SinkExt, stream::StreamExt};
+use minidom::Element;
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio_util::codec::Framed;
-use xmpp_parsers::{ns, Element, Jid};
+use xmpp_parsers::{jid::Jid, ns};
 
 use crate::xmpp_codec::{Packet, XmppCodec};
 use crate::xmpp_stream::XMPPStream;

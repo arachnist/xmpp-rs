@@ -43,6 +43,6 @@ mod error;
 pub use crate::error::{AuthError, Error, ParseError, ProtocolError};
 
 // Re-exports
-pub use minidom::Element;
+pub use minidom;
 pub use xmpp_parsers as parsers;
-pub use xmpp_parsers::{BareJid, FullJid, Jid, JidParseError};
+pub use xmpp_parsers::jid;

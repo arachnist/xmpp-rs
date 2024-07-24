@@ -2,12 +2,13 @@
 
 use futures::sink::Send;
 use futures::{sink::SinkExt, task::Poll, Sink, Stream};
+use minidom::Element;
 use rand::{thread_rng, Rng};
 use std::pin::Pin;
 use std::task::Context;
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio_util::codec::Framed;
-use xmpp_parsers::{Element, Jid};
+use xmpp_parsers::jid::Jid;
 
 use crate::stream_features::StreamFeatures;
 use crate::stream_start;

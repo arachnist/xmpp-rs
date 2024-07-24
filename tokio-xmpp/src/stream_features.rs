@@ -1,7 +1,8 @@
 //! Contains wrapper for `<stream:features/>`
 
 use crate::error::AuthError;
-use xmpp_parsers::{ns, Element};
+use minidom::Element;
+use xmpp_parsers::ns;
 
 /// Wraps `<stream:features/>`, usually the very first nonza of an
 /// XMPPStream.

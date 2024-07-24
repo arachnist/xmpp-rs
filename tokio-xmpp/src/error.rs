@@ -6,7 +6,7 @@ use std::io::Error as IoError;
 use std::str::Utf8Error;
 
 use xmpp_parsers::sasl::DefinedCondition as SaslDefinedCondition;
-use xmpp_parsers::{Error as ParsersError, JidParseError};
+use xmpp_parsers::{jid::Error as JidParseError, Error as ParsersError};
 
 use crate::connect::ServerConnectorError;
 

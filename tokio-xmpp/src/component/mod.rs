@@ -2,10 +2,11 @@
 //! XMPP server under a JID consisting of just a domain name. They are
 //! allowed to use any user and resource identifiers in their stanzas.
 use futures::{sink::SinkExt, task::Poll, Sink, Stream};
+use minidom::Element;
 use std::pin::Pin;
 use std::str::FromStr;
 use std::task::Context;
-use xmpp_parsers::{ns, Element, Jid};
+use xmpp_parsers::{jid::Jid, ns};
 
 use self::connect::component_login;
 

@@ -1,9 +1,10 @@
 use futures::{sink::SinkExt, task::Poll, Future, Sink, Stream};
+use minidom::Element;
 use std::mem::replace;
 use std::pin::Pin;
 use std::task::Context;
 use tokio::task::JoinHandle;
-use xmpp_parsers::{ns, Element, Jid};
+use xmpp_parsers::{jid::Jid, ns};
 
 use super::connect::client_login;
 use crate::connect::{AsyncReadAndWrite, ServerConnector};

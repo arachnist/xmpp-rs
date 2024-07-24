@@ -18,12 +18,13 @@ use {
     tokio_native_tls::{TlsConnector, TlsStream},
 };
 
+use minidom::Element;
 use sasl::common::ChannelBinding;
 use tokio::{
     io::{AsyncRead, AsyncWrite},
     net::TcpStream,
 };
-use xmpp_parsers::{ns, Element, Jid};
+use xmpp_parsers::{jid::Jid, ns};
 
 use crate::{connect::ServerConnector, xmpp_codec::Packet, AsyncClient, SimpleClient};
 use crate::{connect::ServerConnectorError, xmpp_stream::XMPPStream};

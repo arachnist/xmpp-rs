@@ -3,8 +3,8 @@ use std::io::{stdin, Read};
 use std::process::exit;
 use std::str::FromStr;
 use tokio_xmpp::SimpleClient as Client;
+use xmpp_parsers::jid::Jid;
 use xmpp_parsers::message::{Body, Message};
-use xmpp_parsers::Jid;
 
 #[tokio::main]
 async fn main() {

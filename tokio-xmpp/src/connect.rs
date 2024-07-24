@@ -2,7 +2,7 @@
 
 use sasl::common::ChannelBinding;
 use tokio::io::{AsyncRead, AsyncWrite};
-use xmpp_parsers::Jid;
+use xmpp_parsers::jid::Jid;
 
 use crate::xmpp_stream::XMPPStream;
 
