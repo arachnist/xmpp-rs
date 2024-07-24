@@ -292,3 +292,31 @@ where
             .map(Option::flatten)
     }
 }
+
+/// Text codec for colon-separated bytes of uppercase hexadecimal.
+pub struct ColonSeparatedHex;
+
+impl TextCodec<Vec<u8>> for ColonSeparatedHex {
+    fn decode(s: String) -> Result<Vec<u8>, Error> {
+        assert_eq!((s.len() + 1) % 3, 0);
+        let mut bytes = Vec::with_capacity((s.len() + 1) / 3);
+        for i in 0..(1 + s.len()) / 3 {
+            let byte =
+                u8::from_str_radix(&s[3 * i..3 * i + 2], 16).map_err(Error::text_parse_error)?;
+            if 3 * i + 2 < s.len() {
+                assert_eq!(&s[3 * i + 2..3 * i + 3], ":");
+            }
+            bytes.push(byte);
+        }
+        Ok(bytes)
+    }
+
+    fn encode(decoded: &Vec<u8>) -> Result<Option<Cow<'_, str>>, Error> {
+        // TODO: Super inefficient!
+        let mut bytes = Vec::with_capacity(decoded.len());
+        for byte in decoded {
+            bytes.push(format!("{:02X}", byte));
+        }
+        Ok(Some(Cow::Owned(bytes.join(":"))))
+    }
+}
