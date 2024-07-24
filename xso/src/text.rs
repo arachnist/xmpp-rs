@@ -171,6 +171,27 @@ impl TextCodec<Option<String>> for EmptyAsNone {
     }
 }
 
+/// Text codec which returns None instead of the empty string.
+pub struct EmptyAsError;
+
+impl TextCodec<String> for EmptyAsError {
+    fn decode(s: String) -> Result<String, Error> {
+        if s.is_empty() {
+            Err(Error::Other("Empty text node."))
+        } else {
+            Ok(s)
+        }
+    }
+
+    fn encode(value: &String) -> Result<Option<Cow<'_, str>>, Error> {
+        if value.is_empty() {
+            Err(Error::Other("Empty text node."))
+        } else {
+            Ok(Some(Cow::Borrowed(value.as_str())))
+        }
+    }
+}
+
 /// Trait for preprocessing text data from XML.
 ///
 /// This may be used by codecs to allow to customize some of their behaviour.
