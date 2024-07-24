@@ -4,11 +4,15 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use xso::{
+    error::{Error, FromElementError},
+    AsXml, FromXml,
+};
+
 use crate::ns;
 use jid::Jid;
 use minidom::Element;
 use std::net::IpAddr;
-use xso::error::{Error, FromElementError};
 
 generate_attribute!(
     /// The type of the connection being proposed by this candidate.
@@ -49,30 +53,35 @@ generate_id!(
     StreamId
 );
 
-generate_element!(
-    /// A candidate for a connection.
-    Candidate, "candidate", JINGLE_S5B,
-    attributes: [
-        /// The identifier for this candidate.
-        cid: Required<CandidateId> = "cid",
+/// A candidate for a connection.
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::JINGLE_S5B, name = "candidate")]
+pub struct Candidate {
+    /// The identifier for this candidate.
+    #[xml(attribute)]
+    cid: CandidateId,
 
-        /// The host to connect to.
-        host: Required<IpAddr> = "host",
+    /// The host to connect to.
+    #[xml(attribute)]
+    host: IpAddr,
 
-        /// The JID to request at the given end.
-        jid: Required<Jid> = "jid",
+    /// The JID to request at the given end.
+    #[xml(attribute)]
+    jid: Jid,
 
-        /// The port to connect to.
-        port: Option<u16> = "port",
+    /// The port to connect to.
+    #[xml(attribute(default))]
+    port: Option<u16>,
 
-        /// The priority of this candidate, computed using this formula:
-        /// priority = (2^16)*(type preference) + (local preference)
-        priority: Required<u32> = "priority",
+    /// The priority of this candidate, computed using this formula:
+    /// priority = (2^16)*(type preference) + (local preference)
+    #[xml(attribute)]
+    priority: u32,
 
-        /// The type of the connection being proposed by this candidate.
-        type_: Default<Type> = "type",
-    ]
-);
+    /// The type of the connection being proposed by this candidate.
+    #[xml(attribute(default, name = "type"))]
+    type_: Type,
+}
 
 impl Candidate {
     /// Creates a new candidate with the given parameters.
