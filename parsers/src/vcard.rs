@@ -13,11 +13,14 @@
 //! For vCard updates defined in [XEP-0153](https://xmpp.org/extensions/xep-0153.html),
 //! see [`vcard_update`][crate::vcard_update] module.
 
-use xso::{error::Error, AsXml, FromXml};
+use xso::{
+    error::Error,
+    text::{Base64, StripWhitespace},
+    AsXml, FromXml,
+};
 
 use crate::iq::{IqGetPayload, IqResultPayload, IqSetPayload};
 use crate::ns;
-use crate::util::text_node_codecs::{Codec, WhitespaceAwareBase64};
 use minidom::Element;
 
 generate_element!(
@@ -41,14 +44,14 @@ pub struct Type {
     pub data: String,
 }
 
-generate_element!(
-    /// The binary data of the photo.
-    Binval, "BINVAL", VCARD,
-    text: (
-        /// The actual data.
-        data: WhitespaceAwareBase64
-    )
-);
+/// The binary data of the photo.
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::VCARD, name = "BINVAL")]
+pub struct Binval {
+    /// The actual data.
+    #[xml(text(codec = Base64<StripWhitespace>))]
+    pub data: Vec<u8>,
+}
 
 /// A `<vCard>` element; only the `<PHOTO>` element is supported for this legacy vCard ; the rest is ignored.
 pub struct VCard {
