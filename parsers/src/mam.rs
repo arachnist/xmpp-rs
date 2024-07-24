@@ -53,7 +53,7 @@ impl TryFrom<Element> for Query {
 
         let mut form = None;
         let mut set = None;
-        let mut flip_page = None;
+        let mut flip_page = false;
         for child in elem.children() {
             if child.is("x", ns::DATA_FORMS) {
                 if form.is_some() {
@@ -75,13 +75,13 @@ impl TryFrom<Element> for Query {
                 continue;
             }
             if child.is("flip-page", ns::MAM) {
-                if flip_page.is_some() {
+                if flip_page {
                     return Err(Error::Other(
                         "Element query must not have more than one flip-page child.",
                     )
                     .into());
                 }
-                flip_page = Some(true);
+                flip_page = true;
                 continue;
             }
             return Err(Error::Other("Unknown child in query element.").into());
@@ -97,7 +97,7 @@ impl TryFrom<Element> for Query {
             },
             form,
             set,
-            flip_page: flip_page.is_some(),
+            flip_page,
         })
     }
 }
