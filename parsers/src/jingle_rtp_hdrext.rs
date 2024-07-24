@@ -4,6 +4,10 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use xso::{AsXml, FromXml};
+
+use crate::ns;
+
 generate_attribute!(
     /// Which party is allowed to send the negotiated RTP Header Extensions.
     Senders, "senders", {
@@ -18,22 +22,24 @@ generate_attribute!(
     }, Default = Both
 );
 
-generate_element!(
-    /// Header extensions to be used in a RTP description.
-    RtpHdrext, "rtp-hdrext", JINGLE_RTP_HDREXT,
-    attributes: [
-        /// The ID of the extensions.  The allowed values are only in the 1-256, 4096-4351 ranges,
-        /// this isn’t enforced by xmpp-parsers yet!
-        // TODO: make it so.
-        id: Required<u16> = "id",
+/// Header extensions to be used in a RTP description.
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::JINGLE_RTP_HDREXT, name = "rtp-hdrext")]
+pub struct RtpHdrext {
+    /// The ID of the extensions.  The allowed values are only in the 1-256, 4096-4351 ranges,
+    /// this isn’t enforced by xmpp-parsers yet!
+    // TODO: make it so.
+    #[xml(attribute)]
+    pub id: u16,
 
-        /// The URI that defines the extension.
-        uri: Required<String> = "uri",
+    /// The URI that defines the extension.
+    #[xml(attribute)]
+    pub uri: String,
 
-        /// Which party is allowed to send the negotiated RTP Header Extensions.
-        senders: Default<Senders> = "senders",
-    ]
-);
+    /// Which party is allowed to send the negotiated RTP Header Extensions.
+    #[xml(attribute(default))]
+    pub senders: Senders,
+}
 
 impl RtpHdrext {
     /// Create a new RTP header extension element.
