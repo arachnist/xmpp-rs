@@ -12,13 +12,13 @@ use tokio_xmpp::connect::ServerConnector;
 use tokio_xmpp::parsers::{
     avatar::{Data, Metadata},
     iq::Iq,
+    jid::Jid,
     ns,
     pubsub::{
         event::Item,
         pubsub::{Items, PubSub},
         NodeName,
     },
-    Jid,
 };
 
 pub(crate) async fn handle_metadata_pubsub_event<C: ServerConnector>(

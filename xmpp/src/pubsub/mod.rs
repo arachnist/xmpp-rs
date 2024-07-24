@@ -9,12 +9,13 @@ use crate::Event;
 use std::str::FromStr;
 use tokio_xmpp::{
     connect::ServerConnector,
+    jid::{BareJid, Jid},
+    minidom::Element,
     parsers::{
         bookmarks2::{self, Autojoin},
         ns,
         pubsub::event::PubSubEvent,
         pubsub::pubsub::PubSub,
-        BareJid, Element, Jid,
     },
 };
 

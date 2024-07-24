@@ -6,8 +6,8 @@
 
 use tokio_xmpp::connect::ServerConnector;
 use tokio_xmpp::{
+    jid::Jid,
     parsers::message::{Body, Message, MessageType},
-    Jid,
 };
 
 use crate::Agent;

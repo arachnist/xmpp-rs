@@ -7,11 +7,12 @@
 use std::sync::{Arc, RwLock};
 use tokio_xmpp::connect::ServerConnector;
 use tokio_xmpp::{
+    jid::{BareJid, Jid},
     parsers::{
         disco::{DiscoInfoResult, Feature, Identity},
         ns,
     },
-    AsyncClient as TokioXmppClient, AsyncConfig, BareJid, Jid,
+    AsyncClient as TokioXmppClient, AsyncConfig,
 };
 
 use crate::{Agent, ClientFeature};

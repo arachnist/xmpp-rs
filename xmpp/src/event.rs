@@ -4,9 +4,10 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use tokio_xmpp::jid::BareJid;
 #[cfg(feature = "avatars")]
-use tokio_xmpp::parsers::Jid;
-use tokio_xmpp::parsers::{bookmarks2, message::Body, roster::Item as RosterItem, BareJid};
+use tokio_xmpp::jid::Jid;
+use tokio_xmpp::parsers::{bookmarks2, message::Body, roster::Item as RosterItem};
 
 use crate::{delay::StanzaTimeInfo, Error, Id, RoomNick};
 

@@ -6,8 +6,8 @@
 
 use chrono::{DateTime, Utc};
 use tokio_xmpp::{
+    jid::Jid,
     parsers::{delay::Delay, message::Message, ns},
-    Jid,
 };
 
 /// Time information associated with a stanza.

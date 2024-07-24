@@ -6,7 +6,8 @@
 
 use std::env::args;
 use std::str::FromStr;
-use tokio_xmpp::parsers::{message::MessageType, BareJid, Jid};
+use tokio_xmpp::jid::{BareJid, Jid};
+use tokio_xmpp::parsers::message::MessageType;
 use xmpp::{ClientBuilder, ClientFeature, ClientType, Event};
 
 #[tokio::main]

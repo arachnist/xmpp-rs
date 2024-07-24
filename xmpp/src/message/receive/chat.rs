@@ -6,8 +6,8 @@
 
 use tokio_xmpp::connect::ServerConnector;
 use tokio_xmpp::{
+    jid::Jid,
     parsers::{message::Message, muc::user::MucUser},
-    Jid,
 };
 
 use crate::{delay::StanzaTimeInfo, Agent, Event};

@@ -6,6 +6,7 @@
 
 use tokio_xmpp::connect::ServerConnector;
 use tokio_xmpp::{
+    jid::Jid,
     parsers::{
         bookmarks,
         disco::DiscoInfoResult,
@@ -14,7 +15,6 @@ use tokio_xmpp::{
         private::Query as PrivateXMLQuery,
         pubsub::pubsub::{Items, PubSub},
     },
-    Jid,
 };
 
 use crate::Agent;

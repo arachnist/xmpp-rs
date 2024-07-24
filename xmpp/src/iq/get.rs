@@ -6,13 +6,14 @@
 
 use tokio_xmpp::connect::ServerConnector;
 use tokio_xmpp::{
+    jid::Jid,
+    minidom::Element,
     parsers::{
         disco::DiscoInfoQuery,
         iq::Iq,
         ns,
         stanza_error::{DefinedCondition, ErrorType, StanzaError},
     },
-    Element, Jid,
 };
 
 use crate::{Agent, Event};

@@ -5,7 +5,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 use tokio_xmpp::connect::ServerConnector;
-use tokio_xmpp::{parsers::message::Message, Jid};
+use tokio_xmpp::{jid::Jid, parsers::message::Message};
 
 use crate::{delay::StanzaTimeInfo, Agent, Event};
 

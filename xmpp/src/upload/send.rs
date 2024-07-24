@@ -8,8 +8,8 @@ use std::path::Path;
 use tokio::fs::File;
 use tokio_xmpp::connect::ServerConnector;
 use tokio_xmpp::{
+    jid::Jid,
     parsers::{http_upload::SlotRequest, iq::Iq},
-    Jid,
 };
 
 use crate::Agent;

@@ -6,8 +6,9 @@
 
 use tokio_xmpp::connect::ServerConnector;
 use tokio_xmpp::{
+    jid::Jid,
+    minidom::Element,
     parsers::{disco::DiscoInfoResult, ns, private::Query as PrivateXMLQuery, roster::Roster},
-    Element, Jid,
 };
 
 use crate::{disco, pubsub, upload, Agent, Event};

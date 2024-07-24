@@ -6,8 +6,9 @@
 
 #![deny(bare_trait_objects)]
 
+pub use tokio_xmpp::jid;
+pub use tokio_xmpp::minidom;
 pub use tokio_xmpp::parsers;
-pub use tokio_xmpp::{BareJid, Element, FullJid, Jid};
 #[macro_use]
 extern crate log;
 
@@ -37,7 +38,8 @@ pub type RoomNick = String;
 
 #[cfg(all(test, any(feature = "starttls-rust", feature = "starttls-native")))]
 mod tests {
-    use super::{BareJid, ClientBuilder, ClientFeature, ClientType, Event};
+    use super::jid::BareJid;
+    use super::{ClientBuilder, ClientFeature, ClientType, Event};
     use std::str::FromStr;
     use tokio_xmpp::AsyncClient as TokioXmppClient;
 

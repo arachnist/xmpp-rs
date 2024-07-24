@@ -9,7 +9,11 @@ use std::sync::{Arc, RwLock};
 use tokio_xmpp::connect::ServerConnector;
 pub use tokio_xmpp::parsers;
 use tokio_xmpp::parsers::{disco::DiscoInfoResult, message::MessageType};
-pub use tokio_xmpp::{AsyncClient as TokioXmppClient, BareJid, Element, FullJid, Jid};
+pub use tokio_xmpp::{
+    jid::{BareJid, FullJid, Jid},
+    minidom::Element,
+    AsyncClient as TokioXmppClient,
+};
 
 use crate::{event_loop, message, muc, upload, Error, Event, RoomNick};
 

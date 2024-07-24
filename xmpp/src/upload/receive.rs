@@ -12,8 +12,9 @@ use tokio::fs::File;
 use tokio_util::codec::{BytesCodec, FramedRead};
 use tokio_xmpp::connect::ServerConnector;
 use tokio_xmpp::{
+    jid::Jid,
+    minidom::Element,
     parsers::http_upload::{Header as HttpUploadHeader, SlotResult},
-    Element, Jid,
 };
 
 use crate::{Agent, Event};

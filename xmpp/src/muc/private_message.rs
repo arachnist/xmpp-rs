@@ -6,11 +6,11 @@
 
 use tokio_xmpp::connect::ServerConnector;
 use tokio_xmpp::{
+    jid::{BareJid, Jid},
     parsers::{
         message::{Body, Message, MessageType},
         muc::user::MucUser,
     },
-    BareJid, Jid,
 };
 
 use crate::{Agent, RoomNick};
