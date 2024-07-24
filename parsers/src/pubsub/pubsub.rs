@@ -64,17 +64,17 @@ pub struct Create {
     pub node: Option<NodeName>,
 }
 
-generate_element!(
-    /// Request for a default node configuration.
-    Default, "default", PUBSUB,
-    attributes: [
-        /// The node targeted by this request, otherwise the entire service.
-        node: Option<NodeName> = "node",
-
-        // TODO: do we really want to support collection nodes?
-        // type: Option<String> = "type",
-    ]
-);
+/// Request for a default node configuration.
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::PUBSUB, name = "default")]
+pub struct Default {
+    /// The node targeted by this request, otherwise the entire service.
+    #[xml(attribute(default))]
+    pub node: Option<NodeName>,
+    // TODO: do we really want to support collection nodes?
+    // #[xml(attribute(default, name = "type"))]
+    // type_: Option<String>,
+}
 
 generate_element!(
     /// A request for a list of items.
