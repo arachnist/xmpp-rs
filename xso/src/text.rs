@@ -28,6 +28,7 @@ macro_rules! convert_via_fromstr_and_display {
                 #[cfg_attr(docsrs, doc(cfg(feature = $feature)))]
             )?
             impl FromXmlText for $t {
+                #[doc = concat!("Parse [`", stringify!($t), "`] from XML text via [`FromStr`][`core::str::FromStr`].")]
                 fn from_xml_text(s: String) -> Result<Self, Error> {
                     s.parse().map_err(Error::text_parse_error)
                 }
@@ -38,6 +39,7 @@ macro_rules! convert_via_fromstr_and_display {
                 #[cfg_attr(docsrs, doc(cfg(feature = $feature)))]
             )?
             impl AsXmlText for $t {
+                #[doc = concat!("Convert [`", stringify!($t), "`] to XML text via [`Display`][`core::fmt::Display`].\n\nThis implementation never fails.")]
                 fn as_xml_text(&self) -> Result<Cow<'_, str>, Error> {
                     Ok(Cow::Owned(self.to_string()))
                 }
@@ -48,6 +50,11 @@ macro_rules! convert_via_fromstr_and_display {
 
 /// This provides an implementation compliant with xsd::bool.
 impl FromXmlText for bool {
+    /// Parse a boolean from XML text.
+    ///
+    /// The values `"1"` and `"true"` are considered true. The values `"0"`
+    /// and `"false"` are considered `false`. Any other value is invalid and
+    /// will return an error.
     fn from_xml_text(s: String) -> Result<Self, Error> {
         match s.as_str() {
             "1" => "true",
@@ -61,6 +68,10 @@ impl FromXmlText for bool {
 
 /// This provides an implementation compliant with xsd::bool.
 impl AsXmlText for bool {
+    /// Convert a boolean to XML text.
+    ///
+    /// `true` is converted to `"true"` and `false` is converted to `"false"`.
+    /// This implementation never fails.
     fn as_xml_text(&self) -> Result<Cow<'_, str>, Error> {
         match self {
             true => Ok(Cow::Borrowed("true")),

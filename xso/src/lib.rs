@@ -164,24 +164,28 @@ pub trait FromXmlText: Sized {
 }
 
 impl FromXmlText for String {
+    /// Return the string unchanged.
     fn from_xml_text(data: String) -> Result<Self, self::error::Error> {
         Ok(data)
     }
 }
 
 impl<T: FromXmlText, B: ToOwned<Owned = T>> FromXmlText for Cow<'_, B> {
+    /// Return a [`Cow::Owned`] containing the parsed value.
     fn from_xml_text(data: String) -> Result<Self, self::error::Error> {
         Ok(Cow::Owned(T::from_xml_text(data)?))
     }
 }
 
 impl<T: FromXmlText> FromXmlText for Option<T> {
+    /// Return a [`Some`] containing the parsed value.
     fn from_xml_text(data: String) -> Result<Self, self::error::Error> {
         Ok(Some(T::from_xml_text(data)?))
     }
 }
 
 impl<T: FromXmlText> FromXmlText for Box<T> {
+    /// Return a [`Box`] containing the parsed value.
     fn from_xml_text(data: String) -> Result<Self, self::error::Error> {
         Ok(Box::new(T::from_xml_text(data)?))
     }
@@ -218,26 +222,37 @@ pub trait AsXmlText {
 }
 
 impl AsXmlText for String {
+    /// Return the borrowed string contents.
     fn as_xml_text(&self) -> Result<Cow<'_, str>, self::error::Error> {
         Ok(Cow::Borrowed(self.as_str()))
     }
 }
 
-impl AsXmlText for &str {
+impl AsXmlText for str {
+    /// Return the borrowed string contents.
     fn as_xml_text(&self) -> Result<Cow<'_, str>, self::error::Error> {
-        Ok(Cow::Borrowed(&**self))
+        Ok(Cow::Borrowed(&*self))
     }
 }
 
 impl<T: AsXmlText> AsXmlText for Box<T> {
+    /// Return the borrowed [`Box`] contents.
     fn as_xml_text(&self) -> Result<Cow<'_, str>, self::error::Error> {
         T::as_xml_text(self)
     }
 }
 
 impl<B: AsXmlText + ToOwned> AsXmlText for Cow<'_, B> {
+    /// Return the borrowed [`Cow`] contents.
     fn as_xml_text(&self) -> Result<Cow<'_, str>, self::error::Error> {
         B::as_xml_text(self.as_ref())
+    }
+}
+
+impl<T: AsXmlText> AsXmlText for &T {
+    /// Delegate to the `AsXmlText` implementation on `T`.
+    fn as_xml_text(&self) -> Result<Cow<'_, str>, self::error::Error> {
+        T::as_xml_text(*self)
     }
 }
 
