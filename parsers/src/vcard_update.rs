@@ -12,7 +12,9 @@
 //! For [XEP-0054](https://xmpp.org/extensions/xep-0054.html) vCard support,
 //! see [`vcard`][crate::vcard] module.
 
-use crate::util::text_node_codecs::{Codec, FixedHex, OptionalCodec};
+use xso::{text::FixedHex, AsXml, FromXml};
+
+use crate::ns;
 
 generate_element!(
     /// The presence payload for an avatar VCard update
@@ -23,14 +25,14 @@ generate_element!(
     ]
 );
 
-generate_element!(
-    /// The photo element containing the avatar metadata
-    Photo, "photo", VCARD_UPDATE,
-    text: (
-        /// The SHA1 hash of the avatar. Empty when there is no photo.
-        data: OptionalCodec<FixedHex<20>>
-    )
-);
+/// The photo element containing the avatar metadata
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::VCARD_UPDATE, name = "photo")]
+pub struct Photo {
+    /// The SHA1 hash of the avatar. Empty when there is no photo.
+    #[xml(text(codec = FixedHex<20>))]
+    pub data: Option<[u8; 20]>,
+}
 
 #[cfg(test)]
 mod tests {
