@@ -15,17 +15,13 @@ use crate::{error::Error, AsXmlText, FromXmlText};
 
 #[cfg(feature = "base64")]
 use base64::engine::{general_purpose::STANDARD as StandardBase64Engine, Engine as _};
-#[cfg(feature = "jid")]
-use jid;
-#[cfg(feature = "uuid")]
-use uuid;
 
 macro_rules! convert_via_fromstr_and_display {
-    ($($(#[cfg(feature = $feature:literal)])?$t:ty,)+) => {
+    ($($(#[cfg $cfg:tt])?$t:ty,)+) => {
         $(
             $(
-                #[cfg(feature = $feature)]
-                #[cfg_attr(docsrs, doc(cfg(feature = $feature)))]
+                #[cfg $cfg]
+                #[cfg_attr(docsrs, doc(cfg $cfg))]
             )?
             impl FromXmlText for $t {
                 #[doc = concat!("Parse [`", stringify!($t), "`] from XML text via [`FromStr`][`core::str::FromStr`].")]
@@ -35,8 +31,8 @@ macro_rules! convert_via_fromstr_and_display {
             }
 
             $(
-                #[cfg(feature = $feature)]
-                #[cfg_attr(docsrs, doc(cfg(feature = $feature)))]
+                #[cfg $cfg]
+                #[cfg_attr(docsrs, doc(cfg $cfg))]
             )?
             impl AsXmlText for $t {
                 #[doc = concat!("Convert [`", stringify!($t), "`] to XML text via [`Display`][`core::fmt::Display`].\n\nThis implementation never fails.")]
