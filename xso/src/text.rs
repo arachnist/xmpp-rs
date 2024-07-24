@@ -243,3 +243,52 @@ impl<Filter: TextFilter> TextCodec<Option<Vec<u8>>> for Base64<Filter> {
             .map(Option::flatten)
     }
 }
+
+/// Text codec transforming text to binary using hexadecimal nibbles.
+///
+/// The length must be known at compile-time.
+pub struct FixedHex<const N: usize>;
+
+impl<const N: usize> TextCodec<[u8; N]> for FixedHex<N> {
+    fn decode(s: String) -> Result<[u8; N], Error> {
+        if s.len() != 2 * N {
+            return Err(Error::Other("Invalid length"));
+        }
+
+        let mut bytes = [0u8; N];
+        for i in 0..N {
+            bytes[i] =
+                u8::from_str_radix(&s[2 * i..2 * i + 2], 16).map_err(Error::text_parse_error)?;
+        }
+
+        Ok(bytes)
+    }
+
+    fn encode(value: &[u8; N]) -> Result<Option<Cow<'_, str>>, Error> {
+        let mut bytes = String::with_capacity(N * 2);
+        for byte in value {
+            bytes.extend(format!("{:02x}", byte).chars());
+        }
+        Ok(Some(Cow::Owned(bytes)))
+    }
+}
+
+impl<T, const N: usize> TextCodec<Option<T>> for FixedHex<N>
+where
+    FixedHex<N>: TextCodec<T>,
+{
+    fn decode(s: String) -> Result<Option<T>, Error> {
+        if s.is_empty() {
+            return Ok(None);
+        }
+        Ok(Some(Self::decode(s)?))
+    }
+
+    fn encode(decoded: &Option<T>) -> Result<Option<Cow<'_, str>>, Error> {
+        decoded
+            .as_ref()
+            .map(Self::encode)
+            .transpose()
+            .map(Option::flatten)
+    }
+}
