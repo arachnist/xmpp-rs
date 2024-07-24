@@ -24,7 +24,9 @@ XXXX-YY-ZZ RELEASER <admin@example.com>
         nothing so far uses it for anything but this message.  We can always
         change it again once any other specification allows e.g. presences or
         iqs.
-      - Module `jingle_thumnails` renamed to `jingle_thumbnails`.
+      - Module `jingle_thumnails` has been renamed to `jingle_thumbnails`.  It
+        now respect the latest version of the XEP, with the width and height
+        being limited to 0..65535 and the media-type being optional (!475).
       - The bookmarks2 Conference `extensions` child is now an
         `Option<Extensions>` instead of a `Vec<Element>`, to distinguish
         between it being absent or empty (!472).
