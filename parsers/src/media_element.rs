@@ -4,26 +4,28 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use crate::util::text_node_codecs::{Codec, Text, Trimmed};
+use xso::{text::EmptyAsError, AsXml, FromXml};
 
-generate_element!(
-    /// Represents an URI used in a media element.
-    URI, "uri", MEDIA_ELEMENT,
-    attributes: [
-        /// The MIME type of the URI referenced.
-        ///
-        /// See the [IANA MIME Media Types Registry][1] for a list of
-        /// registered types, but unregistered or yet-to-be-registered are
-        /// accepted too.
-        ///
-        /// [1]: <https://www.iana.org/assignments/media-types/media-types.xhtml>
-        type_: Required<String> = "type"
-    ],
-    text: (
-        /// The actual URI contained.
-        uri: Trimmed<Text>
-    )
-);
+use crate::ns;
+
+/// Represents an URI used in a media element.
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::MEDIA_ELEMENT, name = "uri")]
+pub struct Uri {
+    /// The MIME type of the URI referenced.
+    ///
+    /// See the [IANA MIME Media Types Registry][1] for a list of
+    /// registered types, but unregistered or yet-to-be-registered are
+    /// accepted too.
+    ///
+    /// [1]: <https://www.iana.org/assignments/media-types/media-types.xhtml>
+    #[xml(attribute(name = "type"))]
+    pub type_: String,
+
+    /// The actual URI contained.
+    #[xml(text(codec = EmptyAsError))]
+    pub uri: String,
+}
 
 generate_element!(
     /// References a media element, to be used in [data
@@ -38,7 +40,7 @@ generate_element!(
     ],
     children: [
         /// A list of URIs referencing this media.
-        uris: Vec<URI> = ("uri", MEDIA_ELEMENT) => URI
+        uris: Vec<Uri> = ("uri", MEDIA_ELEMENT) => Uri
     ]
 );
 
@@ -52,14 +54,14 @@ mod tests {
     #[cfg(target_pointer_width = "32")]
     #[test]
     fn test_size() {
-        assert_size!(URI, 24);
+        assert_size!(Uri, 24);
         assert_size!(MediaElement, 28);
     }
 
     #[cfg(target_pointer_width = "64")]
     #[test]
     fn test_size() {
-        assert_size!(URI, 48);
+        assert_size!(Uri, 48);
         assert_size!(MediaElement, 56);
     }
 
@@ -174,7 +176,10 @@ mod tests {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Required attribute 'type' missing.");
+        assert_eq!(
+            message,
+            "Required attribute field 'type_' on Uri element missing."
+        );
 
         let elem: Element = "<media xmlns='urn:xmpp:media-element'><uri type='text/html'/></media>"
             .parse()
@@ -184,24 +189,15 @@ mod tests {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(
-            message,
-            "The text in the element's text node was empty after trimming."
-        );
+        assert_eq!(message, "Empty text node.");
     }
 
     #[test]
     fn test_xep_ex1() {
         let elem: Element = r#"<media xmlns='urn:xmpp:media-element'>
-  <uri type='audio/x-wav'>
-    http://victim.example.com/challenges/speech.wav?F3A6292C
-  </uri>
-  <uri type='audio/ogg; codecs=speex'>
-    cid:sha1+a15a505e360702b79c75a5f67773072ed392f52a@bob.xmpp.org
-  </uri>
-  <uri type='audio/mpeg'>
-    http://victim.example.com/challenges/speech.mp3?F3A6292C
-  </uri>
+  <uri type='audio/x-wav'>http://victim.example.com/challenges/speech.wav?F3A6292C</uri>
+  <uri type='audio/ogg; codecs=speex'>cid:sha1+a15a505e360702b79c75a5f67773072ed392f52a@bob.xmpp.org</uri>
+  <uri type='audio/mpeg'>http://victim.example.com/challenges/speech.mp3?F3A6292C</uri>
 </media>"#
             .parse()
             .unwrap();
@@ -234,12 +230,8 @@ mod tests {
     <media xmlns='urn:xmpp:media-element'
            height='80'
            width='290'>
-      <uri type='image/jpeg'>
-        http://www.victim.com/challenges/ocr.jpeg?F3A6292C
-      </uri>
-      <uri type='image/jpeg'>
-        cid:sha1+f24030b8d91d233bac14777be5ab531ca3b9f102@bob.xmpp.org
-      </uri>
+      <uri type='image/jpeg'>http://www.victim.com/challenges/ocr.jpeg?F3A6292C</uri>
+      <uri type='image/jpeg'>cid:sha1+f24030b8d91d233bac14777be5ab531ca3b9f102@bob.xmpp.org</uri>
     </media>
   </field>
   [ ... ]
