@@ -1,3 +1,9 @@
+Version 0.1.1:
+2024-07-25 Maxime “pep” Buquet <pep@bouah.net>
+    * Added
+      - Import various text codecs from parsers: FixedHex, ColonSeparatedHex,
+        EmptyAsError.
+
 Version 0.1.0:
 2024-07-25 Jonas Schäfer <jonas@zombofant.net>
     * Initial release of this crate
