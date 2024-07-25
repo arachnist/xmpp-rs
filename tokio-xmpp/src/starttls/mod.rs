@@ -7,7 +7,8 @@ use {
     std::sync::Arc,
     tokio_rustls::{
         client::TlsStream,
-        rustls::{ClientConfig, OwnedTrustAnchor, RootCertStore, ServerName},
+        rustls::pki_types::ServerName,
+        rustls::{ClientConfig, RootCertStore},
         TlsConnector,
     },
 };
@@ -128,18 +129,12 @@ async fn get_tls_stream<S: AsyncRead + AsyncWrite + Unpin>(
     xmpp_stream: XMPPStream<S>,
 ) -> Result<TlsStream<S>, Error> {
     let domain = xmpp_stream.jid.domain().to_string();
-    let domain = ServerName::try_from(domain.as_str())?;
+    let domain = ServerName::try_from(domain)?;
     let stream = xmpp_stream.into_inner();
-    let mut root_store = RootCertStore::empty();
-    root_store.add_trust_anchors(webpki_roots::TLS_SERVER_ROOTS.iter().map(|ta| {
-        OwnedTrustAnchor::from_subject_spki_name_constraints(
-            ta.subject,
-            ta.spki,
-            ta.name_constraints,
-        )
-    }));
+    let root_store = RootCertStore {
+        roots: webpki_roots::TLS_SERVER_ROOTS.into(),
+    };
     let config = ClientConfig::builder()
-        .with_safe_defaults()
         .with_root_certificates(root_store)
         .with_no_client_auth();
     let tls_stream = TlsConnector::from(Arc::new(config))

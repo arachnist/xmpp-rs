@@ -7,7 +7,7 @@ use std::borrow::Cow;
 use std::error::Error as StdError;
 use std::fmt;
 #[cfg(all(feature = "tls-rust", not(feature = "tls-native")))]
-use tokio_rustls::rustls::client::InvalidDnsNameError;
+use tokio_rustls::rustls::pki_types::InvalidDnsNameError;
 #[cfg(all(feature = "tls-rust", not(feature = "tls-native")))]
 use tokio_rustls::rustls::Error as TlsError;
 
