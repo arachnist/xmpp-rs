@@ -20,7 +20,7 @@ tokio-stream = { version = "0.1", features = [] }
 tokio-util = { version = "0.7", features = ["codec"] }
 webpki-roots = { version = "0.25", optional = true }
 rxml = { version = "0.11.1", features = ["compact_str"] }
-rand = "^0.8"
+rand = "0.8"
 syntect = { version = "5", optional = true }
 # same repository dependencies
 sasl = { version = "0.5" }
