@@ -1,6 +1,6 @@
 [package]
 name = "xso_proc"
-version = "0.0.2"
+version = "0.1.0"
 authors = [
   "Jonas Schäfer <jonas@zombofant.net>",
 ]
@@ -18,7 +18,7 @@ proc-macro = true
 quote = "^1"
 syn = { version = "^2", features = ["full", "extra-traits"] }
 proc-macro2 = "^1"
-rxml_validation = { version = "0.11.0", default-features = false, features = ["std"] }
+rxml_validation = { version = "0.11", default-features = false, features = ["std"] }
 
 [features]
 panicking-into-impl = ["minidom"]
