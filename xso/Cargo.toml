@@ -28,3 +28,7 @@ base64 = { version = "0.22", optional = true }
 macros = [ "dep:xso_proc" ]
 minidom = [ "xso_proc/minidom"]
 panicking-into-impl = ["xso_proc/panicking-into-impl"]
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
