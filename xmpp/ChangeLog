@@ -1,3 +1,32 @@
+Version 0.6.0:
+2024-07-27 [ Maxime “pep” Buquet <pep@bouah.net> ]
+    * Breaking:
+      - Rename ClientBuilder::new_with_server to new_with_connector. (99036735)
+    * Added:
+      - Split xmpp in various modules to facilitate changes and contributions.
+      - Expose `bound_jid` on `Agent`. (e36b8d4f)
+      - Add `Agent::leave_room` method. (249d2aee, d2a56348)
+      - `Event::Disconnected` now exposes reasons of the disconnect. (ba48f6de)
+      - Read legacy XEP-0048 v1.0 bookmarks. (5fbba5c9)
+      - Read legacy bookmarks or bookmarks2 depending on disco#info result on
+        account. (4f8dc68b)
+      - Implement `Event::RoomSubject` for room subject changes / retrieval. (4f8ce0a9)
+      - Add StanzaTimeInfo for \<delay\> (XEP-0203). (3d9bdd6f)
+      - Add documentation on various methods.
+      - Fix typos via codespell. (002c2803)
+      - Update to edition 2021. (4089891f)
+      - Bump dependencies.
+      - Add `syntax-highlighting` feature as a proxy for tokio-xmpp's. (aee4c7911)
+      - Allow `xmpp` to be built with no default features. (54de8d99)
+      - Remove unused features from dependencies. (2d11ada)
+    * Fixes:
+      - Prevent crash when avatar is too big. (13449b19)
+      - Add handler for the Err case when parsing a PubSub event. (7579173c)
+      - Stop interpreting “unavailable” status as a `RoomJoined` event. (49921ac7)
+      - Assume BareJid and not FullJid as per the spec when @from isn't set on
+        received iq. (51f24627)
+      - Ensure reqwest dep doesn't automatically pull openssl when we use rustls. (cde6450b)
+
 Version 0.5.0:
 2023-08-23 [ Maxime “pep” Buquet <pep@bouah.net> ]
     * Breaking changes:
