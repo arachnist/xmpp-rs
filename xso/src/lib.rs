@@ -45,6 +45,7 @@ pub use rxml_util::Item;
 #[doc = include_str!("from_xml_doc.md")]
 #[doc(inline)]
 #[cfg(feature = "macros")]
+#[cfg_attr(docsrs, doc(cfg(feature = "macros")))]
 pub use xso_proc::FromXml;
 
 /// # Make a struct or enum serialisable to XML
@@ -56,6 +57,7 @@ pub use xso_proc::FromXml;
 /// documented on [`macro@FromXml`].
 #[doc(inline)]
 #[cfg(feature = "macros")]
+#[cfg_attr(docsrs, doc(cfg(feature = "macros")))]
 pub use xso_proc::AsXml;
 
 /// Trait allowing to iterate a struct's contents as serialisable
