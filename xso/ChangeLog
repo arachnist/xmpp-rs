@@ -1,3 +1,10 @@
+Version 0.1.2:
+2024-07-26 Jonas Schäfer <jonas@zombofant.net>
+    * Added
+      - FromXmlText and AsXmlText are now implemented on char.
+    * Fixed
+      - Docs build on docs.rs now shows feature-gated items.
+
 Version 0.1.1:
 2024-07-25 Maxime “pep” Buquet <pep@bouah.net>
     * Added
