@@ -85,13 +85,23 @@ impl StructDef {
             return Err(Error::new(meta.span, "`name` is required on structs"));
         };
 
+        let builder_ty_ident = match meta.builder {
+            Some(v) => v,
+            None => concat_camel_case(ident, "FromXmlBuilder"),
+        };
+
+        let item_iter_ty_ident = match meta.iterator {
+            Some(v) => v,
+            None => concat_camel_case(ident, "AsXmlIterator"),
+        };
+
         Ok(Self {
             namespace,
             name,
             inner: Compound::from_fields(fields)?,
             target_ty_ident: ident.clone(),
-            builder_ty_ident: concat_camel_case(ident, "FromXmlBuilder"),
-            item_iter_ty_ident: concat_camel_case(ident, "AsXmlIterator"),
+            builder_ty_ident,
+            item_iter_ty_ident,
             debug: meta.debug.is_set(),
         })
     }

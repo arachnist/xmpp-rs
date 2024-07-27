@@ -35,6 +35,7 @@ such:
   is also a path.
 - *string literal*: A string literal, like `"hello world!"`.
 - *type*: A Rust type.
+- *ident*: A Rust identifier.
 - flag: Has no value. The key's mere presence has relevance and it must not be
   followed by a `=` sign.
 
@@ -46,6 +47,8 @@ The following keys are defined on structs:
 | --- | --- | --- |
 | `namespace` | *string literal* or *path* | The XML element namespace to match. If it is a *path*, it must point at a `&'static str`. |
 | `name` | *string literal* or *path* | The XML element name to match. If it is a *path*, it must point at a `&'static NcNameStr`. |
+| `builder` | optional *ident* | The name to use for the generated builder type. |
+| `iterator` | optional *ident* | The name to use for the generated iterator type. |
 
 Note that the `name` value must be a valid XML element name, without colons.
 The namespace prefix, if any, is assigned automatically at serialisation time
@@ -57,6 +60,17 @@ and cannot be overridden. The following will thus not compile:
 #[xml(namespace = "urn:example", name = "fnord:foo")]  // colon not allowed
 struct Foo;
 ```
+
+If `builder` or `iterator` are given, the respective generated types will use
+the given names instead of names chosen by the derive macro implementation.
+Helper types will use these names as prefix. The exact names of helper types
+are implementation defined, which is why any type name starting with the
+identifiers passed to either of these keys is considered reserved.
+
+By default, the builder type uses the type's name suffixed with
+`FromXmlBuilder` and the iterator type uses the type's name suffixed with
+`AsXmlIterator`. If the target type has any trailing underscores, they are
+removed before making the type name.
 
 ### Field meta
 

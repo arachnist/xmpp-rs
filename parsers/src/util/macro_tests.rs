@@ -587,3 +587,26 @@ fn boxed_child_roundtrip_nested_2() {
     };
     roundtrip_full::<BoxedChild>("<elem xmlns='urn:example:ns1'><elem><elem/></elem></elem>")
 }
+
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = NS1, name = "elem", builder = RenamedBuilder, iterator = RenamedIter)]
+struct RenamedTypes;
+
+#[test]
+fn renamed_types_roundtrip() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<RenamedTypes>("<elem xmlns='urn:example:ns1'/>")
+}
+
+#[test]
+#[allow(unused_comparisons)]
+fn renamed_types_get_renamed() {
+    // these merely serve as a test that the types are declared with the names
+    // given in the attributes.
+    assert!(std::mem::size_of::<RenamedBuilder>() >= 0);
+    assert!(std::mem::size_of::<RenamedIter>() >= 0);
+}

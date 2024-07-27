@@ -157,6 +157,12 @@ pub(crate) struct XmlCompoundMeta {
 
     /// The debug flag.
     pub(crate) debug: Flag,
+
+    /// The value assigned to `builder` inside `#[xml(..)]`, if any.
+    pub(crate) builder: Option<Ident>,
+
+    /// The value assigned to `iterator` inside `#[xml(..)]`, if any.
+    pub(crate) iterator: Option<Ident>,
 }
 
 impl XmlCompoundMeta {
@@ -167,6 +173,8 @@ impl XmlCompoundMeta {
     fn parse_from_attribute(attr: &Attribute) -> Result<Self> {
         let mut namespace = None;
         let mut name = None;
+        let mut builder = None;
+        let mut iterator = None;
         let mut debug = Flag::Absent;
 
         attr.parse_nested_meta(|meta| {
@@ -188,6 +196,18 @@ impl XmlCompoundMeta {
                 }
                 debug = (&meta.path).into();
                 Ok(())
+            } else if meta.path.is_ident("builder") {
+                if builder.is_some() {
+                    return Err(Error::new_spanned(meta.path, "duplicate `builder` key"));
+                }
+                builder = Some(meta.value()?.parse()?);
+                Ok(())
+            } else if meta.path.is_ident("iterator") {
+                if iterator.is_some() {
+                    return Err(Error::new_spanned(meta.path, "duplicate `iterator` key"));
+                }
+                iterator = Some(meta.value()?.parse()?);
+                Ok(())
             } else {
                 Err(Error::new_spanned(meta.path, "unsupported key"))
             }
@@ -198,6 +218,8 @@ impl XmlCompoundMeta {
             namespace,
             name,
             debug,
+            builder,
+            iterator,
         })
     }
 
