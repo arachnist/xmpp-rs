@@ -198,16 +198,18 @@ pub struct MetadataQuery;
 
 impl IqGetPayload for MetadataQuery {}
 
-generate_element!(
 /// Response from the archive, containing the start and end metadata if it isn’t empty.
-MetadataResponse, "metadata", MAM,
-children: [
+#[derive(FromXml, AsXml, Debug, Clone, PartialEq)]
+#[xml(namespace = ns::MAM, name = "metadata")]
+pub struct MetadataResponse {
     /// Metadata about the first message in the archive.
-    start: Option<Start> = ("start", MAM) => Start,
+    #[xml(child(default))]
+    start: Option<Start>,
 
     /// Metadata about the last message in the archive.
-    end: Option<End> = ("end", MAM) => End,
-]);
+    #[xml(child(default))]
+    end: Option<End>,
+}
 
 impl IqResultPayload for MetadataResponse {}
 
