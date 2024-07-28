@@ -4,10 +4,10 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use xso::{AsXml, FromXml};
+
 use crate::ns;
 use crate::pubsub::PubSubPayload;
-use minidom::Element;
-use xso::error::{Error, FromElementError};
 
 generate_elem_id!(
     /// The artist or performer of the song or piece.
@@ -63,36 +63,45 @@ generate_elem_id!(
 );
 
 /// Container for formatted text.
-#[derive(Debug, Clone)]
+#[derive(FromXml, AsXml, Debug, Clone, PartialEq)]
+#[xml(namespace = ns::TUNE, name = "tune")]
 pub struct Tune {
     /// The artist or performer of the song or piece.
+    #[xml(child(default))]
     artist: Option<Artist>,
 
     /// The duration of the song or piece in seconds.
+    #[xml(child(default))]
     length: Option<Length>,
 
     /// The user's rating of the song or piece, from 1 (lowest) to 10 (highest).
+    #[xml(child(default))]
     rating: Option<Rating>,
 
     /// The collection (e.g., album) or other source (e.g., a band website that hosts streams or
     /// audio files).
+    #[xml(child(default))]
     source: Option<Source>,
 
     /// The title of the song or piece.
+    #[xml(child(default))]
     title: Option<Title>,
 
     /// A unique identifier for the tune; e.g., the track number within a collection or the
     /// specific URI for the object (e.g., a stream or audio file).
+    #[xml(child(default))]
     track: Option<Track>,
 
     /// A URI or URL pointing to information about the song, collection, or artist.
+    #[xml(child(default))]
     uri: Option<Uri>,
 }
 
 impl PubSubPayload for Tune {}
 
 impl Tune {
-    fn new() -> Tune {
+    /// Construct an empty `<tune/>` element.
+    pub fn new() -> Tune {
         Tune {
             artist: None,
             length: None,
@@ -105,76 +114,10 @@ impl Tune {
     }
 }
 
-impl TryFrom<Element> for Tune {
-    type Error = FromElementError;
-
-    fn try_from(elem: Element) -> Result<Tune, FromElementError> {
-        check_self!(elem, "tune", TUNE);
-        check_no_attributes!(elem, "tune");
-
-        let mut tune = Tune::new();
-        for child in elem.children() {
-            if child.is("artist", ns::TUNE) {
-                if tune.artist.is_some() {
-                    return Err(Error::Other("Tune can’t have more than one artist.").into());
-                }
-                tune.artist = Some(Artist::try_from(child.clone())?);
-            } else if child.is("length", ns::TUNE) {
-                if tune.length.is_some() {
-                    return Err(Error::Other("Tune can’t have more than one length.").into());
-                }
-                tune.length = Some(Length::try_from(child.clone())?);
-            } else if child.is("rating", ns::TUNE) {
-                if tune.rating.is_some() {
-                    return Err(Error::Other("Tune can’t have more than one rating.").into());
-                }
-                tune.rating = Some(Rating::try_from(child.clone())?);
-            } else if child.is("source", ns::TUNE) {
-                if tune.source.is_some() {
-                    return Err(Error::Other("Tune can’t have more than one source.").into());
-                }
-                tune.source = Some(Source::try_from(child.clone())?);
-            } else if child.is("title", ns::TUNE) {
-                if tune.title.is_some() {
-                    return Err(Error::Other("Tune can’t have more than one title.").into());
-                }
-                tune.title = Some(Title::try_from(child.clone())?);
-            } else if child.is("track", ns::TUNE) {
-                if tune.track.is_some() {
-                    return Err(Error::Other("Tune can’t have more than one track.").into());
-                }
-                tune.track = Some(Track::try_from(child.clone())?);
-            } else if child.is("uri", ns::TUNE) {
-                if tune.uri.is_some() {
-                    return Err(Error::Other("Tune can’t have more than one uri.").into());
-                }
-                tune.uri = Some(Uri::try_from(child.clone())?);
-            } else {
-                return Err(Error::Other("Unknown element in User Tune.").into());
-            }
-        }
-
-        Ok(tune)
-    }
-}
-
-impl From<Tune> for Element {
-    fn from(tune: Tune) -> Element {
-        Element::builder("tune", ns::TUNE)
-            .append_all(tune.artist)
-            .append_all(tune.length)
-            .append_all(tune.rating)
-            .append_all(tune.source)
-            .append_all(tune.title)
-            .append_all(tune.track)
-            .append_all(tune.uri)
-            .build()
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use minidom::Element;
     use std::str::FromStr;
 
     #[cfg(target_pointer_width = "32")]
