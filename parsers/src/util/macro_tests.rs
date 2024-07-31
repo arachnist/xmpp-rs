@@ -611,6 +611,9 @@ fn renamed_types_get_renamed() {
     assert!(std::mem::size_of::<RenamedIter>() >= 0);
 }
 
+// What is this, you may wonder?
+// This is a test that any generated type names won't trigger
+// the `non_camel_case_types` lint.
 #[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = NS1, name = "elem")]
-struct Foo_;
+struct LintTest_;

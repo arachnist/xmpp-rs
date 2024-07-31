@@ -77,12 +77,12 @@ impl StructDef {
 
         let builder_ty_ident = match meta.builder {
             Some(v) => v,
-            None => quote::format_ident!("{}FromXmlBuilder", ident),
+            None => quote::format_ident!("{}FromXmlBuilder", ident.to_string()),
         };
 
         let item_iter_ty_ident = match meta.iterator {
             Some(v) => v,
-            None => quote::format_ident!("{}AsXmlIterator", ident),
+            None => quote::format_ident!("{}AsXmlIterator", ident.to_string()),
         };
 
         Ok(Self {
