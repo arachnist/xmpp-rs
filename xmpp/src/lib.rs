@@ -6,6 +6,7 @@
 
 #![deny(bare_trait_objects)]
 
+pub use tokio_xmpp;
 pub use tokio_xmpp::jid;
 pub use tokio_xmpp::minidom;
 pub use tokio_xmpp::parsers;
