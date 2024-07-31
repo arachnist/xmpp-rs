@@ -1,3 +1,8 @@
+Version NEXT:
+XXXX-YY-ZZ RELEASER <admin@example.com>
+    * Breaking:
+      - Remove `tokio_xmpp::ParseError` and `tokio_xmpp::starttls::ParseError` which were never used
+
 Version 4.0.0:
 2024-07-26 Maxime “pep” Buquet <pep@bouah.net>
     * Breaking:

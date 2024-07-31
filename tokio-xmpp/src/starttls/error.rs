@@ -3,7 +3,6 @@
 use hickory_resolver::{error::ResolveError, proto::error::ProtoError};
 #[cfg(feature = "tls-native")]
 use native_tls::Error as TlsError;
-use std::borrow::Cow;
 use std::error::Error as StdError;
 use std::fmt;
 #[cfg(all(feature = "tls-rust", not(feature = "tls-native")))]
@@ -65,25 +64,6 @@ impl From<TlsError> for Error {
 impl From<InvalidDnsNameError> for Error {
     fn from(e: InvalidDnsNameError) -> Self {
         Error::DnsNameError(e)
-    }
-}
-
-/// XML parse error wrapper type
-#[derive(Debug)]
-pub struct ParseError(pub Cow<'static, str>);
-
-impl StdError for ParseError {
-    fn description(&self) -> &str {
-        self.0.as_ref()
-    }
-    fn cause(&self) -> Option<&dyn StdError> {
-        None
-    }
-}
-
-impl fmt::Display for ParseError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.0)
     }
 }
 

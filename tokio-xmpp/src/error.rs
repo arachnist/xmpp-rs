@@ -1,5 +1,4 @@
 use sasl::client::MechanismError as SaslMechanismError;
-use std::borrow::Cow;
 use std::error::Error as StdError;
 use std::fmt;
 use std::io::Error as IoError;
@@ -90,25 +89,6 @@ impl From<fmt::Error> for Error {
 impl From<Utf8Error> for Error {
     fn from(e: Utf8Error) -> Self {
         Error::Utf8(e)
-    }
-}
-
-/// XML parse error wrapper type
-#[derive(Debug)]
-pub struct ParseError(pub Cow<'static, str>);
-
-impl StdError for ParseError {
-    fn description(&self) -> &str {
-        self.0.as_ref()
-    }
-    fn cause(&self) -> Option<&dyn StdError> {
-        None
-    }
-}
-
-impl fmt::Display for ParseError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.0)
     }
 }
 

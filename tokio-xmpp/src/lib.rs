@@ -40,7 +40,7 @@ pub use client::{
 mod component;
 pub use crate::component::Component;
 mod error;
-pub use crate::error::{AuthError, Error, ParseError, ProtocolError};
+pub use crate::error::{AuthError, Error, ProtocolError};
 
 // Re-exports
 pub use minidom;
