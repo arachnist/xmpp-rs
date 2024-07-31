@@ -1,12 +1,5 @@
 Version NEXT:
 0000-00-00 Jonas Schäfer <jonas@zombofant.net>
-    * Breaking
-      - We now strip trailing underscores from identifiers before constructing
-        any type names we declare from derive macros.
-
-        If you previously derived any of the macros on e.g. `Foo` and `Foo_`
-        within the same scope, you can use the newly added `builder` and
-        `iterator` meta keys to override the generated type names.
     * Added
       - Support for child elements in derive macros. Child elements may also
         be wrapped in Option or Box.

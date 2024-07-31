@@ -64,16 +64,6 @@ pub(crate) struct StructDef {
     debug: bool,
 }
 
-fn concat_camel_case(lhs: &Ident, suffix: &str) -> Ident {
-    let span = lhs.span();
-    let mut s = lhs.to_string();
-    while s.ends_with('_') {
-        s.pop();
-    }
-    s.push_str(suffix);
-    Ident::new(&s, span)
-}
-
 impl StructDef {
     /// Create a new struct from its name, meta, and fields.
     pub(crate) fn new(ident: &Ident, meta: XmlCompoundMeta, fields: &Fields) -> Result<Self> {
@@ -87,12 +77,12 @@ impl StructDef {
 
         let builder_ty_ident = match meta.builder {
             Some(v) => v,
-            None => concat_camel_case(ident, "FromXmlBuilder"),
+            None => quote::format_ident!("{}FromXmlBuilder", ident),
         };
 
         let item_iter_ty_ident = match meta.iterator {
             Some(v) => v,
-            None => concat_camel_case(ident, "AsXmlIterator"),
+            None => quote::format_ident!("{}AsXmlIterator", ident),
         };
 
         Ok(Self {

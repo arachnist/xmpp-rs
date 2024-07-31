@@ -69,8 +69,7 @@ identifiers passed to either of these keys is considered reserved.
 
 By default, the builder type uses the type's name suffixed with
 `FromXmlBuilder` and the iterator type uses the type's name suffixed with
-`AsXmlIterator`. If the target type has any trailing underscores, they are
-removed before making the type name.
+`AsXmlIterator`.
 
 ### Field meta
 

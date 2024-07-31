@@ -610,3 +610,7 @@ fn renamed_types_get_renamed() {
     assert!(std::mem::size_of::<RenamedBuilder>() >= 0);
     assert!(std::mem::size_of::<RenamedIter>() >= 0);
 }
+
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = NS1, name = "elem")]
+struct Foo_;
