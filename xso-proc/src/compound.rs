@@ -23,23 +23,16 @@ pub(crate) struct Compound {
 }
 
 impl Compound {
-    /// Construct a compound from fields.
-    pub(crate) fn from_fields(compound_fields: &Fields) -> Result<Self> {
-        let mut fields = Vec::with_capacity(compound_fields.len());
+    /// Construct a compound from processed field definitions.
+    pub(crate) fn from_field_defs<I: IntoIterator<Item = Result<FieldDef>>>(
+        compound_fields: I,
+    ) -> Result<Self> {
+        let compound_fields = compound_fields.into_iter();
+        let size_hint = compound_fields.size_hint();
+        let mut fields = Vec::with_capacity(size_hint.1.unwrap_or(size_hint.0));
         let mut text_field = None;
-        for (i, field) in compound_fields.iter().enumerate() {
-            let index = match i.try_into() {
-                Ok(v) => v,
-                // we are converting to u32, are you crazy?!
-                // (u32, because syn::Member::Index needs that.)
-                Err(_) => {
-                    return Err(Error::new_spanned(
-                        field,
-                        "okay, mate, that are way too many fields. get your life together.",
-                    ))
-                }
-            };
-            let field = FieldDef::from_field(field, index)?;
+        for field in compound_fields {
+            let field = field?;
 
             if field.is_text_field() {
                 if let Some(other_field) = text_field.as_ref() {
@@ -58,8 +51,25 @@ impl Compound {
 
             fields.push(field);
         }
-
         Ok(Self { fields })
+    }
+
+    /// Construct a compound from fields.
+    pub(crate) fn from_fields(compound_fields: &Fields) -> Result<Self> {
+        Self::from_field_defs(compound_fields.iter().enumerate().map(|(i, field)| {
+            let index = match i.try_into() {
+                Ok(v) => v,
+                // we are converting to u32, are you crazy?!
+                // (u32, because syn::Member::Index needs that.)
+                Err(_) => {
+                    return Err(Error::new_spanned(
+                        field,
+                        "okay, mate, that are way too many fields. get your life together.",
+                    ))
+                }
+            };
+            FieldDef::from_field(field, index)
+        }))
     }
 
     /// Make and return a set of states which is used to construct the target
