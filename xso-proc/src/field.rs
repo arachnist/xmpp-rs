@@ -12,6 +12,7 @@ use syn::{spanned::Spanned, *};
 
 use rxml_validation::NcName;
 
+use crate::compound::Compound;
 use crate::error_message::{self, ParentRef};
 use crate::meta::{AmountConstraint, Flag, NameRef, NamespaceRef, QNameRef, XmlFieldMeta};
 use crate::scope::{AsItemsScope, FromEventsScope};
@@ -19,7 +20,7 @@ use crate::types::{
     as_optional_xml_text_fn, as_xml_iter_fn, as_xml_text_fn, default_fn, extend_fn, from_events_fn,
     from_xml_builder_ty, from_xml_text_fn, into_iterator_into_iter_fn, into_iterator_item_ty,
     into_iterator_iter_ty, item_iter_ty, option_ty, ref_ty, string_ty, text_codec_decode_fn,
-    text_codec_encode_fn,
+    text_codec_encode_fn, ty_from_ident,
 };
 
 /// Code slices necessary for declaring and initializing a temporary variable
@@ -63,6 +64,10 @@ pub(crate) enum FieldBuilderPart {
 
     /// Parse a field from child element events.
     Nested {
+        /// Additional definition items which need to be inserted at module
+        /// level for the rest of the implementation to work.
+        extra_defs: TokenStream,
+
         /// Expression and type which initializes a buffer to use during
         /// parsing.
         value: FieldTempInit,
@@ -117,6 +122,10 @@ pub(crate) enum FieldIteratorPart {
 
     /// The field is emitted as series of items which form a child element.
     Content {
+        /// Additional definition items which need to be inserted at module
+        /// level for the rest of the implementation to work.
+        extra_defs: TokenStream,
+
         /// Expression and type which initializes the nested iterator.
         ///
         /// Note that this is evaluated at construction time of the iterator.
@@ -161,6 +170,26 @@ enum FieldKind {
         /// Number of child elements allowed.
         amount: AmountConstraint,
     },
+
+    /// Extract contents from a child element.
+    Extract {
+        /// The XML namespace of the child to extract data from.
+        xml_namespace: NamespaceRef,
+
+        /// The XML name of the child to extract data from.
+        xml_name: NameRef,
+
+        /// Compound which contains the arguments of the `extract(..)` meta
+        /// (except the `from`), transformed into a struct with unnamed
+        /// fields.
+        ///
+        /// This is used to generate the parsing/serialisation code, by
+        /// essentially "declaring" a shim struct, as if it were a real Rust
+        /// struct, and using the result of the parsing process directly for
+        /// the field on which the `extract(..)` option was used, instead of
+        /// putting it into a Rust struct.
+        parts: Compound,
+    },
 }
 
 impl FieldKind {
@@ -168,7 +197,9 @@ impl FieldKind {
     ///
     /// `field_ident` is, for some field types, used to infer an XML name if
     /// it is not specified explicitly.
-    fn from_meta(meta: XmlFieldMeta, field_ident: Option<&Ident>) -> Result<Self> {
+    ///
+    /// `field_ty` is needed for type inferrence on extracted fields.
+    fn from_meta(meta: XmlFieldMeta, field_ident: Option<&Ident>, field_ty: &Type) -> Result<Self> {
         match meta {
             XmlFieldMeta::Attribute {
                 span,
@@ -204,9 +235,13 @@ impl FieldKind {
                 })
             }
 
-            XmlFieldMeta::Text { codec } => Ok(Self::Text { codec }),
+            XmlFieldMeta::Text { span: _, codec } => Ok(Self::Text { codec }),
 
-            XmlFieldMeta::Child { default_, amount } => {
+            XmlFieldMeta::Child {
+                span: _,
+                default_,
+                amount,
+            } => {
                 if let Some(AmountConstraint::Any(ref amount_span)) = amount {
                     if let Flag::Present(ref flag_span) = default_ {
                         let mut err = Error::new(
@@ -224,6 +259,55 @@ impl FieldKind {
                 Ok(Self::Child {
                     default_,
                     amount: amount.unwrap_or(AmountConstraint::FixedSingle(Span::call_site())),
+                })
+            }
+
+            XmlFieldMeta::Extract {
+                span,
+                qname: QNameRef { namespace, name },
+                fields,
+            } => {
+                let Some(xml_namespace) = namespace else {
+                    return Err(Error::new(
+                        span,
+                        "`#[xml(extract(..))]` must contain a `namespace` key.",
+                    ));
+                };
+
+                let Some(xml_name) = name else {
+                    return Err(Error::new(
+                        span,
+                        "`#[xml(extract(..))]` must contain a `name` key.",
+                    ));
+                };
+
+                let field = {
+                    let mut fields = fields.into_iter();
+                    let Some(field) = fields.next() else {
+                        return Err(Error::new(
+                            span,
+                            "`#[xml(extract(..))]` must contain one `fields(..)` nested meta which contains at least one field meta."
+                        ));
+                    };
+
+                    if let Some(field) = fields.next() {
+                        return Err(Error::new(
+                            field.span(),
+                            "more than one extracted piece of data is currently not supported",
+                        ));
+                    }
+
+                    field
+                };
+
+                let parts = Compound::from_field_defs(
+                    [FieldDef::from_extract(field, 0, field_ty)].into_iter(),
+                )?;
+
+                Ok(Self::Extract {
+                    xml_namespace,
+                    xml_name,
+                    parts,
                 })
             }
         }
@@ -268,9 +352,22 @@ impl FieldDef {
         let ty = field.ty.clone();
 
         Ok(Self {
+            kind: FieldKind::from_meta(meta, ident, &ty)?,
             member,
             ty,
-            kind: FieldKind::from_meta(meta, ident)?,
+        })
+    }
+
+    /// Create a new field definition from its declaration.
+    ///
+    /// The `index` must be the zero-based index of the field even for named
+    /// fields.
+    pub(crate) fn from_extract(meta: XmlFieldMeta, index: u32, ty: &Type) -> Result<Self> {
+        let span = meta.span();
+        Ok(Self {
+            member: Member::Unnamed(Index { index, span }),
+            ty: ty.clone(),
+            kind: FieldKind::from_meta(meta, None, ty)?,
         })
     }
 
@@ -408,6 +505,7 @@ impl FieldDef {
                         };
 
                         Ok(FieldBuilderPart::Nested {
+                            extra_defs: TokenStream::default(),
                             value: FieldTempInit {
                                 init: quote! { ::std::option::Option::None },
                                 ty: option_ty(self.ty.clone()),
@@ -438,6 +536,7 @@ impl FieldDef {
                         let ty_extend = extend_fn(self.ty.clone(), element_ty.clone());
                         let ty_default = default_fn(self.ty.clone());
                         Ok(FieldBuilderPart::Nested {
+                            extra_defs: TokenStream::default(),
                             value: FieldTempInit {
                                 init: quote! { #ty_default() },
                                 ty: self.ty.clone(),
@@ -452,6 +551,80 @@ impl FieldDef {
                     }
                 }
             }
+
+            FieldKind::Extract {
+                ref xml_namespace,
+                ref xml_name,
+                ref parts,
+            } => {
+                let FromEventsScope {
+                    ref substate_result,
+                    ..
+                } = scope;
+                let field_access = scope.access_field(&self.member);
+
+                let missing_msg = error_message::on_missing_child(container_name, &self.member);
+                let duplicate_msg = error_message::on_duplicate_child(container_name, &self.member);
+
+                let on_absent = quote! {
+                    return ::core::result::Result::Err(::xso::error::Error::Other(#missing_msg).into())
+                };
+
+                let from_xml_builder_ty_ident =
+                    scope.make_member_type_name(&self.member, "FromXmlBuilder");
+                let state_ty_ident = quote::format_ident!("{}State", from_xml_builder_ty_ident,);
+
+                let extra_defs = parts.make_from_events_statemachine(
+                    &state_ty_ident,
+                    &container_name.child(self.member.clone()),
+                    "",
+                )?.with_augmented_init(|init| quote! {
+                    if name.0 == #xml_namespace && name.1 == #xml_name {
+                        #init
+                    } else {
+                        ::core::result::Result::Err(::xso::error::FromEventsError::Mismatch { name, attrs })
+                    }
+                }).compile().render(
+                    &Visibility::Inherited,
+                    &from_xml_builder_ty_ident,
+                    &state_ty_ident,
+                    &Type::Tuple(TypeTuple {
+                        paren_token: token::Paren::default(),
+                        elems: [
+                            self.ty.clone(),
+                        ].into_iter().collect(),
+                    })
+                )?;
+                let from_xml_builder_ty = ty_from_ident(from_xml_builder_ty_ident.clone()).into();
+
+                Ok(FieldBuilderPart::Nested {
+                    extra_defs,
+                    value: FieldTempInit {
+                        init: quote! { ::std::option::Option::None },
+                        ty: option_ty(self.ty.clone()),
+                    },
+                    matcher: quote! {
+                        match #state_ty_ident::new(name, attrs) {
+                            ::core::result::Result::Ok(v) => if #field_access.is_some() {
+                                ::core::result::Result::Err(::xso::error::FromEventsError::Invalid(::xso::error::Error::Other(#duplicate_msg)))
+                            } else {
+                                ::core::result::Result::Ok(#from_xml_builder_ty_ident(::core::option::Option::Some(v)))
+                            },
+                            ::core::result::Result::Err(e) => ::core::result::Result::Err(e),
+                        }
+                    },
+                    builder: from_xml_builder_ty,
+                    collect: quote! {
+                        #field_access = ::std::option::Option::Some(#substate_result.0);
+                    },
+                    finalize: quote! {
+                        match #field_access {
+                            ::std::option::Option::Some(value) => value,
+                            ::std::option::Option::None => #on_absent,
+                        }
+                    },
+                })
+            }
         }
     }
 
@@ -462,6 +635,7 @@ impl FieldDef {
     pub(crate) fn make_iterator_part(
         &self,
         scope: &AsItemsScope,
+        container_name: &ParentRef,
         bound_name: &Ident,
     ) -> Result<FieldIteratorPart> {
         match self.kind {
@@ -515,6 +689,7 @@ impl FieldDef {
                 let item_iter = item_iter_ty(self.ty.clone(), lifetime.clone());
 
                 Ok(FieldIteratorPart::Content {
+                    extra_defs: TokenStream::default(),
                     value: FieldTempInit {
                         init: quote! {
                             #as_xml_iter(#bound_name)?
@@ -561,6 +736,7 @@ impl FieldDef {
                 });
 
                 Ok(FieldIteratorPart::Content {
+                    extra_defs: TokenStream::default(),
                     value: FieldTempInit {
                         init: quote! {
                             (#into_iter(#bound_name), ::core::option::Option::None)
@@ -580,6 +756,70 @@ impl FieldDef {
                                 break ::core::result::Result::Ok(::core::option::Option::None)
                             }
                         }
+                    },
+                })
+            }
+
+            FieldKind::Extract {
+                ref xml_namespace,
+                ref xml_name,
+                ref parts,
+            } => {
+                let AsItemsScope { ref lifetime, .. } = scope;
+                let item_iter_ty_ident = scope.make_member_type_name(&self.member, "AsXmlIterator");
+                let state_ty_ident = quote::format_ident!("{}State", item_iter_ty_ident,);
+                let mut item_iter_ty = ty_from_ident(item_iter_ty_ident.clone());
+                item_iter_ty.path.segments[0].arguments =
+                    PathArguments::AngleBracketed(AngleBracketedGenericArguments {
+                        colon2_token: None,
+                        lt_token: token::Lt::default(),
+                        args: [GenericArgument::Lifetime(lifetime.clone())]
+                            .into_iter()
+                            .collect(),
+                        gt_token: token::Gt::default(),
+                    });
+                let item_iter_ty = item_iter_ty.into();
+
+                let extra_defs = parts
+                    .make_as_item_iter_statemachine(
+                        &container_name.child(self.member.clone()),
+                        &state_ty_ident,
+                        "",
+                        lifetime,
+                    )?
+                    .with_augmented_init(|init| {
+                        quote! {
+                            let name = (
+                                ::xso::exports::rxml::Namespace::from(#xml_namespace),
+                                ::std::borrow::Cow::Borrowed(#xml_name),
+                            );
+                            #init
+                        }
+                    })
+                    .compile()
+                    .render(
+                        &Visibility::Inherited,
+                        &Type::Tuple(TypeTuple {
+                            paren_token: token::Paren::default(),
+                            elems: [ref_ty(self.ty.clone(), lifetime.clone())]
+                                .into_iter()
+                                .collect(),
+                        }),
+                        &state_ty_ident,
+                        lifetime,
+                        &item_iter_ty,
+                    )?;
+
+                Ok(FieldIteratorPart::Content {
+                    extra_defs,
+                    value: FieldTempInit {
+                        init: quote! {
+                            #item_iter_ty_ident::new((&#bound_name,))?
+                        },
+                        ty: item_iter_ty,
+                    },
+                    generator: quote! {
+                        #bound_name.next().transpose()
                     },
                 })
             }

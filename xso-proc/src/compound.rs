@@ -83,7 +83,7 @@ impl Compound {
         output_name: &ParentRef,
         state_prefix: &str,
     ) -> Result<FromEventsSubmachine> {
-        let scope = FromEventsScope::new();
+        let scope = FromEventsScope::new(state_ty_ident.clone());
         let FromEventsScope {
             ref attrs,
             ref builder_data_ident,
@@ -106,6 +106,8 @@ impl Compound {
         let mut output_cons = TokenStream::default();
         let mut child_matchers = TokenStream::default();
         let mut text_handler = None;
+        let mut extra_defs = TokenStream::default();
+        let is_tuple = !output_name.is_path();
 
         for (i, field) in self.fields.iter().enumerate() {
             let member = field.member();
@@ -125,9 +127,15 @@ impl Compound {
                         #builder_field_name: #init,
                     });
 
-                    output_cons.extend(quote! {
-                        #member: #builder_data_ident.#builder_field_name,
-                    });
+                    if is_tuple {
+                        output_cons.extend(quote! {
+                            #builder_data_ident.#builder_field_name,
+                        });
+                    } else {
+                        output_cons.extend(quote! {
+                            #member: #builder_data_ident.#builder_field_name,
+                        });
+                    }
                 }
 
                 FieldBuilderPart::Text {
@@ -153,12 +161,20 @@ impl Compound {
                             Self::#default_state_ident { #builder_data_ident }
                         ))
                     });
-                    output_cons.extend(quote! {
-                        #member: #finalize,
-                    });
+
+                    if is_tuple {
+                        output_cons.extend(quote! {
+                            #finalize,
+                        });
+                    } else {
+                        output_cons.extend(quote! {
+                            #member: #finalize,
+                        });
+                    }
                 }
 
                 FieldBuilderPart::Nested {
+                    extra_defs: field_extra_defs,
                     value: FieldTempInit { ty, init },
                     matcher,
                     builder,
@@ -212,9 +228,17 @@ impl Compound {
                         };
                     });
 
-                    output_cons.extend(quote! {
-                        #member: #finalize,
-                    });
+                    if is_tuple {
+                        output_cons.extend(quote! {
+                            #finalize,
+                        });
+                    } else {
+                        output_cons.extend(quote! {
+                            #member: #finalize,
+                        });
+                    }
+
+                    extra_defs.extend(field_extra_defs);
                 }
             }
         }
@@ -241,6 +265,11 @@ impl Compound {
             ParentRef::Named(ref path) => {
                 quote! {
                     #path { #output_cons }
+                }
+            }
+            ParentRef::Unnamed { .. } => {
+                quote! {
+                    ( #output_cons )
                 }
             }
         };
@@ -277,6 +306,8 @@ impl Compound {
 
         Ok(FromEventsSubmachine {
             defs: quote! {
+                #extra_defs
+
                 struct #builder_data_ty {
                     #builder_data_def
                 }
@@ -308,10 +339,11 @@ impl Compound {
     pub(crate) fn make_as_item_iter_statemachine(
         &self,
         input_name: &ParentRef,
+        state_ty_ident: &Ident,
         state_prefix: &str,
         lifetime: &Lifetime,
     ) -> Result<AsItemsSubmachine> {
-        let scope = AsItemsScope::new(lifetime);
+        let scope = AsItemsScope::new(lifetime, state_ty_ident.clone());
 
         let element_head_start_state_ident =
             quote::format_ident!("{}ElementHeadStart", state_prefix);
@@ -322,8 +354,10 @@ impl Compound {
         let dummy_ident = quote::format_ident!("dummy");
         let mut states = Vec::new();
 
+        let is_tuple = !input_name.is_path();
         let mut destructure = TokenStream::default();
         let mut start_init = TokenStream::default();
+        let mut extra_defs = TokenStream::default();
 
         states.push(
             State::new(element_head_start_state_ident.clone())
@@ -345,7 +379,7 @@ impl Compound {
         for (i, field) in self.fields.iter().enumerate() {
             let member = field.member();
             let bound_name = mangle_member(member);
-            let part = field.make_iterator_part(&scope, &bound_name)?;
+            let part = field.make_iterator_part(&scope, input_name, &bound_name)?;
             let state_name = quote::format_ident!("{}Field{}", state_prefix, i);
             let ty = scope.borrow(field.ty().clone());
 
@@ -366,9 +400,15 @@ impl Compound {
                     );
                     element_head_end_idx += 1;
 
-                    destructure.extend(quote! {
-                        #member: ref #bound_name,
-                    });
+                    if is_tuple {
+                        destructure.extend(quote! {
+                            ref #bound_name,
+                        });
+                    } else {
+                        destructure.extend(quote! {
+                            #member: ref #bound_name,
+                        });
+                    }
                     start_init.extend(quote! {
                         #bound_name,
                     });
@@ -389,15 +429,22 @@ impl Compound {
                                 ))
                             }),
                     );
-                    destructure.extend(quote! {
-                        #member: #bound_name,
-                    });
+                    if is_tuple {
+                        destructure.extend(quote! {
+                            #bound_name,
+                        });
+                    } else {
+                        destructure.extend(quote! {
+                            #member: #bound_name,
+                        });
+                    }
                     start_init.extend(quote! {
                         #bound_name,
                     });
                 }
 
                 FieldIteratorPart::Content {
+                    extra_defs: field_extra_defs,
                     value: FieldTempInit { ty, init },
                     generator,
                 } => {
@@ -415,12 +462,20 @@ impl Compound {
                                 #generator?
                             }),
                     );
-                    destructure.extend(quote! {
-                        #member: #bound_name,
-                    });
+                    if is_tuple {
+                        destructure.extend(quote! {
+                            #bound_name,
+                        });
+                    } else {
+                        destructure.extend(quote! {
+                            #member: #bound_name,
+                        });
+                    }
                     start_init.extend(quote! {
                         #bound_name: #init,
                     });
+
+                    extra_defs.extend(field_extra_defs);
                 }
             }
         }
@@ -440,14 +495,19 @@ impl Compound {
             }),
         );
 
-        let ParentRef::Named(input_path) = input_name;
-
-        Ok(AsItemsSubmachine {
-            defs: TokenStream::default(),
-            states,
-            destructure: quote! {
+        let destructure = match input_name {
+            ParentRef::Named(ref input_path) => quote! {
                 #input_path { #destructure }
             },
+            ParentRef::Unnamed { .. } => quote! {
+                ( #destructure )
+            },
+        };
+
+        Ok(AsItemsSubmachine {
+            defs: extra_defs,
+            states,
+            destructure,
             init: quote! {
                 Self::#element_head_start_state_ident { #dummy_ident: ::std::marker::PhantomData, #name_ident: name.1, #ns_ident: name.0, #start_init }
             },

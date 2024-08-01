@@ -37,6 +37,8 @@ such:
 - *type*: A Rust type.
 - *expression*: A Rust expression.
 - *ident*: A Rust identifier.
+- *nested*: The meta is followed by parentheses, inside of which meta-specific
+  additional keys are present.
 - flag: Has no value. The key's mere presence has relevance and it must not be
   followed by a `=` sign.
 
@@ -148,6 +150,7 @@ The following mapping types are defined:
 | --- | --- |
 | [`attribute`](#attribute-meta) | Map the field to an XML attribute on the struct's element |
 | [`child`](#child-meta) | Map the field to a child element |
+| [`extract`](#extract-meta) | Map the field to contents of a child element of specified structure |
 | [`text`](#text-meta) | Map the field to the text content of the struct's element |
 
 #### `attribute` meta
@@ -291,6 +294,62 @@ assert_eq!(parent, Parent {
         OtherChild { some_attr: "c1".to_owned() },
         OtherChild { some_attr: "c2".to_owned() },
     ],
+});
+```
+
+#### `extract` meta
+
+The `extract` meta causes the field to be mapped to the *contents* of a child
+element.
+
+The following keys can be used inside the `#[xml(extract(..))]` meta:
+
+| Key | Value type | Description |
+| --- | --- | --- |
+| `namespace` | *string literal* or *path* | The XML namespace of the child element. |
+| `name` | *string literal* or *path* | The XML name of the child element. If it is a *path*, it must point at a `&'static NcNameStr`. |
+| `fields` | *nested* | A list of [field meta](#field-meta) which describe the contents of the child element. |
+
+If the `name` key contains a namespace prefix, it must be one of the prefixes
+defined as built-in in the XML specifications. That prefix will then be
+expanded to the corresponding namespace URI and the value for the `namespace`
+key is implied. Mixing a prefixed name with an explicit `namespace` key is
+not allowed.
+
+The sequence of field meta inside `fields` can be thought of as a nameless
+tuple-style struct. The macro generates serialisation/deserialisation code
+for that nameless tuple-style struct and uses it to serialise/deserialise
+the field.
+
+**Note:** Currently, only a single field can be extracted. This restriction
+will be lifted in the future. Collections are not supported yet, either.
+
+Using `extract` instead of `child` combined with a specific struct declaration
+comes with trade-offs. On the one hand, using `extract` gives you flexibility
+in regard of the specific serialisation of a field: it is possible to exchange
+a nested child element for an attribute without changing the Rust interface
+of the struct.
+
+On the other hand, `extract` meta declarations can quickly become unwieldly
+and they may not support all configuration options which may in the future be
+added on structs (such as configuring handling of undeclared attributes) and
+they cannot be used for enumerations.
+
+##### Example
+
+```rust
+# use xso::FromXml;
+#[derive(FromXml, Debug, PartialEq)]
+#[xml(namespace = "urn:example", name = "foo")]
+struct Foo {
+    #[xml(extract(namespace = "urn:example", name = "bar", fields(attribute = "a")))]
+    a: String,
+}
+
+let foo: Foo = xso::from_bytes(b"<foo
+    xmlns='urn:example'><bar a='xyz'/></foo>").unwrap();
+assert_eq!(foo, Foo {
+    a: "xyz".to_string(),
 });
 ```
 

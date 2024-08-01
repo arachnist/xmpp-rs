@@ -638,7 +638,7 @@ impl AsItemsStateMachine {
     pub(crate) fn render(
         self,
         vis: &Visibility,
-        input_ty: &Type,
+        input_ty_ref: &Type,
         state_ty_ident: &Ident,
         item_iter_ty_lifetime: &Lifetime,
         item_iter_ty: &Type,
@@ -650,8 +650,8 @@ impl AsItemsStateMachine {
             mut variants,
         } = self;
 
-        let input_ty_ref = make_ty_ref(input_ty);
-        let docstr = format!("Convert a {0} into XML events.\n\nThis type is generated using the [`macro@xso::AsXml`] derive macro and implements [`std::iter:Iterator`] for {0}.", input_ty_ref);
+        let input_ty_ref_text = make_ty_ref(input_ty_ref);
+        let docstr = format!("Convert a {0} into XML events.\n\nThis type is generated using the [`macro@xso::AsXml`] derive macro and implements [`std::iter:Iterator`] for {0}.", input_ty_ref_text);
 
         let init_body = if variants.len() == 1 {
             let AsItemsEntryPoint { destructure, init } = variants.remove(0);
@@ -691,7 +691,7 @@ impl AsItemsStateMachine {
                 }
 
                 fn new(
-                    value: &#item_iter_ty_lifetime #input_ty,
+                    value: #input_ty_ref,
                 ) -> ::core::result::Result<Self, ::xso::error::Error> {
                     ::core::result::Result::Ok(#init_body)
                 }
@@ -729,7 +729,7 @@ impl AsItemsStateMachine {
             }
 
             impl<#item_iter_ty_lifetime> #item_iter_ty {
-                fn new(value: &#item_iter_ty_lifetime #input_ty) -> ::core::result::Result<Self, ::xso::error::Error> {
+                fn new(value: #input_ty_ref) -> ::core::result::Result<Self, ::xso::error::Error> {
                     #state_ty_ident::new(value).map(|ok| Self(::core::option::Option::Some(ok)))
                 }
             }
@@ -765,6 +765,7 @@ fn doc_link_path(ty: &Type) -> Option<String> {
             }
             Some(buf)
         }
+        Type::Reference(TypeReference { ref elem, .. }) => doc_link_path(elem),
         _ => None,
     }
 }

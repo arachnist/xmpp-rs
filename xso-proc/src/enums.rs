@@ -17,6 +17,7 @@ use crate::compound::Compound;
 use crate::error_message::ParentRef;
 use crate::meta::{reject_key, Flag, NameRef, NamespaceRef, QNameRef, XmlCompoundMeta};
 use crate::state::{AsItemsStateMachine, FromEventsStateMachine};
+use crate::types::{ref_ty, ty_from_ident};
 
 /// The definition of an enum variant, switched on the XML element's name.
 struct NameVariant {
@@ -103,6 +104,7 @@ impl NameVariant {
         &self,
         xml_namespace: &NamespaceRef,
         enum_ident: &Ident,
+        state_ty_ident: &Ident,
         item_iter_ty_lifetime: &Lifetime,
     ) -> Result<AsItemsStateMachine> {
         let xml_name = &self.name;
@@ -119,6 +121,7 @@ impl NameVariant {
                     .into_iter()
                     .collect(),
                 }),
+                state_ty_ident,
                 &self.ident.to_string(),
                 &item_iter_ty_lifetime,
             )?
@@ -316,17 +319,17 @@ impl ItemDef for EnumDef {
             statemachine.merge(variant.make_as_item_iter_statemachine(
                 &self.namespace,
                 target_ty_ident,
+                &state_ty_ident,
                 &item_iter_ty_lifetime,
             )?);
         }
 
         let defs = statemachine.render(
             vis,
-            &TypePath {
-                qself: None,
-                path: target_ty_ident.clone().into(),
-            }
-            .into(),
+            &ref_ty(
+                ty_from_ident(target_ty_ident.clone()).into(),
+                item_iter_ty_lifetime.clone(),
+            ),
             &state_ty_ident,
             &item_iter_ty_lifetime,
             &item_iter_ty,

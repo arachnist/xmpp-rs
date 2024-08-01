@@ -827,3 +827,130 @@ fn children_roundtrip() {
         "<parent xmlns='urn:example:ns1'><attr foo='X'/><attr foo='Y'/><attr foo='Z'/></parent>",
     )
 }
+
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = NS1, name = "parent")]
+struct TextExtract {
+    #[xml(extract(namespace = NS1, name = "child", fields(text)))]
+    contents: String,
+}
+
+#[test]
+fn text_extract_positive() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    match parse_str::<TextExtract>(
+        "<parent xmlns='urn:example:ns1'><child>hello world</child></parent>",
+    ) {
+        Ok(TextExtract { contents }) => {
+            assert_eq!(contents, "hello world");
+        }
+        other => panic!("unexpected result: {:?}", other),
+    }
+}
+
+#[test]
+fn text_extract_roundtrip() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<TextExtract>(
+        "<parent xmlns='urn:example:ns1'><child>hello world!</child></parent>",
+    )
+}
+
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = NS1, name = "parent")]
+struct AttributeExtract {
+    #[xml(extract(namespace = NS1, name = "child", fields(attribute = "foo")))]
+    contents: String,
+}
+
+#[test]
+fn attribute_extract_positive() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    match parse_str::<AttributeExtract>(
+        "<parent xmlns='urn:example:ns1'><child foo='hello world'/></parent>",
+    ) {
+        Ok(AttributeExtract { contents }) => {
+            assert_eq!(contents, "hello world");
+        }
+        other => panic!("unexpected result: {:?}", other),
+    }
+}
+
+#[test]
+fn attribute_extract_roundtrip() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<AttributeExtract>(
+        "<parent xmlns='urn:example:ns1'><child foo='hello world'/></parent>",
+    )
+}
+
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = NS1, name = "parent")]
+struct ChildExtract {
+    #[xml(extract(namespace = NS1, name = "child", fields(child)))]
+    contents: RequiredAttribute,
+}
+
+#[test]
+fn child_extract_roundtrip() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<ChildExtract>(
+        "<parent xmlns='urn:example:ns1'><child><attr foo='hello world!'/></child></parent>",
+    )
+}
+
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = NS1, name = "parent")]
+struct NestedExtract {
+    #[xml(extract(namespace = NS1, name = "child", fields(
+        extract(namespace = NS1, name = "grandchild", fields(text))
+    )))]
+    contents: String,
+}
+
+#[test]
+fn nested_extract_positive() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    match parse_str::<NestedExtract>(
+        "<parent xmlns='urn:example:ns1'><child><grandchild>hello world</grandchild></child></parent>",
+    ) {
+        Ok(NestedExtract { contents }) => {
+            assert_eq!(contents, "hello world");
+        }
+        other => panic!("unexpected result: {:?}", other),
+    }
+}
+
+#[test]
+fn nested_extract_roundtrip() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<NestedExtract>("<parent xmlns='urn:example:ns1'><child><grandchild>hello world</grandchild></child></parent>")
+}

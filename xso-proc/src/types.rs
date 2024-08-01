@@ -745,3 +745,11 @@ pub(crate) fn extend_fn(of_ty: Type, item_ty: Type) -> Expr {
         },
     })
 }
+
+/// Construct a [`syn::TypePath`] which references the given type name.
+pub(crate) fn ty_from_ident(ident: Ident) -> TypePath {
+    TypePath {
+        qself: None,
+        path: ident.into(),
+    }
+}

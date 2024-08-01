@@ -13,6 +13,7 @@ use syn::*;
 use crate::common::{AsXmlParts, FromXmlParts, ItemDef};
 use crate::compound::Compound;
 use crate::meta::{reject_key, Flag, NameRef, NamespaceRef, QNameRef, XmlCompoundMeta};
+use crate::types::{ref_ty, ty_from_ident};
 
 /// Definition of a struct and how to parse it.
 pub(crate) struct StructDef {
@@ -178,6 +179,7 @@ impl ItemDef for StructDef {
             .inner
             .make_as_item_iter_statemachine(
                 &Path::from(target_ty_ident.clone()).into(),
+                &state_ty_ident,
                 "Struct",
                 &item_iter_ty_lifetime,
             )?
@@ -193,11 +195,10 @@ impl ItemDef for StructDef {
             .compile()
             .render(
                 vis,
-                &TypePath {
-                    qself: None,
-                    path: target_ty_ident.clone().into(),
-                }
-                .into(),
+                &ref_ty(
+                    ty_from_ident(target_ty_ident.clone()).into(),
+                    item_iter_ty_lifetime.clone(),
+                ),
                 &state_ty_ident,
                 &item_iter_ty_lifetime,
                 &item_iter_ty,

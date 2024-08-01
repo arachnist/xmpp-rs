@@ -52,11 +52,15 @@ pub(crate) struct FromEventsScope {
     ///
     /// See [`crate::field::FieldBuilderPart::Nested`].
     pub(crate) substate_result: Ident,
+
+    /// Prefix which should be used for any types which are declared, to
+    /// ensure they don't collide with other names.
+    pub(crate) type_prefix: Ident,
 }
 
 impl FromEventsScope {
     /// Create a fresh scope with all necessary identifiers.
-    pub(crate) fn new() -> Self {
+    pub(crate) fn new(type_prefix: Ident) -> Self {
         // Sadly, `Ident::new` is not `const`, so we have to create even the
         // well-known identifiers from scratch all the time.
         Self {
@@ -65,6 +69,7 @@ impl FromEventsScope {
             builder_data_ident: Ident::new("__xso_proc_macro_builder_data", Span::call_site()),
             substate_data: Ident::new("__xso_proc_macro_substate_data", Span::call_site()),
             substate_result: Ident::new("__xso_proc_macro_substate_result", Span::call_site()),
+            type_prefix,
         }
     }
 
@@ -84,6 +89,24 @@ impl FromEventsScope {
             member: Member::Named(mangle_member(member)),
         })
     }
+
+    /// Generate an ident with proper scope and span from the type prefix and
+    /// the given member and actual type name.
+    ///
+    /// Due to being merged with the type prefix of this scope and the given
+    /// member, this type name is guaranteed to be unique for unique values of
+    /// `name`.
+    pub(crate) fn make_member_type_name(&self, member: &Member, name: &str) -> Ident {
+        quote::format_ident!(
+            "{}Member{}{}",
+            self.type_prefix,
+            match member {
+                Member::Named(ref ident) => ident.to_string(),
+                Member::Unnamed(Index { index, .. }) => index.to_string(),
+            },
+            name,
+        )
+    }
 }
 
 /// Container struct for various identifiers used throughout the generator
@@ -97,13 +120,18 @@ impl FromEventsScope {
 pub(crate) struct AsItemsScope {
     /// Lifetime for data borrowed by the implementation.
     pub(crate) lifetime: Lifetime,
+
+    /// Prefix which should be used for any types which are declared, to
+    /// ensure they don't collide with other names.
+    pub(crate) type_prefix: Ident,
 }
 
 impl AsItemsScope {
     /// Create a fresh scope with all necessary identifiers.
-    pub(crate) fn new(lifetime: &Lifetime) -> Self {
+    pub(crate) fn new(lifetime: &Lifetime, type_prefix: Ident) -> Self {
         Self {
             lifetime: lifetime.clone(),
+            type_prefix,
         }
     }
 
@@ -111,6 +139,24 @@ impl AsItemsScope {
     /// impl.
     pub(crate) fn borrow(&self, ty: Type) -> Type {
         ref_ty(ty, self.lifetime.clone())
+    }
+
+    /// Generate an ident with proper scope and span from the type prefix and
+    /// the given member and actual type name.
+    ///
+    /// Due to being merged with the type prefix of this scope and the given
+    /// member, this type name is guaranteed to be unique for unique values of
+    /// `name`.
+    pub(crate) fn make_member_type_name(&self, member: &Member, name: &str) -> Ident {
+        quote::format_ident!(
+            "{}Member{}{}",
+            self.type_prefix,
+            match member {
+                Member::Named(ref ident) => ident.to_string(),
+                Member::Unnamed(Index { index, .. }) => index.to_string(),
+            },
+            name,
+        )
     }
 }
 

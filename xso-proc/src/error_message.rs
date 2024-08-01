@@ -19,6 +19,25 @@ pub(super) enum ParentRef {
     /// The parent is addressable by a path, e.g. a struct type or enum
     /// variant.
     Named(Path),
+
+    /// The parent is not addressable by a path, because it is in fact an
+    /// ephemeral structure.
+    ///
+    /// Used to reference the ephemeral structures used by fields declared
+    /// with `#[xml(extract(..))]`.
+    Unnamed {
+        /// The parent's ref.
+        ///
+        /// For extracts, this refers to the compound where the field with
+        /// the extract is declared.
+        parent: Box<ParentRef>,
+
+        /// The field inside that parent.
+        ///
+        /// For extracts, this refers to the compound field where the extract
+        /// is declared.
+        field: Member,
+    },
 }
 
 impl From<Path> for ParentRef {
@@ -47,6 +66,32 @@ impl fmt::Display for ParentRef {
                 }
                 write!(f, " element")
             }
+            Self::Unnamed { parent, field } => {
+                write!(f, "extraction for {} in {}", FieldName(field), parent)
+            }
+        }
+    }
+}
+
+impl ParentRef {
+    /// Create a new `ParentRef` for a member inside this one.
+    ///
+    /// Returns a [`Self::Unnamed`] with `self` as parent and `member` as
+    /// field.
+    pub(crate) fn child(&self, member: Member) -> Self {
+        match self {
+            Self::Named { .. } | Self::Unnamed { .. } => Self::Unnamed {
+                parent: Box::new(self.clone()),
+                field: member,
+            },
+        }
+    }
+
+    /// Return true if and only if this ParentRef can be addressed as a path.
+    pub(crate) fn is_path(&self) -> bool {
+        match self {
+            Self::Named { .. } => true,
+            Self::Unnamed { .. } => false,
         }
     }
 }

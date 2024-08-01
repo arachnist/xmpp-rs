@@ -638,17 +638,41 @@ pub(crate) enum XmlFieldMeta {
 
     /// `#[xml(text)]`
     Text {
+        /// The span of the `#[xml(text)]` meta from which this was parsed.
+        ///
+        /// This is useful for error messages.
+        span: Span,
+
         /// The path to the optional codec type.
         codec: Option<Expr>,
     },
 
     /// `#[xml(child)`
     Child {
+        /// The span of the `#[xml(child)]` meta from which this was parsed.
+        ///
+        /// This is useful for error messages.
+        span: Span,
+
         /// The `default` flag.
         default_: Flag,
 
         /// The `n` flag.
         amount: Option<AmountConstraint>,
+    },
+
+    /// `#[xml(extract)]
+    Extract {
+        /// The span of the `#[xml(extract)]` meta from which this was parsed.
+        ///
+        /// This is useful for error messages.
+        span: Span,
+
+        /// The namespace/name keys.
+        qname: QNameRef,
+
+        /// The `fields` nested meta.
+        fields: Vec<XmlFieldMeta>,
     },
 }
 
@@ -725,7 +749,10 @@ impl XmlFieldMeta {
                     return Err(e);
                 }
             }
-            Ok(Self::Text { codec: Some(codec) })
+            Ok(Self::Text {
+                span: meta.path.span(),
+                codec: Some(codec),
+            })
         } else if meta.input.peek(syn::token::Paren) {
             let mut codec: Option<Expr> = None;
             meta.parse_nested_meta(|meta| {
@@ -750,9 +777,15 @@ impl XmlFieldMeta {
                     Err(Error::new_spanned(meta.path, "unsupported key"))
                 }
             })?;
-            Ok(Self::Text { codec })
+            Ok(Self::Text {
+                span: meta.path.span(),
+                codec,
+            })
         } else {
-            Ok(Self::Text { codec: None })
+            Ok(Self::Text {
+                span: meta.path.span(),
+                codec: None,
+            })
         }
     }
 
@@ -778,13 +811,51 @@ impl XmlFieldMeta {
                     Err(Error::new_spanned(meta.path, "unsupported key"))
                 }
             })?;
-            Ok(Self::Child { default_, amount })
+            Ok(Self::Child {
+                span: meta.path.span(),
+                default_,
+                amount,
+            })
         } else {
             Ok(Self::Child {
+                span: meta.path.span(),
                 default_: Flag::Absent,
                 amount: None,
             })
         }
+    }
+
+    /// Parse a `#[xml(extract)]` meta.
+    fn extract_from_meta(meta: ParseNestedMeta<'_>) -> Result<Self> {
+        let mut qname = QNameRef::default();
+        let mut fields = None;
+        meta.parse_nested_meta(|meta| {
+            if meta.path.is_ident("fields") {
+                if let Some((fields_span, _)) = fields.as_ref() {
+                    let mut error = Error::new_spanned(meta.path, "duplicate `fields` meta");
+                    error.combine(Error::new(*fields_span, "previous `fields` meta was here"));
+                    return Err(error);
+                }
+                let mut new_fields = Vec::new();
+                meta.parse_nested_meta(|meta| {
+                    new_fields.push(XmlFieldMeta::parse_from_meta(meta)?);
+                    Ok(())
+                })?;
+                fields = Some((meta.path.span(), new_fields));
+                Ok(())
+            } else {
+                match qname.parse_incremental_from_meta(meta)? {
+                    None => Ok(()),
+                    Some(meta) => Err(Error::new_spanned(meta.path, "unsupported key")),
+                }
+            }
+        })?;
+        let fields = fields.map(|(_, x)| x).unwrap_or_else(Vec::new);
+        Ok(Self::Extract {
+            span: meta.path.span(),
+            qname,
+            fields,
+        })
     }
 
     /// Parse [`Self`] from a nestd meta, switching on the identifier
@@ -796,6 +867,8 @@ impl XmlFieldMeta {
             Self::text_from_meta(meta)
         } else if meta.path.is_ident("child") {
             Self::child_from_meta(meta)
+        } else if meta.path.is_ident("extract") {
+            Self::extract_from_meta(meta)
         } else {
             Err(Error::new_spanned(meta.path, "unsupported field meta"))
         }
@@ -866,6 +939,17 @@ impl XmlFieldMeta {
             Ok(result)
         } else {
             Err(Error::new(*err_span, "missing #[xml(..)] meta on field"))
+        }
+    }
+
+    /// Return a span which points at the meta which constructed this
+    /// XmlFieldMeta.
+    pub(crate) fn span(&self) -> Span {
+        match self {
+            Self::Attribute { ref span, .. } => *span,
+            Self::Child { ref span, .. } => *span,
+            Self::Text { ref span, .. } => *span,
+            Self::Extract { ref span, .. } => *span,
         }
     }
 }
