@@ -3,10 +3,9 @@ use minidom::Element;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 use tokio_stream::StreamExt;
-use xmpp_parsers::{jid::Jid, ns};
+use xmpp_parsers::{jid::Jid, ns, stream_features::StreamFeatures};
 
 use crate::connect::ServerConnector;
-use crate::stream_features::StreamFeatures;
 use crate::xmpp_codec::Packet;
 use crate::xmpp_stream::{add_stanza_id, XMPPStream};
 use crate::Error;

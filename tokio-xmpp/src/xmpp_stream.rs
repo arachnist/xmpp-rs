@@ -8,9 +8,8 @@ use std::pin::Pin;
 use std::task::Context;
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio_util::codec::Framed;
-use xmpp_parsers::jid::Jid;
+use xmpp_parsers::{jid::Jid, stream_features::StreamFeatures};
 
-use crate::stream_features::StreamFeatures;
 use crate::stream_start;
 use crate::xmpp_codec::{Packet, XmppCodec};
 use crate::Error;
@@ -60,12 +59,12 @@ impl<S: AsyncRead + AsyncWrite + Unpin> XMPPStream<S> {
         stream: Framed<S, XmppCodec>,
         ns: String,
         id: String,
-        stream_features: Element,
+        stream_features: StreamFeatures,
     ) -> Self {
         XMPPStream {
             jid,
             stream,
-            stream_features: StreamFeatures::new(stream_features),
+            stream_features,
             ns,
             id,
         }

@@ -30,7 +30,6 @@ mod event;
 pub use event::Event;
 mod client;
 pub mod connect;
-pub mod stream_features;
 pub mod xmpp_stream;
 
 pub use client::{

@@ -23,7 +23,13 @@ pub async fn auth<S: AsyncRead + AsyncWrite + Unpin>(
         Box::new(|| Box::new(Anonymous::new())),
     ];
 
-    let remote_mechs: HashSet<String> = stream.stream_features.sasl_mechanisms()?.collect();
+    let remote_mechs: HashSet<String> = stream
+        .stream_features
+        .sasl_mechanisms
+        .mechanisms
+        .iter()
+        .map(|item| item.mechanism.clone())
+        .collect();
 
     for local_mech in local_mechs {
         let mut mechanism = local_mech();

@@ -1,8 +1,7 @@
 use futures::{sink::SinkExt, stream::StreamExt};
-use minidom::Element;
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio_util::codec::Framed;
-use xmpp_parsers::{jid::Jid, ns};
+use xmpp_parsers::{jid::Jid, ns, stream_features::StreamFeatures};
 
 use crate::xmpp_codec::{Packet, XmppCodec};
 use crate::xmpp_stream::XMPPStream;
@@ -47,29 +46,27 @@ pub async fn start<S: AsyncRead + AsyncWrite + Unpin>(
         .get("id")
         .ok_or(ProtocolError::NoStreamId)?
         .clone();
-    let stream = if stream_ns == "jabber:client" && stream_attrs.get("version").is_some() {
-        let stream_features;
+    if stream_ns == "jabber:client" && stream_attrs.get("version").is_some() {
         loop {
             match stream.next().await {
-                Some(Ok(Packet::Stanza(stanza))) if stanza.is("features", ns::STREAM) => {
-                    stream_features = stanza;
-                    break;
+                Some(Ok(Packet::Stanza(stanza))) => {
+                    if let Ok(stream_features) = StreamFeatures::try_from(stanza) {
+                        return Ok(XMPPStream::new(jid, stream, ns, stream_id, stream_features));
+                    }
                 }
                 Some(Ok(_)) => {}
                 Some(Err(e)) => return Err(e.into()),
                 None => return Err(Error::Disconnected),
             }
         }
-        XMPPStream::new(jid, stream, ns, stream_id, stream_features)
     } else {
         // FIXME: huge hack, shouldn’t be an element!
-        XMPPStream::new(
+        return Ok(XMPPStream::new(
             jid,
             stream,
             ns,
             stream_id.clone(),
-            Element::builder(stream_id, ns::STREAM).build(),
-        )
-    };
-    Ok(stream)
+            StreamFeatures::default(),
+        ));
+    }
 }
