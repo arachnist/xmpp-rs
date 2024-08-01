@@ -260,6 +260,63 @@ impl<T: Spanned> From<T> for Flag {
     }
 }
 
+/// A pair of `namespace` and `name` keys.
+#[derive(Debug, Default)]
+pub(crate) struct QNameRef {
+    /// The XML namespace supplied.
+    pub(crate) namespace: Option<NamespaceRef>,
+
+    /// The XML name supplied.
+    pub(crate) name: Option<NameRef>,
+}
+
+impl QNameRef {
+    /// Attempt to incrementally parse this QNameRef.
+    ///
+    /// If `meta` contains either `namespace` or `name` keys, they are
+    /// processed and either `Ok(None)` or an error is returned.
+    ///
+    /// If no matching key is found, `Ok(Some(meta))` is returned for further
+    /// processing.
+    fn parse_incremental_from_meta<'x>(
+        &mut self,
+        meta: ParseNestedMeta<'x>,
+    ) -> Result<Option<ParseNestedMeta<'x>>> {
+        if meta.path.is_ident("name") {
+            if self.name.is_some() {
+                return Err(Error::new_spanned(meta.path, "duplicate `name` key"));
+            }
+            let value = meta.value()?;
+            let name_span = value.span();
+            let (new_namespace, new_name) = parse_prefixed_name(value)?;
+            if let Some(new_namespace) = new_namespace {
+                if let Some(namespace) = self.namespace.as_ref() {
+                    let mut error = Error::new(
+                        name_span,
+                        "cannot combine `namespace` key with prefixed `name`",
+                    );
+                    error.combine(Error::new_spanned(namespace, "`namespace` was set here"));
+                    return Err(error);
+                }
+                self.namespace = Some(new_namespace);
+            }
+            self.name = Some(new_name);
+            Ok(None)
+        } else if meta.path.is_ident("namespace") {
+            if self.namespace.is_some() {
+                return Err(Error::new_spanned(
+                    meta.path,
+                    "duplicate `namespace` key or `name` key has prefix",
+                ));
+            }
+            self.namespace = Some(meta.value()?.parse()?);
+            Ok(None)
+        } else {
+            Ok(Some(meta))
+        }
+    }
+}
+
 /// Contents of an `#[xml(..)]` attribute on a struct, enum variant, or enum.
 #[derive(Debug)]
 pub(crate) struct XmlCompoundMeta {
@@ -268,11 +325,9 @@ pub(crate) struct XmlCompoundMeta {
     /// This is useful for error messages.
     pub(crate) span: Span,
 
-    /// The value assigned to `namespace` inside `#[xml(..)]`, if any.
-    pub(crate) namespace: Option<NamespaceRef>,
-
-    /// The value assigned to `name` inside `#[xml(..)]`, if any.
-    pub(crate) name: Option<NameRef>,
+    /// The value assigned to `namespace` and `name` fields inside
+    /// `#[xml(..)]`, if any.
+    pub(crate) qname: QNameRef,
 
     /// The debug flag.
     pub(crate) debug: Flag,
@@ -293,27 +348,14 @@ impl XmlCompoundMeta {
     /// Undefined options or options with incompatible values are rejected
     /// with an appropriate compile-time error.
     fn parse_from_attribute(attr: &Attribute) -> Result<Self> {
-        let mut namespace = None;
-        let mut name = None;
+        let mut qname = QNameRef::default();
         let mut builder = None;
         let mut iterator = None;
         let mut debug = Flag::Absent;
         let mut exhaustive = Flag::Absent;
 
         attr.parse_nested_meta(|meta| {
-            if meta.path.is_ident("name") {
-                if name.is_some() {
-                    return Err(Error::new_spanned(meta.path, "duplicate `name` key"));
-                }
-                name = Some(meta.value()?.parse()?);
-                Ok(())
-            } else if meta.path.is_ident("namespace") {
-                if namespace.is_some() {
-                    return Err(Error::new_spanned(meta.path, "duplicate `namespace` key"));
-                }
-                namespace = Some(meta.value()?.parse()?);
-                Ok(())
-            } else if meta.path.is_ident("debug") {
+            if meta.path.is_ident("debug") {
                 if debug.is_set() {
                     return Err(Error::new_spanned(meta.path, "duplicate `debug` key"));
                 }
@@ -338,14 +380,16 @@ impl XmlCompoundMeta {
                 exhaustive = (&meta.path).into();
                 Ok(())
             } else {
-                Err(Error::new_spanned(meta.path, "unsupported key"))
+                match qname.parse_incremental_from_meta(meta)? {
+                    None => Ok(()),
+                    Some(meta) => Err(Error::new_spanned(meta.path, "unsupported key")),
+                }
             }
         })?;
 
         Ok(Self {
             span: attr.span(),
-            namespace,
-            name,
+            qname,
             debug,
             builder,
             iterator,
@@ -585,11 +629,8 @@ pub(crate) enum XmlFieldMeta {
         /// This is useful for error messages.
         span: Span,
 
-        /// The XML namespace supplied.
-        namespace: Option<NamespaceRef>,
-
-        /// The XML name supplied.
-        name: Option<NameRef>,
+        /// The namespace/name keys.
+        qname: QNameRef,
 
         /// The `default` flag.
         default_: Flag,
@@ -624,65 +665,40 @@ impl XmlFieldMeta {
             let (namespace, name) = parse_prefixed_name(meta.value()?)?;
             Ok(Self::Attribute {
                 span: meta.path.span(),
-                name: Some(name),
-                namespace,
+                qname: QNameRef {
+                    name: Some(name),
+                    namespace,
+                },
                 default_: Flag::Absent,
             })
         } else if meta.input.peek(syn::token::Paren) {
             // full syntax
-            let mut name: Option<NameRef> = None;
-            let mut namespace: Option<NamespaceRef> = None;
+            let mut qname = QNameRef::default();
             let mut default_ = Flag::Absent;
             meta.parse_nested_meta(|meta| {
-                if meta.path.is_ident("name") {
-                    if name.is_some() {
-                        return Err(Error::new_spanned(meta.path, "duplicate `name` key"));
-                    }
-                    let value = meta.value()?;
-                    let name_span = value.span();
-                    let (new_namespace, new_name) = parse_prefixed_name(value)?;
-                    if let Some(new_namespace) = new_namespace {
-                        if namespace.is_some() {
-                            return Err(Error::new(
-                                name_span,
-                                "cannot combine `namespace` key with prefixed `name`",
-                            ));
-                        }
-                        namespace = Some(new_namespace);
-                    }
-                    name = Some(new_name);
-                    Ok(())
-                } else if meta.path.is_ident("namespace") {
-                    if namespace.is_some() {
-                        return Err(Error::new_spanned(
-                            meta.path,
-                            "duplicate `namespace` key or `name` key has prefix",
-                        ));
-                    }
-                    namespace = Some(meta.value()?.parse()?);
-                    Ok(())
-                } else if meta.path.is_ident("default") {
+                if meta.path.is_ident("default") {
                     if default_.is_set() {
                         return Err(Error::new_spanned(meta.path, "duplicate `default` key"));
                     }
                     default_ = (&meta.path).into();
                     Ok(())
                 } else {
-                    Err(Error::new_spanned(meta.path, "unsupported key"))
+                    match qname.parse_incremental_from_meta(meta)? {
+                        None => Ok(()),
+                        Some(meta) => Err(Error::new_spanned(meta.path, "unsupported key")),
+                    }
                 }
             })?;
             Ok(Self::Attribute {
                 span: meta.path.span(),
-                name,
-                namespace,
+                qname,
                 default_,
             })
         } else {
             // argument-less syntax
             Ok(Self::Attribute {
                 span: meta.path.span(),
-                name: None,
-                namespace: None,
+                qname: QNameRef::default(),
                 default_: Flag::Absent,
             })
         }

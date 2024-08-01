@@ -12,7 +12,7 @@ use syn::*;
 
 use crate::common::{AsXmlParts, FromXmlParts, ItemDef};
 use crate::compound::Compound;
-use crate::meta::{reject_key, Flag, NameRef, NamespaceRef, XmlCompoundMeta};
+use crate::meta::{reject_key, Flag, NameRef, NamespaceRef, QNameRef, XmlCompoundMeta};
 
 /// Definition of a struct and how to parse it.
 pub(crate) struct StructDef {
@@ -46,8 +46,7 @@ impl StructDef {
         // an error if they are present.
         let XmlCompoundMeta {
             span: meta_span,
-            namespace,
-            name,
+            qname: QNameRef { namespace, name },
             exhaustive,
             debug,
             builder,

@@ -13,7 +13,7 @@ use syn::{spanned::Spanned, *};
 use rxml_validation::NcName;
 
 use crate::error_message::{self, ParentRef};
-use crate::meta::{AmountConstraint, Flag, NameRef, NamespaceRef, XmlFieldMeta};
+use crate::meta::{AmountConstraint, Flag, NameRef, NamespaceRef, QNameRef, XmlFieldMeta};
 use crate::scope::{AsItemsScope, FromEventsScope};
 use crate::types::{
     as_optional_xml_text_fn, as_xml_iter_fn, as_xml_text_fn, default_fn, extend_fn, from_events_fn,
@@ -172,8 +172,7 @@ impl FieldKind {
         match meta {
             XmlFieldMeta::Attribute {
                 span,
-                namespace,
-                name,
+                qname: QNameRef { namespace, name },
                 default_,
             } => {
                 let xml_name = match name {

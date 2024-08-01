@@ -15,7 +15,7 @@ use syn::*;
 use crate::common::{AsXmlParts, FromXmlParts, ItemDef};
 use crate::compound::Compound;
 use crate::error_message::ParentRef;
-use crate::meta::{reject_key, Flag, NameRef, NamespaceRef, XmlCompoundMeta};
+use crate::meta::{reject_key, Flag, NameRef, NamespaceRef, QNameRef, XmlCompoundMeta};
 use crate::state::{AsItemsStateMachine, FromEventsStateMachine};
 
 /// The definition of an enum variant, switched on the XML element's name.
@@ -38,8 +38,7 @@ impl NameVariant {
         // an error if they are present.
         let XmlCompoundMeta {
             span: meta_span,
-            namespace,
-            name,
+            qname: QNameRef { namespace, name },
             exhaustive,
             debug,
             builder,
@@ -172,8 +171,7 @@ impl EnumDef {
         // an error if they are present.
         let XmlCompoundMeta {
             span: meta_span,
-            namespace,
-            name,
+            qname: QNameRef { namespace, name },
             exhaustive,
             debug,
             builder,
