@@ -192,6 +192,28 @@ enum FieldKind {
     },
 }
 
+fn default_name(span: Span, name: Option<NameRef>, field_ident: Option<&Ident>) -> Result<NameRef> {
+    match name {
+        Some(v) => Ok(v),
+        None => match field_ident {
+            None => Err(Error::new(
+                span,
+                "name must be explicitly specified with the `name` key on unnamed fields",
+            )),
+            Some(field_ident) => match NcName::try_from(field_ident.to_string()) {
+                Ok(value) => Ok(NameRef::Literal {
+                    span: field_ident.span(),
+                    value,
+                }),
+                Err(e) => Err(Error::new(
+                    field_ident.span(),
+                    format!("invalid XML name: {}", e),
+                )),
+            },
+        },
+    }
+}
+
 impl FieldKind {
     /// Construct a new field implementation from the meta attributes.
     ///
@@ -199,34 +221,22 @@ impl FieldKind {
     /// it is not specified explicitly.
     ///
     /// `field_ty` is needed for type inferrence on extracted fields.
-    fn from_meta(meta: XmlFieldMeta, field_ident: Option<&Ident>, field_ty: &Type) -> Result<Self> {
+    ///
+    /// `container_namespace` is used in some cases to insert a default
+    /// namespace.
+    fn from_meta(
+        meta: XmlFieldMeta,
+        field_ident: Option<&Ident>,
+        field_ty: &Type,
+        container_namespace: &NamespaceRef,
+    ) -> Result<Self> {
         match meta {
             XmlFieldMeta::Attribute {
                 span,
                 qname: QNameRef { namespace, name },
                 default_,
             } => {
-                let xml_name = match name {
-                    Some(v) => v,
-                    None => match field_ident {
-                        None => return Err(Error::new(
-                            span,
-                            "attribute name must be explicitly specified using `#[xml(attribute = ..)] on unnamed fields",
-                        )),
-                        Some(field_ident) => match NcName::try_from(field_ident.to_string()) {
-                            Ok(value) => NameRef::Literal {
-                                span: field_ident.span(),
-                                value,
-                            },
-                            Err(e) => {
-                                return Err(Error::new(
-                                    field_ident.span(),
-                                    format!("invalid XML attribute name: {}", e),
-                                ))
-                            }
-                        },
-                    }
-                };
+                let xml_name = default_name(span, name, field_ident)?;
 
                 Ok(Self::Attribute {
                     xml_name,
@@ -267,19 +277,8 @@ impl FieldKind {
                 qname: QNameRef { namespace, name },
                 fields,
             } => {
-                let Some(xml_namespace) = namespace else {
-                    return Err(Error::new(
-                        span,
-                        "`#[xml(extract(..))]` must contain a `namespace` key.",
-                    ));
-                };
-
-                let Some(xml_name) = name else {
-                    return Err(Error::new(
-                        span,
-                        "`#[xml(extract(..))]` must contain a `name` key.",
-                    ));
-                };
+                let xml_namespace = namespace.unwrap_or_else(|| container_namespace.clone());
+                let xml_name = default_name(span, name, field_ident)?;
 
                 let field = {
                     let mut fields = fields.into_iter();
@@ -301,7 +300,7 @@ impl FieldKind {
                 };
 
                 let parts = Compound::from_field_defs(
-                    [FieldDef::from_extract(field, 0, field_ty)].into_iter(),
+                    [FieldDef::from_extract(field, 0, field_ty, &xml_namespace)].into_iter(),
                 )?;
 
                 Ok(Self::Extract {
@@ -334,7 +333,11 @@ impl FieldDef {
     ///
     /// The `index` must be the zero-based index of the field even for named
     /// fields.
-    pub(crate) fn from_field(field: &syn::Field, index: u32) -> Result<Self> {
+    pub(crate) fn from_field(
+        field: &syn::Field,
+        index: u32,
+        container_namespace: &NamespaceRef,
+    ) -> Result<Self> {
         let field_span = field.span();
         let meta = XmlFieldMeta::parse_from_attributes(&field.attrs, &field_span)?;
 
@@ -352,7 +355,7 @@ impl FieldDef {
         let ty = field.ty.clone();
 
         Ok(Self {
-            kind: FieldKind::from_meta(meta, ident, &ty)?,
+            kind: FieldKind::from_meta(meta, ident, &ty, container_namespace)?,
             member,
             ty,
         })
@@ -362,12 +365,17 @@ impl FieldDef {
     ///
     /// The `index` must be the zero-based index of the field even for named
     /// fields.
-    pub(crate) fn from_extract(meta: XmlFieldMeta, index: u32, ty: &Type) -> Result<Self> {
+    pub(crate) fn from_extract(
+        meta: XmlFieldMeta,
+        index: u32,
+        ty: &Type,
+        container_namespace: &NamespaceRef,
+    ) -> Result<Self> {
         let span = meta.span();
         Ok(Self {
             member: Member::Unnamed(Index { index, span }),
             ty: ty.clone(),
-            kind: FieldKind::from_meta(meta, None, ty)?,
+            kind: FieldKind::from_meta(meta, None, ty, container_namespace)?,
         })
     }
 

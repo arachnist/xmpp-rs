@@ -316,6 +316,12 @@ expanded to the corresponding namespace URI and the value for the `namespace`
 key is implied. Mixing a prefixed name with an explicit `namespace` key is
 not allowed.
 
+Both `namespace` and `name` may be omitted. If `namespace` is omitted, it
+defaults to the namespace of the surrounding container. If `name` is omitted
+and the `extract` meta is being used on a named field, that field's name is
+used. If `name` is omitted and `extract` is not used on a named field, an
+error is emitted.
+
 The sequence of field meta inside `fields` can be thought of as a nameless
 tuple-style struct. The macro generates serialisation/deserialisation code
 for that nameless tuple-style struct and uses it to serialise/deserialise

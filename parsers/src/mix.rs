@@ -38,11 +38,11 @@ generate_id!(
 #[xml(namespace = ns::MIX_CORE, name = "participant")]
 pub struct Participant {
     /// The nick of this participant.
-    #[xml(extract(namespace = ns::MIX_CORE, name = "nick", fields(text)))]
+    #[xml(extract(fields(text)))]
     pub nick: String,
 
     /// The bare JID of this participant.
-    #[xml(extract(namespace = ns::MIX_CORE, name = "jid", fields(text)))]
+    #[xml(extract(fields(text)))]
     pub jid: BareJid,
 }
 
@@ -85,7 +85,7 @@ pub struct Join {
     pub id: Option<ParticipantId>,
 
     /// The nick requested by the user or set by the service.
-    #[xml(extract(namespace = ns::MIX_CORE, name = "nick", fields(text)))]
+    #[xml(extract(fields(text)))]
     pub nick: String,
 
     /// Which MIX nodes to subscribe to.
@@ -164,7 +164,7 @@ impl IqResultPayload for Leave {}
 #[xml(namespace = ns::MIX_CORE, name = "setnick")]
 pub struct SetNick {
     /// The new requested nick.
-    #[xml(extract(namespace = ns::MIX_CORE, name = "nick", fields(text)))]
+    #[xml(extract(fields(text)))]
     pub nick: String,
 }
 
@@ -184,11 +184,11 @@ impl SetNick {
 #[xml(namespace = ns::MIX_CORE, name = "mix")]
 pub struct Mix {
     /// The nick of the user who said something.
-    #[xml(extract(namespace = ns::MIX_CORE, name = "nick", fields(text)))]
+    #[xml(extract(fields(text)))]
     pub nick: String,
 
     /// The JID of the user who said something.
-    #[xml(extract(namespace = ns::MIX_CORE, name = "jid", fields(text)))]
+    #[xml(extract(fields(text)))]
     pub jid: BareJid,
 }
 

@@ -75,9 +75,9 @@ impl StructDef {
         };
 
         Ok(Self {
+            inner: Compound::from_fields(fields, &namespace)?,
             namespace,
             name,
-            inner: Compound::from_fields(fields)?,
             target_ty_ident: ident.clone(),
             builder_ty_ident,
             item_iter_ty_ident,

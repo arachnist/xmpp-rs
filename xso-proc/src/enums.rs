@@ -33,7 +33,7 @@ struct NameVariant {
 
 impl NameVariant {
     /// Construct a new name-selected variant from its declaration.
-    fn new(decl: &Variant) -> Result<Self> {
+    fn new(decl: &Variant, enum_namespace: &NamespaceRef) -> Result<Self> {
         // We destructure here so that we get informed when new fields are
         // added and can handle them, either by processing them or raising
         // an error if they are present.
@@ -59,7 +59,7 @@ impl NameVariant {
         Ok(Self {
             name,
             ident: decl.ident.clone(),
-            inner: Compound::from_fields(&decl.fields)?,
+            inner: Compound::from_fields(&decl.fields, enum_namespace)?,
         })
     }
 
@@ -190,7 +190,7 @@ impl EnumDef {
         let mut variants = Vec::new();
         let mut seen_names = HashMap::new();
         for variant in variant_iter {
-            let variant = NameVariant::new(variant)?;
+            let variant = NameVariant::new(variant, &namespace)?;
             if let Some(other) = seen_names.get(&variant.name) {
                 return Err(Error::new_spanned(
                     variant.name,

@@ -24,7 +24,7 @@ pub struct Option_ {
     pub label: Option<String>,
 
     /// The value returned to the server when selecting this option.
-    #[xml(extract(namespace = ns::DATA_FORMS, name = "value", fields(text)))]
+    #[xml(extract(fields(text)))]
     pub value: String,
 }
 

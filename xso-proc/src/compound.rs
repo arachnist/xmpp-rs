@@ -12,6 +12,7 @@ use syn::{spanned::Spanned, *};
 
 use crate::error_message::ParentRef;
 use crate::field::{FieldBuilderPart, FieldDef, FieldIteratorPart, FieldTempInit};
+use crate::meta::NamespaceRef;
 use crate::scope::{mangle_member, AsItemsScope, FromEventsScope};
 use crate::state::{AsItemsSubmachine, FromEventsSubmachine, State};
 use crate::types::{feed_fn, namespace_ty, ncnamestr_cow_ty, phantom_lifetime_ty};
@@ -55,7 +56,10 @@ impl Compound {
     }
 
     /// Construct a compound from fields.
-    pub(crate) fn from_fields(compound_fields: &Fields) -> Result<Self> {
+    pub(crate) fn from_fields(
+        compound_fields: &Fields,
+        container_namespace: &NamespaceRef,
+    ) -> Result<Self> {
         Self::from_field_defs(compound_fields.iter().enumerate().map(|(i, field)| {
             let index = match i.try_into() {
                 Ok(v) => v,
@@ -68,7 +72,7 @@ impl Compound {
                     ))
                 }
             };
-            FieldDef::from_field(field, index)
+            FieldDef::from_field(field, index, container_namespace)
         }))
     }
 

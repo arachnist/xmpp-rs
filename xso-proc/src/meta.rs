@@ -61,7 +61,7 @@ macro_rules! reject_key {
 pub(crate) use reject_key;
 
 /// Value for the `#[xml(namespace = ..)]` attribute.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) enum NamespaceRef {
     /// The XML namespace is specified as a string literal.
     LitStr(LitStr),

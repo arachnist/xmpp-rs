@@ -1124,3 +1124,60 @@ fn nested_extract_roundtrip() {
     };
     roundtrip_full::<NestedExtract>("<parent xmlns='urn:example:ns1'><child><grandchild>hello world</grandchild></child></parent>")
 }
+
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = NS1, name = "parent")]
+struct ExtractOmitNamespace {
+    #[xml(extract(name = "child", fields(text)))]
+    contents: String,
+}
+
+#[test]
+fn extract_omit_namespace_roundtrip() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<ExtractOmitNamespace>(
+        "<parent xmlns='urn:example:ns1'><child>hello world!</child></parent>",
+    )
+}
+
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = NS1, name = "parent")]
+struct ExtractOmitName {
+    #[xml(extract(namespace = NS1, fields(text)))]
+    contents: String,
+}
+
+#[test]
+fn extract_omit_name_roundtrip() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<ExtractOmitName>(
+        "<parent xmlns='urn:example:ns1'><contents>hello world!</contents></parent>",
+    )
+}
+
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = NS1, name = "parent")]
+struct ExtractOmitNameAndNamespace {
+    #[xml(extract(fields(text)))]
+    contents: String,
+}
+
+#[test]
+fn extract_omit_name_and_namespace_roundtrip() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<ExtractOmitNameAndNamespace>(
+        "<parent xmlns='urn:example:ns1'><contents>hello world!</contents></parent>",
+    )
+}
