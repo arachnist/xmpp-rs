@@ -233,7 +233,7 @@ impl<T: FromXml> FromXml for Box<T> {
 
 /// Trait allowing to convert XML text to a value.
 ///
-/// This trait is similar to [`std::str::FromStr`], however, due to
+/// This trait is similar to [`core::str::FromStr`], however, due to
 /// restrictions imposed by the orphan rule, a separate trait is needed.
 /// Implementations for many standard library types are available. In
 /// addition, the following feature flags can enable more implementations:
@@ -281,7 +281,7 @@ impl<T: FromXmlText> FromXmlText for Box<T> {
 /// Trait to convert a value to an XML text string.
 ///
 /// This trait is implemented for many standard library types implementing
-/// [`std::fmt::Display`]. In addition, the following feature flags can enable
+/// [`core::fmt::Display`]. In addition, the following feature flags can enable
 /// more implementations:
 ///
 /// - `jid`: `jid::Jid`, `jid::BareJid`, `jid::FullJid`

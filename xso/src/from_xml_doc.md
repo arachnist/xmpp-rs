@@ -180,7 +180,7 @@ The `attribute` meta also supports a shorthand syntax,
 otherwise).
 
 If `default` is specified and the attribute is absent in the source, the value
-is generated using [`std::default::Default`], requiring the field type to
+is generated using [`core::default::Default`], requiring the field type to
 implement the `Default` trait for a `FromXml` derivation. `default` has no
 influence on `AsXml`.
 
@@ -239,14 +239,14 @@ the field's type must implement [`FromXml`] in order to derive `FromXml` and
 [`AsXml`] in order to derive `AsXml`.
 
 When parsing a collection (with `n = ..`), the field's type must implement
-[`IntoIterator<Item = T>`][`std::iter::IntoIterator`], where `T` must
+[`IntoIterator<Item = T>`][`core::iter::IntoIterator`], where `T` must
 implement [`FromXml`] in order to derive `FromXml` and [`AsXml`] in order to
 derive `AsXml`. In addition, the field's type must implement
-[`Extend<T>`][`std::iter::Extend`] to derive `FromXml` and the field's
+[`Extend<T>`][`core::iter::Extend`] to derive `FromXml` and the field's
 reference type must implement `IntoIterator<Item = &'_ T>` to derive `AsXml`.
 
 If `default` is specified and the child is absent in the source, the value
-is generated using [`std::default::Default`], requiring the field type to
+is generated using [`core::default::Default`], requiring the field type to
 implement the `Default` trait for a `FromXml` derivation. `default` has no
 influence on `AsXml`. Combining `default` and `n` where `n` is not set to `1`
 is not supported and will cause a compile-time error.

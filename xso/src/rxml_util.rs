@@ -281,8 +281,6 @@ impl<'x, I: Iterator<Item = Result<Item<'x>, crate::error::Error>>> Iterator for
 
 #[cfg(all(test, feature = "minidom"))]
 mod tests_minidom {
-    use std::convert::TryInto;
-
     use super::*;
 
     fn events_to_items<I: Iterator<Item = Event>>(events: I) -> Vec<Item<'static>> {
@@ -423,8 +421,6 @@ mod tests_minidom {
 
 #[cfg(test)]
 mod tests {
-    use std::convert::TryInto;
-
     use super::*;
 
     fn items_to_events<'x, I: IntoIterator<Item = Item<'x>>>(
