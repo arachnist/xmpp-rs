@@ -853,6 +853,78 @@ fn text_extract_positive() {
 }
 
 #[test]
+fn text_extract_negative_absent_child() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    match parse_str::<TextExtract>("<parent xmlns='urn:example:ns1'/>") {
+        Err(xso::error::FromElementError::Invalid(xso::error::Error::Other(e)))
+            if e.contains("Missing child field") =>
+        {
+            ()
+        }
+        other => panic!("unexpected result: {:?}", other),
+    }
+}
+
+#[test]
+fn text_extract_negative_unexpected_attribute_in_child() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    match parse_str::<TextExtract>("<parent xmlns='urn:example:ns1'><child foo='bar'/></parent>") {
+        Err(xso::error::FromElementError::Invalid(xso::error::Error::Other(e)))
+            if e.contains("Unknown attribute") =>
+        {
+            ()
+        }
+        other => panic!("unexpected result: {:?}", other),
+    }
+}
+
+#[test]
+fn text_extract_negative_unexpected_child_in_child() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    match parse_str::<TextExtract>(
+        "<parent xmlns='urn:example:ns1'><child><quak/></child></parent>",
+    ) {
+        Err(xso::error::FromElementError::Invalid(xso::error::Error::Other(e)))
+            if e.contains("Unknown child in extraction") =>
+        {
+            ()
+        }
+        other => panic!("unexpected result: {:?}", other),
+    }
+}
+
+#[test]
+fn text_extract_negative_duplicate_child() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    match parse_str::<TextExtract>(
+        "<parent xmlns='urn:example:ns1'><child>hello world</child><child>more</child></parent>",
+    ) {
+        Err(xso::error::FromElementError::Invalid(xso::error::Error::Other(e)))
+            if e.contains("must not have more than one") =>
+        {
+            ()
+        }
+        other => panic!("unexpected result: {:?}", other),
+    }
+}
+
+#[test]
 fn text_extract_roundtrip() {
     #[allow(unused_imports)]
     use std::{
@@ -889,6 +961,42 @@ fn attribute_extract_positive() {
 }
 
 #[test]
+fn attribute_extract_negative_absent_attribute() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    match parse_str::<AttributeExtract>("<parent xmlns='urn:example:ns1'><child/></parent>") {
+        Err(xso::error::FromElementError::Invalid(xso::error::Error::Other(e)))
+            if e.contains("Required attribute") =>
+        {
+            ()
+        }
+        other => panic!("unexpected result: {:?}", other),
+    }
+}
+
+#[test]
+fn attribute_extract_negative_unexpected_text_in_child() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    match parse_str::<AttributeExtract>(
+        "<parent xmlns='urn:example:ns1'><child foo='hello world'>fnord</child></parent>",
+    ) {
+        Err(xso::error::FromElementError::Invalid(xso::error::Error::Other(e)))
+            if e.contains("Unexpected text") =>
+        {
+            ()
+        }
+        other => panic!("unexpected result: {:?}", other),
+    }
+}
+
+#[test]
 fn attribute_extract_roundtrip() {
     #[allow(unused_imports)]
     use std::{
@@ -898,6 +1006,68 @@ fn attribute_extract_roundtrip() {
     roundtrip_full::<AttributeExtract>(
         "<parent xmlns='urn:example:ns1'><child foo='hello world'/></parent>",
     )
+}
+
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = NS1, name = "parent")]
+struct OptionalAttributeExtract {
+    #[xml(extract(namespace = NS1, name = "child", fields(attribute(name = "foo", default))))]
+    contents: ::std::option::Option<String>,
+}
+
+#[test]
+fn optional_attribute_extract_positive_present() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    match parse_str::<OptionalAttributeExtract>(
+        "<parent xmlns='urn:example:ns1'><child foo='hello world'/></parent>",
+    ) {
+        Ok(OptionalAttributeExtract {
+            contents: Some(contents),
+        }) => {
+            assert_eq!(contents, "hello world");
+        }
+        other => panic!("unexpected result: {:?}", other),
+    }
+}
+
+#[test]
+fn optional_attribute_extract_positive_absent() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    match parse_str::<OptionalAttributeExtract>("<parent xmlns='urn:example:ns1'><child/></parent>")
+    {
+        Ok(OptionalAttributeExtract { contents: None }) => (),
+        other => panic!("unexpected result: {:?}", other),
+    }
+}
+
+#[test]
+fn optional_attribute_extract_roundtrip_present() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<OptionalAttributeExtract>(
+        "<parent xmlns='urn:example:ns1'><child foo='hello world'/></parent>",
+    )
+}
+
+#[test]
+fn optional_attribute_extract_roundtrip_absent() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<OptionalAttributeExtract>("<parent xmlns='urn:example:ns1'><child/></parent>")
 }
 
 #[derive(FromXml, AsXml, PartialEq, Debug, Clone)]

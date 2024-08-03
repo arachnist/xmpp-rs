@@ -15,18 +15,18 @@ use crate::media_element::MediaElement;
 use crate::ns;
 use minidom::Element;
 
-generate_element!(
-    /// Represents one of the possible values for a list- field.
-    Option_, "option", DATA_FORMS,
-    attributes: [
-        /// The optional label to be displayed to the user for this option.
-        label: Option<String> = "label"
-    ],
-    children: [
-        /// The value returned to the server when selecting this option.
-        value: Required<String> = ("value", DATA_FORMS) => String
-    ]
-);
+/// Represents one of the possible values for a list- field.
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::DATA_FORMS, name = "option")]
+pub struct Option_ {
+    /// The optional label to be displayed to the user for this option.
+    #[xml(attribute(default))]
+    pub label: Option<String>,
+
+    /// The value returned to the server when selecting this option.
+    #[xml(extract(namespace = ns::DATA_FORMS, name = "value", fields(text)))]
+    pub value: String,
+}
 
 generate_attribute!(
     /// The type of a [field](struct.Field.html) element.
@@ -588,7 +588,7 @@ mod tests {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Missing child value in option element.");
+        assert_eq!(message, "Missing child field 'value' in Option_ element.");
 
         let elem: Element = "<option xmlns='jabber:x:data' label='Coucou !'><value>coucou</value><value>error</value></option>".parse().unwrap();
         let error = Option_::try_from(elem).unwrap_err();
@@ -598,7 +598,7 @@ mod tests {
         };
         assert_eq!(
             message,
-            "Element option must not have more than one value child."
+            "Option_ element must not have more than one child in field 'value'."
         );
     }
 

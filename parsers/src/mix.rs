@@ -32,25 +32,25 @@ generate_id!(
     ChannelId
 );
 
-generate_element!(
-    /// Represents a participant in a MIX channel, usually returned on the
-    /// urn:xmpp:mix:nodes:participants PubSub node.
-    Participant, "participant", MIX_CORE,
-    children: [
-        /// The nick of this participant.
-        nick: Required<String> = ("nick", MIX_CORE) => String,
+/// Represents a participant in a MIX channel, usually returned on the
+/// urn:xmpp:mix:nodes:participants PubSub node.
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::MIX_CORE, name = "participant")]
+pub struct Participant {
+    /// The nick of this participant.
+    #[xml(extract(namespace = ns::MIX_CORE, name = "nick", fields(text)))]
+    pub nick: String,
 
-        /// The bare JID of this participant.
-        // TODO: should be a BareJid!
-        jid: Required<String> = ("jid", MIX_CORE) => String
-    ]
-);
+    /// The bare JID of this participant.
+    #[xml(extract(namespace = ns::MIX_CORE, name = "jid", fields(text)))]
+    pub jid: BareJid,
+}
 
 impl PubSubPayload for Participant {}
 
 impl Participant {
     /// Create a new MIX participant.
-    pub fn new<J: Into<String>, N: Into<String>>(jid: J, nick: N) -> Participant {
+    pub fn new<J: Into<BareJid>, N: Into<String>>(jid: J, nick: N) -> Participant {
         Participant {
             nick: nick.into(),
             jid: jid.into(),
@@ -76,21 +76,22 @@ impl Subscribe {
     }
 }
 
-generate_element!(
-    /// A request from a user’s server to join a MIX channel.
-    Join, "join", MIX_CORE,
-    attributes: [
-        /// The participant identifier returned by the MIX service on successful join.
-        id: Option<ParticipantId> = "id",
-    ],
-    children: [
-        /// The nick requested by the user or set by the service.
-        nick: Required<String> = ("nick", MIX_CORE) => String,
+/// A request from a user’s server to join a MIX channel.
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::MIX_CORE, name = "join")]
+pub struct Join {
+    /// The participant identifier returned by the MIX service on successful join.
+    #[xml(attribute(default))]
+    pub id: Option<ParticipantId>,
 
-        /// Which MIX nodes to subscribe to.
-        subscribes: Vec<Subscribe> = ("subscribe", MIX_CORE) => Subscribe
-    ]
-);
+    /// The nick requested by the user or set by the service.
+    #[xml(extract(namespace = ns::MIX_CORE, name = "nick", fields(text)))]
+    pub nick: String,
+
+    /// Which MIX nodes to subscribe to.
+    #[xml(child(n = ..))]
+    pub subscribes: Vec<Subscribe>,
+}
 
 impl IqSetPayload for Join {}
 impl IqResultPayload for Join {}
@@ -158,14 +159,14 @@ pub struct Leave;
 impl IqSetPayload for Leave {}
 impl IqResultPayload for Leave {}
 
-generate_element!(
-    /// A request to change the user’s nick.
-    SetNick, "setnick", MIX_CORE,
-    children: [
-        /// The new requested nick.
-        nick: Required<String> = ("nick", MIX_CORE) => String
-    ]
-);
+/// A request to change the user’s nick.
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::MIX_CORE, name = "setnick")]
+pub struct SetNick {
+    /// The new requested nick.
+    #[xml(extract(namespace = ns::MIX_CORE, name = "nick", fields(text)))]
+    pub nick: String,
+}
 
 impl IqSetPayload for SetNick {}
 impl IqResultPayload for SetNick {}
@@ -177,25 +178,25 @@ impl SetNick {
     }
 }
 
-generate_element!(
-    /// Message payload describing who actually sent the message, since unlike in MUC, all messages
-    /// are sent from the channel’s JID.
-    Mix, "mix", MIX_CORE,
-    children: [
-        /// The nick of the user who said something.
-        nick: Required<String> = ("nick", MIX_CORE) => String,
+/// Message payload describing who actually sent the message, since unlike in MUC, all messages
+/// are sent from the channel’s JID.
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::MIX_CORE, name = "mix")]
+pub struct Mix {
+    /// The nick of the user who said something.
+    #[xml(extract(namespace = ns::MIX_CORE, name = "nick", fields(text)))]
+    pub nick: String,
 
-        /// The JID of the user who said something.
-        // TODO: should be a BareJid!
-        jid: Required<String> = ("jid", MIX_CORE) => String
-    ]
-);
+    /// The JID of the user who said something.
+    #[xml(extract(namespace = ns::MIX_CORE, name = "jid", fields(text)))]
+    pub jid: BareJid,
+}
 
 impl MessagePayload for Mix {}
 
 impl Mix {
     /// Create a new Mix element.
-    pub fn new<N: Into<String>, J: Into<String>>(nick: N, jid: J) -> Mix {
+    pub fn new<N: Into<String>, J: Into<BareJid>>(nick: N, jid: J) -> Mix {
         Mix {
             nick: nick.into(),
             jid: jid.into(),
@@ -263,7 +264,7 @@ mod tests {
             .unwrap();
         let participant = Participant::try_from(elem).unwrap();
         assert_eq!(participant.nick, "coucou");
-        assert_eq!(participant.jid, "foo@bar");
+        assert_eq!(participant.jid.as_str(), "foo@bar");
     }
 
     #[test]
@@ -316,7 +317,7 @@ mod tests {
                 .unwrap();
         let mix = Mix::try_from(elem).unwrap();
         assert_eq!(mix.nick, "coucou");
-        assert_eq!(mix.jid, "foo@bar");
+        assert_eq!(mix.jid.as_str(), "foo@bar");
     }
 
     #[test]
@@ -362,7 +363,7 @@ mod tests {
             "<setnick xmlns='urn:xmpp:mix:core:1'><nick>coucou</nick></setnick>"
         );
 
-        let elem: Element = Mix::new("coucou", "coucou@example").into();
+        let elem: Element = Mix::new("coucou", "coucou@example".parse::<BareJid>().unwrap()).into();
         let xml = String::from(&elem);
         assert_eq!(
             xml,

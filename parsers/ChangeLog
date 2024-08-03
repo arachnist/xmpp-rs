@@ -5,6 +5,10 @@ XXXX-YY-ZZ RELEASER <admin@example.com>
         `xmpp_parsers::stanza_error::StanzaError` has been moved into the
         corresponding enum variants of the
         `xmpp_parsers::stanza_error::DefinedCondition` where it may occur.
+      - The `xmpp_parsers::mix::Participant::jid` and `..::Mix::jid` fields
+        are now of type `BareJid` (instead of `String`), as they should always
+        have been. This influences various other places, such as these
+        struct's constructors.
     * New parsers/serialisers:
         - Stream Features (RFC 6120) (!400)
 
