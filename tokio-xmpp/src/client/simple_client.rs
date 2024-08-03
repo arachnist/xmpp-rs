@@ -1,11 +1,13 @@
 use futures::{sink::SinkExt, Sink, Stream};
 use minidom::Element;
 use std::pin::Pin;
+use std::str::FromStr;
 use std::task::{Context, Poll};
 use tokio_stream::StreamExt;
 use xmpp_parsers::{jid::Jid, ns, stream_features::StreamFeatures};
 
 use crate::connect::ServerConnector;
+use crate::starttls::ServerConfig;
 use crate::xmpp_codec::Packet;
 use crate::xmpp_stream::{add_stanza_id, XMPPStream};
 use crate::Error;
@@ -18,6 +20,19 @@ use super::connect::client_login;
 /// [`Sink`](#impl-Sink<Packet>) traits.
 pub struct Client<C: ServerConnector> {
     stream: XMPPStream<C::Stream>,
+}
+
+impl Client<ServerConfig> {
+    /// Start a new XMPP client and wait for a usable session
+    pub async fn new<P: Into<String>>(jid: &str, password: P) -> Result<Self, Error> {
+        let jid = Jid::from_str(jid)?;
+        Self::new_with_jid(jid, password.into()).await
+    }
+
+    /// Start a new client given that the JID is already parsed.
+    pub async fn new_with_jid(jid: Jid, password: String) -> Result<Self, Error> {
+        Self::new_with_jid_connector(ServerConfig::UseSrv, jid, password).await
+    }
 }
 
 impl<C: ServerConnector> Client<C> {

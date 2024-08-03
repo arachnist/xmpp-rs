@@ -35,7 +35,6 @@ use crate::{connect::ServerConnectorError, xmpp_stream::XMPPStream};
 use self::error::Error as StartTlsError;
 use self::happy_eyeballs::{connect_to_host, connect_with_srv};
 
-mod client;
 pub mod error;
 mod happy_eyeballs;
 
