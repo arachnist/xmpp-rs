@@ -11,25 +11,26 @@ use xso::{AsXml, FromXml};
 use crate::jingle_dtls_srtp::Fingerprint;
 use crate::ns;
 
-generate_element!(
-    /// Wrapper element for an ICE-UDP transport.
-    #[derive(Default)]
-    Transport, "transport", JINGLE_ICE_UDP,
-    attributes: [
-        /// A Password as defined in ICE-CORE.
-        pwd: Option<String> = "pwd",
+/// Wrapper element for an ICE-UDP transport.
+#[derive(FromXml, AsXml, Debug, PartialEq, Clone, Default)]
+#[xml(namespace = ns::JINGLE_ICE_UDP, name = "transport")]
+pub struct Transport {
+    /// A Password as defined in ICE-CORE.
+    #[xml(attribute(default))]
+    pwd: Option<String>,
 
-        /// A User Fragment as defined in ICE-CORE.
-        ufrag: Option<String> = "ufrag",
-    ],
-    children: [
-        /// List of candidates for this ICE-UDP session.
-        candidates: Vec<Candidate> = ("candidate", JINGLE_ICE_UDP) => Candidate,
+    /// A User Fragment as defined in ICE-CORE.
+    #[xml(attribute(default))]
+    ufrag: Option<String>,
 
-        /// Fingerprint of the key used for the DTLS handshake.
-        fingerprint: Option<Fingerprint> = ("fingerprint", JINGLE_DTLS) => Fingerprint
-    ]
-);
+    /// List of candidates for this ICE-UDP session.
+    #[xml(child(n = ..))]
+    candidates: Vec<Candidate>,
+
+    /// Fingerprint of the key used for the DTLS handshake.
+    #[xml(child(default))]
+    fingerprint: Option<Fingerprint>,
+}
 
 impl Transport {
     /// Create a new ICE-UDP transport.

@@ -56,47 +56,57 @@ generate_attribute!(
     bool
 );
 
-generate_element!(
-    /// Structure representing a `<service xmlns='urn:xmpp:extdisco:2'/>` element.
-    Service, "service", EXT_DISCO,
-    attributes: [
-        /// When sending a push update, the action value indicates if the service is being added or
-        /// deleted from the set of known services (or simply being modified).
-        action: Default<Action> = "action",
+/// Structure representing a `<service xmlns='urn:xmpp:extdisco:2'/>` element.
+#[derive(FromXml, AsXml, Debug, PartialEq, Clone)]
+#[xml(namespace = ns::EXT_DISCO, name = "service")]
+pub struct Service {
+    /// When sending a push update, the action value indicates if the service is being added or
+    /// deleted from the set of known services (or simply being modified).
+    #[xml(attribute(default))]
+    action: Action,
 
-        /// A timestamp indicating when the provided username and password credentials will expire.
-        expires: Option<DateTime> = "expires",
+    /// A timestamp indicating when the provided username and password credentials will expire.
+    #[xml(attribute(default))]
+    expires: Option<DateTime>,
 
-        /// Either a fully qualified domain name (FQDN) or an IP address (IPv4 or IPv6).
-        host: Required<String> = "host",
+    /// Either a fully qualified domain name (FQDN) or an IP address (IPv4 or IPv6).
+    #[xml(attribute)]
+    host: String,
 
-        /// A friendly (human-readable) name or label for the service.
-        name: Option<String> = "name",
+    /// A friendly (human-readable) name or label for the service.
+    #[xml(attribute(default))]
+    name: Option<String>,
 
-        /// A service- or server-generated password for use at the service.
-        password: Option<String> = "password",
+    /// A service- or server-generated password for use at the service.
+    #[xml(attribute(default))]
+    password: Option<String>,
 
-        /// The communications port to be used at the host.
-        port: Option<u16> = "port",
+    /// The communications port to be used at the host.
+    #[xml(attribute(default))]
+    port: Option<u16>,
 
-        /// A boolean value indicating that username and password credentials are required and will
-        /// need to be requested if not already provided.
-        restricted: Default<Restricted> = "restricted",
+    /// A boolean value indicating that username and password credentials are required and will
+    /// need to be requested if not already provided.
+    #[xml(attribute(default))]
+    restricted: Restricted,
 
-        /// The underlying transport protocol to be used when communicating with the service (typically
-        /// either TCP or UDP).
-        transport: Option<Transport> = "transport",
+    /// The underlying transport protocol to be used when communicating with the service (typically
+    /// either TCP or UDP).
+    #[xml(attribute(default))]
+    transport: Option<Transport>,
 
-        /// The service type as registered with the XMPP Registrar.
-        type_: Required<Type> = "type",
+    /// The service type as registered with the XMPP Registrar.
+    #[xml(attribute = "type")]
+    type_: Type,
 
-        /// A service- or server-generated username for use at the service.
-        username: Option<String> = "username",
-    ], children: [
-        /// Extended information
-        ext_info: Vec<DataForm> = ("x", DATA_FORMS) => DataForm
-    ]
-);
+    /// A service- or server-generated username for use at the service.
+    #[xml(attribute(default))]
+    username: Option<String>,
+
+    /// Extended information
+    #[xml(child(n = ..))]
+    ext_info: Vec<DataForm>,
+}
 
 impl IqGetPayload for Service {}
 
