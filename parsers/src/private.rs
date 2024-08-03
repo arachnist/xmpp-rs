@@ -39,3 +39,26 @@ pub struct Query {
 impl IqSetPayload for Query {}
 impl IqGetPayload for Query {}
 impl IqResultPayload for Query {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use minidom::Element;
+    use xso::error::{Error, FromElementError};
+
+    #[test]
+    fn test_invalid_duplicate_child() {
+        let elem: Element = "<query xmlns='jabber:iq:private'><storage xmlns='storage:bookmarks'/><storage xmlns='storage:bookmarks'/></query>"
+            .parse()
+            .unwrap();
+        let error = Query::try_from(elem).unwrap_err();
+        let message = match error {
+            FromElementError::Invalid(Error::Other(string)) => string,
+            _ => panic!(),
+        };
+        assert_eq!(
+            message,
+            "Query element must not have more than one child in field 'storage'."
+        );
+    }
+}

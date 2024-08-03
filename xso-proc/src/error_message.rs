@@ -87,3 +87,15 @@ pub(super) fn on_missing_attribute(parent_name: &ParentRef, field: &Member) -> S
 pub(super) fn on_missing_child(parent_name: &ParentRef, field: &Member) -> String {
     format!("Missing child {} in {}.", FieldName(&field), parent_name)
 }
+
+/// Create a string error message for a duplicate child element.
+///
+/// `parent_name` should point at the compound which is being parsed and
+/// `field` should be the field to which the child belongs.
+pub(super) fn on_duplicate_child(parent_name: &ParentRef, field: &Member) -> String {
+    format!(
+        "{} must not have more than one child in {}.",
+        parent_name,
+        FieldName(&field)
+    )
+}

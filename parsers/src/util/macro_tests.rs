@@ -522,6 +522,19 @@ fn parent_positive() {
     assert_eq!(v.child.foo, "hello world!");
 }
 
+#[test]
+fn parent_negative_duplicate_child() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    match parse_str::<Parent>("<parent xmlns='urn:example:ns1'><attr foo='hello world!'/><attr foo='hello world!'/></parent>") {
+        Err(::xso::error::FromElementError::Invalid(::xso::error::Error::Other(e))) if e.contains("must not have more than one") => (),
+        other => panic!("unexpected result: {:?}", other),
+    }
+}
+
 #[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = NS1, name = "parent")]
 struct OptionalChild {

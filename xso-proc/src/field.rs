@@ -393,6 +393,8 @@ impl FieldDef {
                     AmountConstraint::FixedSingle(_) => {
                         let missing_msg =
                             error_message::on_missing_child(container_name, &self.member);
+                        let duplicate_msg =
+                            error_message::on_duplicate_child(container_name, &self.member);
 
                         let on_absent = match default_ {
                             Flag::Absent => quote! {
@@ -411,7 +413,16 @@ impl FieldDef {
                                 init: quote! { ::std::option::Option::None },
                                 ty: option_ty(self.ty.clone()),
                             },
-                            matcher,
+                            matcher: quote! {
+                                match #matcher {
+                                    ::core::result::Result::Ok(v) => if #field_access.is_some() {
+                                        ::core::result::Result::Err(::xso::error::FromEventsError::Invalid(::xso::error::Error::Other(#duplicate_msg)))
+                                    } else {
+                                        ::core::result::Result::Ok(v)
+                                    },
+                                    ::core::result::Result::Err(e) => ::core::result::Result::Err(e),
+                                }
+                            },
                             builder,
                             collect: quote! {
                                 #field_access = ::std::option::Option::Some(#substate_result);

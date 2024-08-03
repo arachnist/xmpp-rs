@@ -96,4 +96,36 @@ mod tests {
         let serialized: Element = forwarded.into();
         assert_eq!(serialized, reference);
     }
+
+    #[test]
+    fn test_invalid_duplicate_delay() {
+        let elem: Element = "<forwarded xmlns='urn:xmpp:forward:0'><delay xmlns='urn:xmpp:delay' from='capulet.com' stamp='2002-09-10T23:08:25+00:00'/><delay xmlns='urn:xmpp:delay' from='capulet.com' stamp='2002-09-10T23:08:25+00:00'/><message xmlns='jabber:client' to='juliet@capulet.example/balcony' from='romeo@montague.example/home'/></forwarded>"
+            .parse()
+            .unwrap();
+        let error = Forwarded::try_from(elem).unwrap_err();
+        let message = match error {
+            FromElementError::Invalid(Error::Other(string)) => string,
+            _ => panic!(),
+        };
+        assert_eq!(
+            message,
+            "Element forwarded must not have more than one delay child."
+        );
+    }
+
+    #[test]
+    fn test_invalid_duplicate_message() {
+        let elem: Element = "<forwarded xmlns='urn:xmpp:forward:0'><delay xmlns='urn:xmpp:delay' from='capulet.com' stamp='2002-09-10T23:08:25+00:00'/><message xmlns='jabber:client' to='juliet@capulet.example/balcony' from='romeo@montague.example/home'/><message xmlns='jabber:client' to='juliet@capulet.example/balcony' from='romeo@montague.example/home'/></forwarded>"
+            .parse()
+            .unwrap();
+        let error = Forwarded::try_from(elem).unwrap_err();
+        let message = match error {
+            FromElementError::Invalid(Error::Other(string)) => string,
+            _ => panic!(),
+        };
+        assert_eq!(
+            message,
+            "Element forwarded must not have more than one message child."
+        );
+    }
 }
