@@ -634,6 +634,9 @@ pub(crate) enum XmlFieldMeta {
 
         /// The `default` flag.
         default_: Flag,
+
+        /// An explicit type override, only usable within extracts.
+        type_: Option<Type>,
     },
 
     /// `#[xml(text)]`
@@ -700,17 +703,25 @@ impl XmlFieldMeta {
                     namespace,
                 },
                 default_: Flag::Absent,
+                type_: None,
             })
         } else if meta.input.peek(syn::token::Paren) {
             // full syntax
             let mut qname = QNameRef::default();
             let mut default_ = Flag::Absent;
+            let mut type_ = None;
             meta.parse_nested_meta(|meta| {
                 if meta.path.is_ident("default") {
                     if default_.is_set() {
                         return Err(Error::new_spanned(meta.path, "duplicate `default` key"));
                     }
                     default_ = (&meta.path).into();
+                    Ok(())
+                } else if meta.path.is_ident("type_") {
+                    if type_.is_some() {
+                        return Err(Error::new_spanned(meta.path, "duplicate `type_` key"));
+                    }
+                    type_ = Some(meta.value()?.parse()?);
                     Ok(())
                 } else {
                     match qname.parse_incremental_from_meta(meta)? {
@@ -723,6 +734,7 @@ impl XmlFieldMeta {
                 span: meta.path.span(),
                 qname,
                 default_,
+                type_,
             })
         } else {
             // argument-less syntax
@@ -730,6 +742,7 @@ impl XmlFieldMeta {
                 span: meta.path.span(),
                 qname: QNameRef::default(),
                 default_: Flag::Absent,
+                type_: None,
             })
         }
     }
@@ -980,6 +993,7 @@ impl XmlFieldMeta {
     /// Extract an explicit type specification if it exists.
     pub(crate) fn take_type(&mut self) -> Option<Type> {
         match self {
+            Self::Attribute { ref mut type_, .. } => type_.take(),
             Self::Text { ref mut type_, .. } => type_.take(),
             _ => None,
         }

@@ -166,6 +166,7 @@ The following keys can be used inside the `#[xml(attribute(..))]` meta:
 | `namespace` | *string literal* or *path* | The optional namespace of the XML attribute to match. If it is a *path*, it must point at a `&'static str`. Note that attributes, unlike elements, are unnamespaced by default. |
 | `name` | *string literal* or *path* | The name of the XML attribute to match. If it is a *path*, it must point at a `&'static NcNameStr`. |
 | `default` | flag | If present, an absent attribute will substitute the default value instead of raising an error. |
+| `type_` | *type* | Optional explicit type specification. Only allowed within `#[xml(extract(fields(..)))]`. |
 
 If the `name` key contains a namespace prefix, it must be one of the prefixes
 defined as built-in in the XML specifications. That prefix will then be
@@ -182,6 +183,10 @@ If `default` is specified and the attribute is absent in the source, the value
 is generated using [`std::default::Default`], requiring the field type to
 implement the `Default` trait for a `FromXml` derivation. `default` has no
 influence on `AsXml`.
+
+If `type_` is specified and the `text` meta is used within an
+`#[xml(extract(fields(..)))]` meta, the specified type is used instead of the
+field type on which the `extract` is declared.
 
 ##### Example
 

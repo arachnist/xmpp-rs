@@ -1234,3 +1234,56 @@ fn text_extract_vec_roundtrip() {
         "<parent xmlns='urn:example:ns1'><child>hello</child><child>world</child></parent>",
     )
 }
+
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = NS1, name = "parent")]
+struct AttributeExtractVec {
+    #[xml(extract(n = .., namespace = NS1, name = "child", fields(attribute(type_ = String, name = "attr"))))]
+    contents: Vec<String>,
+}
+
+#[test]
+fn text_extract_attribute_vec_positive_nonempty() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    match parse_str::<AttributeExtractVec>(
+        "<parent xmlns='urn:example:ns1'><child attr='hello'/><child attr='world'/></parent>",
+    ) {
+        Ok(AttributeExtractVec { contents }) => {
+            assert_eq!(contents[0], "hello");
+            assert_eq!(contents[1], "world");
+            assert_eq!(contents.len(), 2);
+        }
+        other => panic!("unexpected result: {:?}", other),
+    }
+}
+
+#[test]
+fn text_extract_attribute_vec_positive_empty() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    match parse_str::<AttributeExtractVec>("<parent xmlns='urn:example:ns1'/>") {
+        Ok(AttributeExtractVec { contents }) => {
+            assert_eq!(contents.len(), 0);
+        }
+        other => panic!("unexpected result: {:?}", other),
+    }
+}
+
+#[test]
+fn text_extract_attribute_vec_roundtrip() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<AttributeExtractVec>(
+        "<parent xmlns='urn:example:ns1'><child attr='hello'/><child attr='world'/></parent>",
+    )
+}

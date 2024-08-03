@@ -239,8 +239,19 @@ impl FieldKind {
                 span,
                 qname: QNameRef { namespace, name },
                 default_,
+                type_,
             } => {
                 let xml_name = default_name(span, name, field_ident)?;
+
+                // This would've been taken via `XmlFieldMeta::take_type` if
+                // this field was within an extract where a `type_` is legal
+                // to have.
+                if let Some(type_) = type_ {
+                    return Err(Error::new_spanned(
+                        type_,
+                        "specifying `type_` on fields inside structs and enum variants is redundant and not allowed."
+                    ));
+                }
 
                 Ok(Self::Attribute {
                     xml_name,
