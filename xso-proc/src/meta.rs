@@ -9,7 +9,7 @@
 //! This module is concerned with parsing attributes from the Rust "meta"
 //! annotations on structs, enums, enum variants and fields.
 
-use std::hash::{Hash, Hasher};
+use core::hash::{Hash, Hasher};
 
 use proc_macro2::{Span, TokenStream};
 use quote::{quote, quote_spanned};

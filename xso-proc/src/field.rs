@@ -622,7 +622,7 @@ impl FieldDef {
                         Ok(FieldBuilderPart::Nested {
                             extra_defs,
                             value: FieldTempInit {
-                                init: quote! { ::std::option::Option::None },
+                                init: quote! { ::core::option::Option::None },
                                 ty: option_ty(self.ty.clone()),
                             },
                             matcher: quote! {
@@ -637,12 +637,12 @@ impl FieldDef {
                             },
                             builder,
                             collect: quote! {
-                                #field_access = ::std::option::Option::Some(#fetch);
+                                #field_access = ::core::option::Option::Some(#fetch);
                             },
                             finalize: quote! {
                                 match #field_access {
-                                    ::std::option::Option::Some(value) => value,
-                                    ::std::option::Option::None => #on_absent,
+                                    ::core::option::Option::Some(value) => value,
+                                    ::core::option::Option::None => #on_absent,
                                 }
                             },
                         })

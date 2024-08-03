@@ -161,7 +161,7 @@ impl Compound {
                     });
                     text_handler = Some(quote! {
                         #collect
-                        ::core::result::Result::Ok(::std::ops::ControlFlow::Break(
+                        ::core::result::Result::Ok(::core::ops::ControlFlow::Break(
                             Self::#default_state_ident { #builder_data_ident }
                         ))
                     });
@@ -196,14 +196,14 @@ impl Compound {
                         &builder,
                     ).with_mut(substate_data).with_impl(quote! {
                         match #feed(&mut #substate_data, ev)? {
-                            ::std::option::Option::Some(#substate_result) => {
+                            ::core::option::Option::Some(#substate_result) => {
                                 #collect
-                                ::std::result::Result::Ok(::std::ops::ControlFlow::Break(Self::#default_state_ident {
+                                ::core::result::Result::Ok(::core::ops::ControlFlow::Break(Self::#default_state_ident {
                                     #builder_data_ident,
                                 }))
                             }
-                            ::std::option::Option::None => {
-                                ::std::result::Result::Ok(::std::ops::ControlFlow::Break(Self::#state_name {
+                            ::core::option::Option::None => {
+                                ::core::result::Result::Ok(::core::ops::ControlFlow::Break(Self::#state_name {
                                     #builder_data_ident,
                                     #substate_data,
                                 }))
@@ -221,10 +221,10 @@ impl Compound {
 
                     child_matchers.extend(quote! {
                         let (name, attrs) = match #matcher {
-                            ::std::result::Result::Err(::xso::error::FromEventsError::Mismatch { name, attrs }) => (name, attrs),
-                            ::std::result::Result::Err(::xso::error::FromEventsError::Invalid(e)) => return ::std::result::Result::Err(e),
-                            ::std::result::Result::Ok(#substate_data) => {
-                                return ::std::result::Result::Ok(::std::ops::ControlFlow::Break(Self::#state_name {
+                            ::core::result::Result::Err(::xso::error::FromEventsError::Mismatch { name, attrs }) => (name, attrs),
+                            ::core::result::Result::Err(::xso::error::FromEventsError::Invalid(e)) => return ::core::result::Result::Err(e),
+                            ::core::result::Result::Ok(#substate_data) => {
+                                return ::core::result::Result::Ok(::core::ops::ControlFlow::Break(Self::#state_name {
                                     #builder_data_ident,
                                     #substate_data,
                                 }))
@@ -255,7 +255,7 @@ impl Compound {
                 if #text.as_bytes().iter().any(|b| *b != b' ' && *b != b'\t' && *b != b'\r' && *b != b'\n') {
                     ::core::result::Result::Err(::xso::error::Error::Other("Unexpected text content".into()))
                 } else {
-                    ::core::result::Result::Ok(::std::ops::ControlFlow::Break(
+                    ::core::result::Result::Ok(::core::ops::ControlFlow::Break(
                         Self::#default_state_ident { #builder_data_ident }
                     ))
                 }
@@ -286,7 +286,7 @@ impl Compound {
             match ev {
                 // EndElement in Default state -> done parsing.
                 ::xso::exports::rxml::Event::EndElement(_) => {
-                    ::core::result::Result::Ok(::std::ops::ControlFlow::Continue(
+                    ::core::result::Result::Ok(::core::ops::ControlFlow::Continue(
                         #output_cons
                     ))
                 }
@@ -302,7 +302,7 @@ impl Compound {
                 // them at document start, and there we want to indeed
                 // not worry about them being in front of the first
                 // element.
-                ::xso::exports::rxml::Event::XmlDeclaration(_, ::xso::exports::rxml::XmlVersion::V1_0) => ::core::result::Result::Ok(::std::ops::ControlFlow::Break(
+                ::xso::exports::rxml::Event::XmlDeclaration(_, ::xso::exports::rxml::XmlVersion::V1_0) => ::core::result::Result::Ok(::core::ops::ControlFlow::Break(
                     Self::#default_state_ident { #builder_data_ident }
                 ))
             }
@@ -513,7 +513,7 @@ impl Compound {
             states,
             destructure,
             init: quote! {
-                Self::#element_head_start_state_ident { #dummy_ident: ::std::marker::PhantomData, #name_ident: name.1, #ns_ident: name.0, #start_init }
+                Self::#element_head_start_state_ident { #dummy_ident: ::core::marker::PhantomData, #name_ident: name.1, #ns_ident: name.0, #start_init }
             },
         })
     }

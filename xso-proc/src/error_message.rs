@@ -6,14 +6,14 @@
 
 //! Infrastructure for contextual error messages
 
-use std::fmt;
+use core::fmt;
 
 use syn::*;
 
 /// Reference to a compound field's parent
 ///
 /// This reference can be converted to a hopefully-useful human-readable
-/// string via [`std::fmt::Display`].
+/// string via [`core::fmt::Display`].
 #[derive(Clone, Debug)]
 pub(super) enum ParentRef {
     /// The parent is addressable by a path, e.g. a struct type or enum
@@ -99,7 +99,7 @@ impl ParentRef {
 /// Ephemeral struct to create a nice human-readable representation of
 /// [`syn::Member`].
 ///
-/// It implements [`std::fmt::Display`] for that purpose and is otherwise of
+/// It implements [`core::fmt::Display`] for that purpose and is otherwise of
 /// little use.
 #[repr(transparent)]
 struct FieldName<'x>(&'x Member);

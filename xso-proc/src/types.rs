@@ -193,7 +193,7 @@ pub(crate) fn as_optional_xml_text_fn(ty: Type) -> Expr {
 }
 
 /// Construct a [`syn::Expr`] referring to
-/// `<#of_ty as ::std::default::Default>::default`.
+/// `<#of_ty as ::core::default::Default>::default`.
 pub(crate) fn default_fn(of_ty: Type) -> Expr {
     let span = of_ty.span();
     Expr::Path(ExprPath {
@@ -211,7 +211,7 @@ pub(crate) fn default_fn(of_ty: Type) -> Expr {
             }),
             segments: [
                 PathSegment {
-                    ident: Ident::new("std", span),
+                    ident: Ident::new("core", span),
                     arguments: PathArguments::None,
                 },
                 PathSegment {
@@ -373,7 +373,7 @@ pub(crate) fn ref_ty(ty: Type, lifetime: Lifetime) -> Type {
 }
 
 /// Construct a [`syn::Type`] referring to
-/// `::std::marker::PhantomData<&#lifetime ()>`.
+/// `::core::marker::PhantomData<&#lifetime ()>`.
 pub(crate) fn phantom_lifetime_ty(lifetime: Lifetime) -> Type {
     let span = lifetime.span();
     let dummy = Type::Tuple(TypeTuple {
@@ -388,7 +388,7 @@ pub(crate) fn phantom_lifetime_ty(lifetime: Lifetime) -> Type {
             }),
             segments: [
                 PathSegment {
-                    ident: Ident::new("std", span),
+                    ident: Ident::new("core", span),
                     arguments: PathArguments::None,
                 },
                 PathSegment {
@@ -475,7 +475,7 @@ pub(crate) fn from_events_fn(of_ty: Type) -> Expr {
 }
 
 /// Construct a [`syn::Type`] which wraps the given `ty` in
-/// `::std::option::Option<_>`.
+/// `::core::option::Option<_>`.
 pub(crate) fn option_ty(ty: Type) -> Type {
     let span = ty.span();
     Type::Path(TypePath {
@@ -486,7 +486,7 @@ pub(crate) fn option_ty(ty: Type) -> Type {
             }),
             segments: [
                 PathSegment {
-                    ident: Ident::new("std", span),
+                    ident: Ident::new("core", span),
                     arguments: PathArguments::None,
                 },
                 PathSegment {
@@ -642,7 +642,7 @@ fn into_iterator_of(of_ty: Type) -> (Span, TypePath) {
                 }),
                 segments: [
                     PathSegment {
-                        ident: Ident::new("std", span),
+                        ident: Ident::new("core", span),
                         arguments: PathArguments::None,
                     },
                     PathSegment {
@@ -699,7 +699,7 @@ pub(crate) fn into_iterator_into_iter_fn(of_ty: Type) -> Expr {
 }
 
 /// Construct a [`syn::Expr`] referring to
-/// `<#of_ty as ::std::iter::Extend>::extend`.
+/// `<#of_ty as ::core::iter::Extend>::extend`.
 pub(crate) fn extend_fn(of_ty: Type, item_ty: Type) -> Expr {
     let span = of_ty.span();
     Expr::Path(ExprPath {
@@ -717,7 +717,7 @@ pub(crate) fn extend_fn(of_ty: Type, item_ty: Type) -> Expr {
             }),
             segments: [
                 PathSegment {
-                    ident: Ident::new("std", span),
+                    ident: Ident::new("core", span),
                     arguments: PathArguments::None,
                 },
                 PathSegment {

@@ -280,8 +280,8 @@ impl AsItemsSubmachine {
                     Self::#name { #destructure } => {
                         let mut #uses_mut = #uses_mut;
                         match #advance_body {
-                            ::std::option::Option::Some(item) => {
-                                ::std::result::Result::Ok((::std::option::Option::Some(Self::#name { #destructure }), ::std::option::Option::Some(item)))
+                            ::core::option::Option::Some(item) => {
+                                ::core::result::Result::Ok((::core::option::Option::Some(Self::#name { #destructure }), ::core::option::Option::Some(item)))
                             },
                             item => { #footer },
                         }
@@ -496,14 +496,14 @@ impl FromEventsStateMachine {
             }
 
             impl #state_ty_ident {
-                fn advance(mut self, ev: ::xso::exports::rxml::Event) -> ::core::result::Result<::std::ops::ControlFlow<Self, #output_ty>, ::xso::error::Error> {
+                fn advance(mut self, ev: ::xso::exports::rxml::Event) -> ::core::result::Result<::core::ops::ControlFlow<Self, #output_ty>, ::xso::error::Error> {
                     match self {
                         #advance_match_arms
                     }.and_then(|__ok| {
                         match __ok {
-                            ::std::ops::ControlFlow::Break(st) => ::core::result::Result::Ok(::std::ops::ControlFlow::Break(st)),
-                            ::std::ops::ControlFlow::Continue(result) => {
-                                ::core::result::Result::Ok(::std::ops::ControlFlow::Continue(result))
+                            ::core::ops::ControlFlow::Break(st) => ::core::result::Result::Ok(::core::ops::ControlFlow::Break(st)),
+                            ::core::ops::ControlFlow::Continue(result) => {
+                                ::core::result::Result::Ok(::core::ops::ControlFlow::Continue(result))
                             }
                         }
                     })
@@ -528,8 +528,8 @@ impl FromEventsStateMachine {
                 fn feed(&mut self, ev: ::xso::exports::rxml::Event) -> ::core::result::Result<::core::option::Option<Self::Output>, ::xso::error::Error> {
                     let inner = self.0.take().expect("feed called after completion");
                     match inner.advance(ev)? {
-                        ::std::ops::ControlFlow::Continue(value) => ::core::result::Result::Ok(::core::option::Option::Some(value)),
-                        ::std::ops::ControlFlow::Break(st) => {
+                        ::core::ops::ControlFlow::Continue(value) => ::core::result::Result::Ok(::core::option::Option::Some(value)),
+                        ::core::ops::ControlFlow::Break(st) => {
                             self.0 = ::core::option::Option::Some(st);
                             ::core::result::Result::Ok(::core::option::Option::None)
                         }
@@ -651,7 +651,7 @@ impl AsItemsStateMachine {
         } = self;
 
         let input_ty_ref_text = make_ty_ref(input_ty_ref);
-        let docstr = format!("Convert a {0} into XML events.\n\nThis type is generated using the [`macro@xso::AsXml`] derive macro and implements [`std::iter:Iterator`] for {0}.", input_ty_ref_text);
+        let docstr = format!("Convert a {0} into XML events.\n\nThis type is generated using the [`macro@xso::AsXml`] derive macro and implements [`core::iter:Iterator`] for {0}.", input_ty_ref_text);
 
         let init_body = if variants.len() == 1 {
             let AsItemsEntryPoint { destructure, init } = variants.remove(0);
@@ -700,7 +700,7 @@ impl AsItemsStateMachine {
             #[doc = #docstr]
             #vis struct #item_iter_ty(::core::option::Option<#state_ty_ident<#item_iter_ty_lifetime>>);
 
-            impl<#item_iter_ty_lifetime> ::std::iter::Iterator for #item_iter_ty {
+            impl<#item_iter_ty_lifetime> ::core::iter::Iterator for #item_iter_ty {
                 type Item = ::core::result::Result<::xso::Item<#item_iter_ty_lifetime>, ::xso::error::Error>;
 
                 fn next(&mut self) -> ::core::option::Option<Self::Item> {

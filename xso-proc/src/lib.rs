@@ -90,7 +90,7 @@ fn from_xml_impl(input: Item) -> Result<TokenStream> {
 
     #[cfg(feature = "minidom")]
     result.extend(quote! {
-        impl ::std::convert::TryFrom<::xso::exports::minidom::Element> for #ident {
+        impl ::core::convert::TryFrom<::xso::exports::minidom::Element> for #ident {
             type Error = ::xso::error::FromElementError;
 
             fn try_from(other: ::xso::exports::minidom::Element) -> ::core::result::Result<Self, Self::Error> {
@@ -147,7 +147,7 @@ fn as_xml_impl(input: Item) -> Result<TokenStream> {
 
     #[cfg(all(feature = "minidom", feature = "panicking-into-impl"))]
     result.extend(quote! {
-        impl ::std::convert::From<#ident> for ::xso::exports::minidom::Element {
+        impl ::core::convert::From<#ident> for ::xso::exports::minidom::Element {
             fn from(other: #ident) -> Self {
                 ::xso::transform(other).expect("seamless conversion into minidom::Element")
             }
@@ -156,7 +156,7 @@ fn as_xml_impl(input: Item) -> Result<TokenStream> {
 
     #[cfg(all(feature = "minidom", not(feature = "panicking-into-impl")))]
     result.extend(quote! {
-        impl ::std::convert::TryFrom<#ident> for ::xso::exports::minidom::Element {
+        impl ::core::convert::TryFrom<#ident> for ::xso::exports::minidom::Element {
             type Error = ::xso::error::Error;
 
             fn try_from(other: #ident) -> ::core::result::Result<Self, Self::Error> {
