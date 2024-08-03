@@ -123,7 +123,7 @@ convert_via_fromstr_and_display! {
 
 /// Represent a way to encode/decode text data into a Rust type.
 ///
-/// This trait can be used in scenarios where implementing [`FromXmlText`]
+/// This trait can be used in scenarios where implementing [`FromXmlText`]
 /// and/or [`AsXmlText`] on a type is not feasible or sensible, such as the
 /// following:
 ///
@@ -202,23 +202,32 @@ impl TextCodec<String> for Plain {
     }
 }
 
-/// Text codec which returns None instead of the empty string.
+/// Text codec which returns `None` if the input to decode is the empty string, instead of
+/// attempting to decode it.
+///
+/// Particularly useful when parsing `Option<T>` on `#[xml(text)]`, which does not support
+/// `Option<_>` otherwise.
 pub struct EmptyAsNone;
 
-impl TextCodec<Option<String>> for EmptyAsNone {
-    fn decode(&self, s: String) -> Result<Option<String>, Error> {
+impl<T> TextCodec<Option<T>> for EmptyAsNone
+where
+    T: FromXmlText + AsXmlText,
+{
+    fn decode(&self, s: String) -> Result<Option<T>, Error> {
         if s.is_empty() {
             Ok(None)
         } else {
-            Ok(Some(s))
+            Some(T::from_xml_text(s)).transpose()
         }
     }
 
-    fn encode<'x>(&self, value: &'x Option<String>) -> Result<Option<Cow<'x, str>>, Error> {
-        Ok(match value.as_ref() {
-            Some(v) if !v.is_empty() => Some(Cow::Borrowed(v.as_str())),
-            Some(_) | None => None,
-        })
+    fn encode<'x>(&self, value: &'x Option<T>) -> Result<Option<Cow<'x, str>>, Error> {
+        Ok(value
+            .as_ref()
+            .map(AsXmlText::as_xml_text)
+            .transpose()?
+            .map(|v| (!v.is_empty()).then_some(v))
+            .flatten())
     }
 }
 
