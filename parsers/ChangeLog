@@ -19,6 +19,7 @@ XXXX-YY-ZZ RELEASER <admin@example.com>
         - Stream Features (RFC 6120) (!400)
         - Extensible SASL Profile (XEP-0388)
         - SASL Channel-Binding Type Capability (XEP-0440)
+        - Stream Limits Advertisement (XEP-0478)
 
 Version 0.21.0:
 2024-07-25 Emmanuel Gil Peyrot <linkmauve@linkmauve.fr>

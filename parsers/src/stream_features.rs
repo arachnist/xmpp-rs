@@ -9,6 +9,7 @@ use xso::{AsXml, FromXml};
 
 use crate::bind::BindFeature;
 use crate::ns;
+use crate::stream_limits::Limits;
 
 /// Wraps `<stream:features/>`, usually the very first nonza of a
 /// XMPP stream. Indicates which features are supported.
@@ -26,6 +27,10 @@ pub struct StreamFeatures {
     /// List of supported SASL mechanisms
     #[xml(child(default))]
     pub sasl_mechanisms: SaslMechanisms,
+
+    /// Limits advertised by the server.
+    #[xml(child(default))]
+    pub limits: Option<Limits>,
 
     /// Other stream features advertised
     ///
@@ -91,7 +96,7 @@ mod tests {
         assert_size!(SaslMechanisms, 12);
         assert_size!(RequiredStartTls, 0);
         assert_size!(StartTls, 1);
-        assert_size!(StreamFeatures, 28);
+        assert_size!(StreamFeatures, 40);
     }
 
     #[cfg(target_pointer_width = "64")]
@@ -101,7 +106,7 @@ mod tests {
         assert_size!(SaslMechanisms, 24);
         assert_size!(RequiredStartTls, 0);
         assert_size!(StartTls, 1);
-        assert_size!(StreamFeatures, 56);
+        assert_size!(StreamFeatures, 64);
     }
 
     #[test]

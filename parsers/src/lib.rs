@@ -281,5 +281,8 @@ pub mod sasl_cb;
 /// XEP-0444: Message Reactions
 pub mod reactions;
 
+/// XEP-0478: Stream Limits Advertisement
+pub mod stream_limits;
+
 /// XEP-0484: Fast Authentication Streamlining Tokens
 pub mod fast;

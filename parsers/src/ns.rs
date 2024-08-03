@@ -302,6 +302,9 @@ pub const SASL_CB: &str = "urn:xmpp:sasl-cb:0";
 /// XEP-0444: Message Reactions
 pub const REACTIONS: &str = "urn:xmpp:reactions:0";
 
+/// XEP-0478: Stream Limits Advertisement
+pub const STREAM_LIMITS: &str = "urn:xmpp:stream-limits:0";
+
 /// XEP-0484: Fast Authentication Streamlining Tokens
 pub const FAST: &str = "urn:xmpp:fast:0";
 
