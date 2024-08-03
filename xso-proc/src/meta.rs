@@ -345,7 +345,11 @@ impl XmlCompoundMeta {
 /// prefix.
 ///
 /// This does not advance the parse stream.
-fn maybe_type_path(p: parse::ParseStream<'_>) -> bool {
+///
+/// If the tokens *do* look like a type path, a Span which points at the first
+/// `<` encountered is returned. This can be used for a helpful error message
+/// in case parsing the type path does then fail.
+fn maybe_type_path(p: parse::ParseStream<'_>) -> (bool, Option<Span>) {
     // ParseStream cursors do not advance the stream, but they are also rather
     // unwieldly to use. Prepare for a lot of `let .. = ..`.
 
@@ -368,21 +372,21 @@ fn maybe_type_path(p: parse::ParseStream<'_>) -> bool {
         // Here we look for the identifier, but we do not care for its
         // contents.
         let Some((_, new_cursor)) = cursor.ident() else {
-            return false;
+            return (false, None);
         };
         cursor = new_cursor;
 
         // Now we see what actually follows the ident (it must be punctuation
         // for it to be a type path...)
         let Some((punct, new_cursor)) = cursor.punct() else {
-            return false;
+            return (false, None);
         };
         cursor = new_cursor;
 
         match punct.as_char() {
             // Looks like a `foo<..`, we treat that as a type path for the
             // reasons stated in [`parse_codec_expr`]'s doc.
-            '<' => return true,
+            '<' => return (true, Some(punct.span())),
 
             // Continue looking ahead: looks like a path separator.
             ':' => (),
@@ -390,18 +394,18 @@ fn maybe_type_path(p: parse::ParseStream<'_>) -> bool {
             // Anything else (such as `,` (separating another argument most
             // likely), or `.` (a method call?)) we treat as "not a type
             // path".
-            _ => return false,
+            _ => return (false, None),
         }
 
         // If we are here, we saw a `:`. Look for the second one.
         let Some((punct, new_cursor)) = cursor.punct() else {
-            return false;
+            return (false, None);
         };
         cursor = new_cursor;
 
         if punct.as_char() != ':' {
             // If it is not another `:`, it cannot be a type path.
-            return false;
+            return (false, None);
         }
 
         // And round and round and round it goes.
@@ -426,9 +430,21 @@ fn maybe_type_path(p: parse::ParseStream<'_>) -> bool {
 /// We however know that `Foo < Bar` is never a valid expression for a type.
 /// Thus, we can be smart about this and inject the `::` at the right place
 /// automatically.
-fn parse_codec_expr(p: parse::ParseStream<'_>) -> Result<Expr> {
-    if maybe_type_path(p) {
-        let mut type_path: TypePath = p.parse()?;
+fn parse_codec_expr(p: parse::ParseStream<'_>) -> Result<(Expr, Option<Error>)> {
+    let (maybe_type_path, punct_span) = maybe_type_path(p);
+    if maybe_type_path {
+        let helpful_error =
+            punct_span.map(|span| Error::new(span, "help: try inserting a `::` before this `<`"));
+        let mut type_path: TypePath = match p.parse() {
+            Ok(v) => v,
+            Err(mut e) => match helpful_error {
+                Some(help) => {
+                    e.combine(help);
+                    return Err(e);
+                }
+                None => return Err(e),
+            },
+        };
         // We got a type path -- so we now inject the `::` before any `<` as
         // needed.
         for segment in type_path.path.segments.iter_mut() {
@@ -444,13 +460,16 @@ fn parse_codec_expr(p: parse::ParseStream<'_>) -> Result<Expr> {
                 _ => (),
             }
         }
-        Ok(Expr::Path(ExprPath {
-            attrs: Vec::new(),
-            qself: type_path.qself,
-            path: type_path.path,
-        }))
+        Ok((
+            Expr::Path(ExprPath {
+                attrs: Vec::new(),
+                qself: type_path.qself,
+                path: type_path.path,
+            }),
+            helpful_error,
+        ))
     } else {
-        p.parse()
+        p.parse().map(|x| (x, None))
     }
 }
 
@@ -610,18 +629,45 @@ impl XmlFieldMeta {
 
     /// Parse a `#[xml(text)]` meta.
     fn text_from_meta(meta: ParseNestedMeta<'_>) -> Result<Self> {
-        let mut codec: Option<Expr> = None;
         if meta.input.peek(Token![=]) {
-            Ok(Self::Text {
-                codec: Some(parse_codec_expr(meta.value()?)?),
-            })
+            let (codec, helpful_error) = parse_codec_expr(meta.value()?)?;
+            // A meta value can only be followed by either a `,`, or the end
+            // of the parse stream (because of the delimited group ending).
+            // Hence we check we are there. And if we are *not* there, we emit
+            // an error straight away, with the helpful addition from the
+            // `parse_codec_expr` if we have it.
+            //
+            // If we do not do this, the user gets a rather confusing
+            // "expected `,`" message if the `maybe_type_path` guess was
+            // wrong.
+            let lookahead = meta.input.lookahead1();
+            if !lookahead.peek(Token![,]) && !meta.input.is_empty() {
+                if let Some(helpful_error) = helpful_error {
+                    let mut e = lookahead.error();
+                    e.combine(helpful_error);
+                    return Err(e);
+                }
+            }
+            Ok(Self::Text { codec: Some(codec) })
         } else if meta.input.peek(syn::token::Paren) {
+            let mut codec: Option<Expr> = None;
             meta.parse_nested_meta(|meta| {
                 if meta.path.is_ident("codec") {
                     if codec.is_some() {
                         return Err(Error::new_spanned(meta.path, "duplicate `codec` key"));
                     }
-                    codec = Some(parse_codec_expr(meta.value()?)?);
+                    let (new_codec, helpful_error) = parse_codec_expr(meta.value()?)?;
+                    // See above (at the top-ish of this function) for why we
+                    // do this.
+                    let lookahead = meta.input.lookahead1();
+                    if !lookahead.peek(Token![,]) && !meta.input.is_empty() {
+                        if let Some(helpful_error) = helpful_error {
+                            let mut e = lookahead.error();
+                            e.combine(helpful_error);
+                            return Err(e);
+                        }
+                    }
+                    codec = Some(new_codec);
                     Ok(())
                 } else {
                     Err(Error::new_spanned(meta.path, "unsupported key"))
