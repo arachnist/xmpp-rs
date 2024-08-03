@@ -10,8 +10,10 @@ use super::connect::client_login;
 use crate::connect::{AsyncReadAndWrite, ServerConnector};
 use crate::error::{Error, ProtocolError};
 use crate::event::Event;
+use crate::starttls::ServerConfig;
 use crate::xmpp_codec::Packet;
 use crate::xmpp_stream::{add_stanza_id, XMPPStream};
+use crate::AsyncConfig;
 
 /// XMPP client connection and state
 ///
@@ -42,6 +44,22 @@ enum ClientState<S: AsyncReadAndWrite> {
     Disconnected,
     Connecting(JoinHandle<Result<XMPPStream<S>, Error>>),
     Connected(XMPPStream<S>),
+}
+
+impl Client<ServerConfig> {
+    /// Start a new XMPP client using StartTLS transport
+    ///
+    /// Start polling the returned instance so that it will connect
+    /// and yield events.
+    #[cfg(feature = "starttls")]
+    pub fn new<J: Into<Jid>, P: Into<String>>(jid: J, password: P) -> Self {
+        let config = AsyncConfig {
+            jid: jid.into(),
+            password: password.into(),
+            server: ServerConfig::UseSrv,
+        };
+        Self::new_with_config(config)
+    }
 }
 
 impl<C: ServerConnector> Client<C> {
