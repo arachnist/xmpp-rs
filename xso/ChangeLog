@@ -6,14 +6,9 @@ Version NEXT:
         of type paths.
 
         Because all implementations provided by `xso` were in fact unit
-        structs, this should not change most invocations, with two exceptions:
-
-        1. The type argument of `Base64` was removed. Replace all
-           `Base64<Foo>` references with `Base64.filtered(Foo)` to update
-           your code.
-
-        2. `FixedHex<N>` is not a valid expression. You will have to update
-           your code to use `FixedHex::<N>` instead.
+        structs, this should not change most invocations, with one exception:
+        The type argument of `Base64` was removed. Replace all `Base64<Foo>`
+        references with `Base64.filtered(Foo)` to update your code.
 
         This change overall allows for more flexibility in the implementation
         of text codecs.

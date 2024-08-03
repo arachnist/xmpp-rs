@@ -341,6 +341,119 @@ impl XmlCompoundMeta {
     }
 }
 
+/// Return true if the tokens the cursor points at are a valid type path
+/// prefix.
+///
+/// This does not advance the parse stream.
+fn maybe_type_path(p: parse::ParseStream<'_>) -> bool {
+    // ParseStream cursors do not advance the stream, but they are also rather
+    // unwieldly to use. Prepare for a lot of `let .. = ..`.
+
+    let cursor = if p.peek(token::PathSep) {
+        // If we have a path separator, we need to skip that initially. We
+        // do this by skipping two punctuations. We use unwrap() here because
+        // we already know for sure that we see two punctuation items (because
+        // of the peek).
+        p.cursor().punct().unwrap().1.punct().unwrap().1
+    } else {
+        // No `::` initially, so we just take what we have.
+        p.cursor()
+    };
+
+    // Now we loop over `$ident::` segments. If we find anything but a `:`
+    // after the ident, we exit. Depending on *what* we find, we either exit
+    // true or false, but see for yourself.
+    let mut cursor = cursor;
+    loop {
+        // Here we look for the identifier, but we do not care for its
+        // contents.
+        let Some((_, new_cursor)) = cursor.ident() else {
+            return false;
+        };
+        cursor = new_cursor;
+
+        // Now we see what actually follows the ident (it must be punctuation
+        // for it to be a type path...)
+        let Some((punct, new_cursor)) = cursor.punct() else {
+            return false;
+        };
+        cursor = new_cursor;
+
+        match punct.as_char() {
+            // Looks like a `foo<..`, we treat that as a type path for the
+            // reasons stated in [`parse_codec_expr`]'s doc.
+            '<' => return true,
+
+            // Continue looking ahead: looks like a path separator.
+            ':' => (),
+
+            // Anything else (such as `,` (separating another argument most
+            // likely), or `.` (a method call?)) we treat as "not a type
+            // path".
+            _ => return false,
+        }
+
+        // If we are here, we saw a `:`. Look for the second one.
+        let Some((punct, new_cursor)) = cursor.punct() else {
+            return false;
+        };
+        cursor = new_cursor;
+
+        if punct.as_char() != ':' {
+            // If it is not another `:`, it cannot be a type path.
+            return false;
+        }
+
+        // And round and round and round it goes.
+        // We will terminate eventually because the cursor will return None
+        // on any of the lookups because parse streams are (hopefully!)
+        // finite. Most likely, we'll however encounter a `<` or other non-`:`
+        // punctuation first.
+    }
+}
+
+/// Parse expressions passed to `codec`.
+///
+/// Those will generally be paths to unit type constructors (such as `Foo`)
+/// or references to static values or chains of function calls.
+///
+/// In the case of unit type constructors for generic types, users may type
+/// for example `FixedHex<20>`, thinking they are writing a type path. However,
+/// while `FixedHex<20>` is indeed a valid type path, it is not a valid
+/// expression for a unit type constructor. Instead it is parsed as
+/// `FixedHex < 20` and then a syntax error.
+///
+/// We however know that `Foo < Bar` is never a valid expression for a type.
+/// Thus, we can be smart about this and inject the `::` at the right place
+/// automatically.
+fn parse_codec_expr(p: parse::ParseStream<'_>) -> Result<Expr> {
+    if maybe_type_path(p) {
+        let mut type_path: TypePath = p.parse()?;
+        // We got a type path -- so we now inject the `::` before any `<` as
+        // needed.
+        for segment in type_path.path.segments.iter_mut() {
+            match segment.arguments {
+                PathArguments::AngleBracketed(ref mut arguments) => {
+                    let span = arguments.span();
+                    arguments
+                        .colon2_token
+                        .get_or_insert_with(|| token::PathSep {
+                            spans: [span, span],
+                        });
+                }
+                _ => (),
+            }
+        }
+        Ok(Expr::Path(ExprPath {
+            attrs: Vec::new(),
+            qself: type_path.qself,
+            path: type_path.path,
+        }))
+    } else {
+        p.parse()
+    }
+}
+
 /// Parse an XML name while resolving built-in namespace prefixes.
 fn parse_prefixed_name(
     value: syn::parse::ParseStream<'_>,
@@ -500,7 +613,7 @@ impl XmlFieldMeta {
         let mut codec: Option<Expr> = None;
         if meta.input.peek(Token![=]) {
             Ok(Self::Text {
-                codec: Some(meta.value()?.parse()?),
+                codec: Some(parse_codec_expr(meta.value()?)?),
             })
         } else if meta.input.peek(syn::token::Paren) {
             meta.parse_nested_meta(|meta| {
@@ -508,7 +621,7 @@ impl XmlFieldMeta {
                     if codec.is_some() {
                         return Err(Error::new_spanned(meta.path, "duplicate `codec` key"));
                     }
-                    codec = Some(meta.value()?.parse()?);
+                    codec = Some(parse_codec_expr(meta.value()?)?);
                     Ok(())
                 } else {
                     Err(Error::new_spanned(meta.path, "unsupported key"))

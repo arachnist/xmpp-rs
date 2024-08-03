@@ -20,7 +20,7 @@ pub struct Handshake {
     ///
     /// If None, it is the successful reply from the server, the stream is now
     /// fully established and both sides can now exchange stanzas.
-    #[xml(text(codec = FixedHex::<20>))]
+    #[xml(text(codec = FixedHex<20>))]
     pub data: Option<[u8; 20]>,
 }
 
