@@ -1181,3 +1181,56 @@ fn extract_omit_name_and_namespace_roundtrip() {
         "<parent xmlns='urn:example:ns1'><contents>hello world!</contents></parent>",
     )
 }
+
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = NS1, name = "parent")]
+struct TextExtractVec {
+    #[xml(extract(n = .., namespace = NS1, name = "child", fields(text(type_ = String))))]
+    contents: Vec<String>,
+}
+
+#[test]
+fn text_extract_vec_positive_nonempty() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    match parse_str::<TextExtractVec>(
+        "<parent xmlns='urn:example:ns1'><child>hello</child><child>world</child></parent>",
+    ) {
+        Ok(TextExtractVec { contents }) => {
+            assert_eq!(contents[0], "hello");
+            assert_eq!(contents[1], "world");
+            assert_eq!(contents.len(), 2);
+        }
+        other => panic!("unexpected result: {:?}", other),
+    }
+}
+
+#[test]
+fn text_extract_vec_positive_empty() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    match parse_str::<TextExtractVec>("<parent xmlns='urn:example:ns1'/>") {
+        Ok(TextExtractVec { contents }) => {
+            assert_eq!(contents.len(), 0);
+        }
+        other => panic!("unexpected result: {:?}", other),
+    }
+}
+
+#[test]
+fn text_extract_vec_roundtrip() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<TextExtractVec>(
+        "<parent xmlns='urn:example:ns1'><child>hello</child><child>world</child></parent>",
+    )
+}

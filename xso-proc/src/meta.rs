@@ -645,6 +645,9 @@ pub(crate) enum XmlFieldMeta {
 
         /// The path to the optional codec type.
         codec: Option<Expr>,
+
+        /// An explicit type override, only usable within extracts.
+        type_: Option<Type>,
     },
 
     /// `#[xml(child)`
@@ -670,6 +673,9 @@ pub(crate) enum XmlFieldMeta {
 
         /// The namespace/name keys.
         qname: QNameRef,
+
+        /// The `n` flag.
+        amount: Option<AmountConstraint>,
 
         /// The `fields` nested meta.
         fields: Vec<XmlFieldMeta>,
@@ -751,10 +757,12 @@ impl XmlFieldMeta {
             }
             Ok(Self::Text {
                 span: meta.path.span(),
+                type_: None,
                 codec: Some(codec),
             })
         } else if meta.input.peek(syn::token::Paren) {
             let mut codec: Option<Expr> = None;
+            let mut type_: Option<Type> = None;
             meta.parse_nested_meta(|meta| {
                 if meta.path.is_ident("codec") {
                     if codec.is_some() {
@@ -773,17 +781,25 @@ impl XmlFieldMeta {
                     }
                     codec = Some(new_codec);
                     Ok(())
+                } else if meta.path.is_ident("type_") {
+                    if type_.is_some() {
+                        return Err(Error::new_spanned(meta.path, "duplicate `type_` key"));
+                    }
+                    type_ = Some(meta.value()?.parse()?);
+                    Ok(())
                 } else {
                     Err(Error::new_spanned(meta.path, "unsupported key"))
                 }
             })?;
             Ok(Self::Text {
                 span: meta.path.span(),
+                type_,
                 codec,
             })
         } else {
             Ok(Self::Text {
                 span: meta.path.span(),
+                type_: None,
                 codec: None,
             })
         }
@@ -829,6 +845,7 @@ impl XmlFieldMeta {
     fn extract_from_meta(meta: ParseNestedMeta<'_>) -> Result<Self> {
         let mut qname = QNameRef::default();
         let mut fields = None;
+        let mut amount = None;
         meta.parse_nested_meta(|meta| {
             if meta.path.is_ident("fields") {
                 if let Some((fields_span, _)) = fields.as_ref() {
@@ -843,6 +860,12 @@ impl XmlFieldMeta {
                 })?;
                 fields = Some((meta.path.span(), new_fields));
                 Ok(())
+            } else if meta.path.is_ident("n") {
+                if amount.is_some() {
+                    return Err(Error::new_spanned(meta.path, "duplicate `n` key"));
+                }
+                amount = Some(meta.value()?.parse()?);
+                Ok(())
             } else {
                 match qname.parse_incremental_from_meta(meta)? {
                     None => Ok(()),
@@ -855,6 +878,7 @@ impl XmlFieldMeta {
             span: meta.path.span(),
             qname,
             fields,
+            amount,
         })
     }
 
@@ -950,6 +974,14 @@ impl XmlFieldMeta {
             Self::Child { ref span, .. } => *span,
             Self::Text { ref span, .. } => *span,
             Self::Extract { ref span, .. } => *span,
+        }
+    }
+
+    /// Extract an explicit type specification if it exists.
+    pub(crate) fn take_type(&mut self) -> Option<Type> {
+        match self {
+            Self::Text { ref mut type_, .. } => type_.take(),
+            _ => None,
         }
     }
 }

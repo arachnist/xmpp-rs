@@ -249,7 +249,23 @@ impl FieldKind {
                 })
             }
 
-            XmlFieldMeta::Text { span: _, codec } => Ok(Self::Text { codec }),
+            XmlFieldMeta::Text {
+                span: _,
+                codec,
+                type_,
+            } => {
+                // This would've been taken via `XmlFieldMeta::take_type` if
+                // this field was within an extract where a `type_` is legal
+                // to have.
+                if let Some(type_) = type_ {
+                    return Err(Error::new_spanned(
+                        type_,
+                        "specifying `type_` on fields inside structs and enum variants is redundant and not allowed."
+                    ));
+                }
+
+                Ok(Self::Text { codec })
+            }
 
             XmlFieldMeta::Child {
                 span: _,
@@ -280,12 +296,13 @@ impl FieldKind {
             XmlFieldMeta::Extract {
                 span,
                 qname: QNameRef { namespace, name },
+                amount,
                 fields,
             } => {
                 let xml_namespace = namespace.unwrap_or_else(|| container_namespace.clone());
                 let xml_name = default_name(span, name, field_ident)?;
 
-                let field = {
+                let mut field = {
                     let mut fields = fields.into_iter();
                     let Some(field) = fields.next() else {
                         return Err(Error::new(
@@ -304,13 +321,28 @@ impl FieldKind {
                     field
                 };
 
+                let amount = amount.unwrap_or(AmountConstraint::FixedSingle(Span::call_site()));
+                let field_ty = match field.take_type() {
+                    Some(v) => v,
+                    None => match amount {
+                        // Only allow inferrence for single values: inferrence
+                        // for collections will always be wrong.
+                        AmountConstraint::FixedSingle(_) => field_ty.clone(),
+                        _ => {
+                            return Err(Error::new(
+                                field.span(),
+                                "extracted field must specify a type explicitly when extracting into a collection."
+                            ));
+                        }
+                    },
+                };
                 let parts = Compound::from_field_defs(
-                    [FieldDef::from_extract(field, 0, field_ty, &xml_namespace)].into_iter(),
+                    [FieldDef::from_extract(field, 0, &field_ty, &xml_namespace)].into_iter(),
                 )?;
 
                 Ok(Self::Child {
                     default_: Flag::Absent,
-                    amount: AmountConstraint::FixedSingle(Span::call_site()),
+                    amount,
                     extract: Some(ExtractDef {
                         xml_namespace,
                         xml_name,

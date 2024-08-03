@@ -308,6 +308,7 @@ The following keys can be used inside the `#[xml(extract(..))]` meta:
 | --- | --- | --- |
 | `namespace` | *string literal* or *path* | The XML namespace of the child element. |
 | `name` | *string literal* or *path* | The XML name of the child element. If it is a *path*, it must point at a `&'static NcNameStr`. |
+| `n` | `1` or `..` | If `1`, a single element is parsed. If `..`, a collection is parsed. Defaults to `1`. |
 | `fields` | *nested* | A list of [field meta](#field-meta) which describe the contents of the child element. |
 
 If the `name` key contains a namespace prefix, it must be one of the prefixes
@@ -321,6 +322,14 @@ defaults to the namespace of the surrounding container. If `name` is omitted
 and the `extract` meta is being used on a named field, that field's name is
 used. If `name` is omitted and `extract` is not used on a named field, an
 error is emitted.
+
+When parsing a single child element (i.e. `n = 1` or no `n` value set at all),
+the extracted field's type is set to be the same type as the field on which
+the extract is declared, unless overridden in the extracted field's meta.
+
+When parsing a collection (with `n = ..`), the extracted fields within
+`fields()` must all have type specifications. Not all fields kinds support
+that.
 
 The sequence of field meta inside `fields` can be thought of as a nameless
 tuple-style struct. The macro generates serialisation/deserialisation code
@@ -367,12 +376,17 @@ element.
 | Key | Value type | Description |
 | --- | --- | --- |
 | `codec` | *expression* | Optional [`TextCodec`] implementation which is used to encode or decode the field. |
+| `type_` | *type* | Optional explicit type specification. Only allowed within `#[xml(extract(fields(..)))]`. |
 
 If `codec` is given, the given `codec` value must implement
 [`TextCodec<T>`][`TextCodec`] where `T` is the type of the field.
 
 If `codec` is *not* given, the field's type must implement [`FromXmlText`] for
 `FromXml` and for `AsXml`, the field's type must implement [`AsXmlText`].
+
+If `type_` is specified and the `text` meta is used within an
+`#[xml(extract(fields(..)))]` meta, the specified type is used instead of the
+field type on which the `extract` is declared.
 
 The `text` meta also supports a shorthand syntax, `#[xml(text = ..)]`, where
 the value is treated as the value for the `codec` key (with optional prefix as
