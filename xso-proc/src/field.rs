@@ -140,6 +140,26 @@ pub(crate) enum FieldIteratorPart {
     },
 }
 
+/// Definition of what to extract from a child element.
+struct ExtractDef {
+    /// The XML namespace of the child to extract data from.
+    xml_namespace: NamespaceRef,
+
+    /// The XML name of the child to extract data from.
+    xml_name: NameRef,
+
+    /// Compound which contains the arguments of the `extract(..)` meta
+    /// (except the `from`), transformed into a struct with unnamed
+    /// fields.
+    ///
+    /// This is used to generate the parsing/serialisation code, by
+    /// essentially "declaring" a shim struct, as if it were a real Rust
+    /// struct, and using the result of the parsing process directly for
+    /// the field on which the `extract(..)` option was used, instead of
+    /// putting it into a Rust struct.
+    parts: Compound,
+}
+
 /// Specify how the field is mapped to XML.
 enum FieldKind {
     /// The field maps to an attribute.
@@ -169,26 +189,10 @@ enum FieldKind {
 
         /// Number of child elements allowed.
         amount: AmountConstraint,
-    },
 
-    /// Extract contents from a child element.
-    Extract {
-        /// The XML namespace of the child to extract data from.
-        xml_namespace: NamespaceRef,
-
-        /// The XML name of the child to extract data from.
-        xml_name: NameRef,
-
-        /// Compound which contains the arguments of the `extract(..)` meta
-        /// (except the `from`), transformed into a struct with unnamed
-        /// fields.
-        ///
-        /// This is used to generate the parsing/serialisation code, by
-        /// essentially "declaring" a shim struct, as if it were a real Rust
-        /// struct, and using the result of the parsing process directly for
-        /// the field on which the `extract(..)` option was used, instead of
-        /// putting it into a Rust struct.
-        parts: Compound,
+        /// If set, the child element is not parsed as a field implementing
+        /// `FromXml` / `AsXml`, but instead its contents are extracted.
+        extract: Option<ExtractDef>,
     },
 }
 
@@ -269,6 +273,7 @@ impl FieldKind {
                 Ok(Self::Child {
                     default_,
                     amount: amount.unwrap_or(AmountConstraint::FixedSingle(Span::call_site())),
+                    extract: None,
                 })
             }
 
@@ -303,10 +308,14 @@ impl FieldKind {
                     [FieldDef::from_extract(field, 0, field_ty, &xml_namespace)].into_iter(),
                 )?;
 
-                Ok(Self::Extract {
-                    xml_namespace,
-                    xml_name,
-                    parts,
+                Ok(Self::Child {
+                    default_: Flag::Absent,
+                    amount: AmountConstraint::FixedSingle(Span::call_site()),
+                    extract: Some(ExtractDef {
+                        xml_namespace,
+                        xml_name,
+                        parts,
+                    }),
                 })
             }
         }
@@ -475,6 +484,7 @@ impl FieldDef {
             FieldKind::Child {
                 ref default_,
                 ref amount,
+                ref extract,
             } => {
                 let FromEventsScope {
                     ref substate_result,
@@ -487,11 +497,65 @@ impl FieldDef {
                     AmountConstraint::Any(_) => into_iterator_item_ty(self.ty.clone()),
                 };
 
-                let from_events = from_events_fn(element_ty.clone());
-                let from_xml_builder = from_xml_builder_ty(element_ty.clone());
+                let (extra_defs, matcher, fetch, builder) = match extract {
+                    Some(ExtractDef {
+                        ref xml_namespace,
+                        ref xml_name,
+                        ref parts,
+                    }) => {
+                        let from_xml_builder_ty_ident =
+                            scope.make_member_type_name(&self.member, "FromXmlBuilder");
+                        let state_ty_ident =
+                            quote::format_ident!("{}State", from_xml_builder_ty_ident,);
 
-                let matcher = quote! { #from_events(name, attrs) };
-                let builder = from_xml_builder;
+                        let extra_defs = parts.make_from_events_statemachine(
+                            &state_ty_ident,
+                            &container_name.child(self.member.clone()),
+                            "",
+                        )?.with_augmented_init(|init| quote! {
+                            if name.0 == #xml_namespace && name.1 == #xml_name {
+                                #init
+                            } else {
+                                ::core::result::Result::Err(::xso::error::FromEventsError::Mismatch { name, attrs })
+                            }
+                        }).compile().render(
+                            &Visibility::Inherited,
+                            &from_xml_builder_ty_ident,
+                            &state_ty_ident,
+                            &Type::Tuple(TypeTuple {
+                                paren_token: token::Paren::default(),
+                                elems: [
+                                    element_ty.clone(),
+                                ].into_iter().collect(),
+                            })
+                        )?;
+                        let from_xml_builder_ty =
+                            ty_from_ident(from_xml_builder_ty_ident.clone()).into();
+
+                        let matcher = quote! { #state_ty_ident::new(name, attrs).map(|x| #from_xml_builder_ty_ident(::core::option::Option::Some(x))) };
+
+                        (
+                            extra_defs,
+                            matcher,
+                            quote! { #substate_result.0 },
+                            from_xml_builder_ty,
+                        )
+                    }
+                    None => {
+                        let from_events = from_events_fn(element_ty.clone());
+                        let from_xml_builder = from_xml_builder_ty(element_ty.clone());
+
+                        let matcher = quote! { #from_events(name, attrs) };
+                        let builder = from_xml_builder;
+
+                        (
+                            TokenStream::default(),
+                            matcher,
+                            quote! { #substate_result },
+                            builder,
+                        )
+                    }
+                };
 
                 match amount {
                     AmountConstraint::FixedSingle(_) => {
@@ -505,7 +569,7 @@ impl FieldDef {
                                 return ::core::result::Result::Err(::xso::error::Error::Other(#missing_msg).into())
                             },
                             Flag::Present(_) => {
-                                let default_ = default_fn(self.ty.clone());
+                                let default_ = default_fn(element_ty.clone());
                                 quote! {
                                     #default_()
                                 }
@@ -513,7 +577,7 @@ impl FieldDef {
                         };
 
                         Ok(FieldBuilderPart::Nested {
-                            extra_defs: TokenStream::default(),
+                            extra_defs,
                             value: FieldTempInit {
                                 init: quote! { ::std::option::Option::None },
                                 ty: option_ty(self.ty.clone()),
@@ -530,7 +594,7 @@ impl FieldDef {
                             },
                             builder,
                             collect: quote! {
-                                #field_access = ::std::option::Option::Some(#substate_result);
+                                #field_access = ::std::option::Option::Some(#fetch);
                             },
                             finalize: quote! {
                                 match #field_access {
@@ -544,7 +608,7 @@ impl FieldDef {
                         let ty_extend = extend_fn(self.ty.clone(), element_ty.clone());
                         let ty_default = default_fn(self.ty.clone());
                         Ok(FieldBuilderPart::Nested {
-                            extra_defs: TokenStream::default(),
+                            extra_defs,
                             value: FieldTempInit {
                                 init: quote! { #ty_default() },
                                 ty: self.ty.clone(),
@@ -552,86 +616,12 @@ impl FieldDef {
                             matcher,
                             builder,
                             collect: quote! {
-                                #ty_extend(&mut #field_access, [#substate_result]);
+                                #ty_extend(&mut #field_access, [#fetch]);
                             },
                             finalize: quote! { #field_access },
                         })
                     }
                 }
-            }
-
-            FieldKind::Extract {
-                ref xml_namespace,
-                ref xml_name,
-                ref parts,
-            } => {
-                let FromEventsScope {
-                    ref substate_result,
-                    ..
-                } = scope;
-                let field_access = scope.access_field(&self.member);
-
-                let missing_msg = error_message::on_missing_child(container_name, &self.member);
-                let duplicate_msg = error_message::on_duplicate_child(container_name, &self.member);
-
-                let on_absent = quote! {
-                    return ::core::result::Result::Err(::xso::error::Error::Other(#missing_msg).into())
-                };
-
-                let from_xml_builder_ty_ident =
-                    scope.make_member_type_name(&self.member, "FromXmlBuilder");
-                let state_ty_ident = quote::format_ident!("{}State", from_xml_builder_ty_ident,);
-
-                let extra_defs = parts.make_from_events_statemachine(
-                    &state_ty_ident,
-                    &container_name.child(self.member.clone()),
-                    "",
-                )?.with_augmented_init(|init| quote! {
-                    if name.0 == #xml_namespace && name.1 == #xml_name {
-                        #init
-                    } else {
-                        ::core::result::Result::Err(::xso::error::FromEventsError::Mismatch { name, attrs })
-                    }
-                }).compile().render(
-                    &Visibility::Inherited,
-                    &from_xml_builder_ty_ident,
-                    &state_ty_ident,
-                    &Type::Tuple(TypeTuple {
-                        paren_token: token::Paren::default(),
-                        elems: [
-                            self.ty.clone(),
-                        ].into_iter().collect(),
-                    })
-                )?;
-                let from_xml_builder_ty = ty_from_ident(from_xml_builder_ty_ident.clone()).into();
-
-                Ok(FieldBuilderPart::Nested {
-                    extra_defs,
-                    value: FieldTempInit {
-                        init: quote! { ::std::option::Option::None },
-                        ty: option_ty(self.ty.clone()),
-                    },
-                    matcher: quote! {
-                        match #state_ty_ident::new(name, attrs) {
-                            ::core::result::Result::Ok(v) => if #field_access.is_some() {
-                                ::core::result::Result::Err(::xso::error::FromEventsError::Invalid(::xso::error::Error::Other(#duplicate_msg)))
-                            } else {
-                                ::core::result::Result::Ok(#from_xml_builder_ty_ident(::core::option::Option::Some(v)))
-                            },
-                            ::core::result::Result::Err(e) => ::core::result::Result::Err(e),
-                        }
-                    },
-                    builder: from_xml_builder_ty,
-                    collect: quote! {
-                        #field_access = ::std::option::Option::Some(#substate_result.0);
-                    },
-                    finalize: quote! {
-                        match #field_access {
-                            ::std::option::Option::Some(value) => value,
-                            ::std::option::Option::None => #on_absent,
-                        }
-                    },
-                })
             }
         }
     }
@@ -689,147 +679,146 @@ impl FieldDef {
 
             FieldKind::Child {
                 default_: _,
-                amount: AmountConstraint::FixedSingle(_),
+                ref amount,
+                ref extract,
             } => {
                 let AsItemsScope { ref lifetime, .. } = scope;
 
-                let as_xml_iter = as_xml_iter_fn(self.ty.clone());
-                let item_iter = item_iter_ty(self.ty.clone(), lifetime.clone());
+                let item_ty = match amount {
+                    AmountConstraint::FixedSingle(_) => self.ty.clone(),
+                    AmountConstraint::Any(_) => {
+                        // This should give us the type of element stored in the
+                        // collection.
+                        into_iterator_item_ty(self.ty.clone())
+                    }
+                };
 
-                Ok(FieldIteratorPart::Content {
-                    extra_defs: TokenStream::default(),
-                    value: FieldTempInit {
-                        init: quote! {
-                            #as_xml_iter(#bound_name)?
-                        },
-                        ty: item_iter,
-                    },
-                    generator: quote! {
-                        #bound_name.next().transpose()
-                    },
-                })
-            }
+                let (extra_defs, fetch, as_xml_iter, iter_ty) = match extract {
+                    Some(ExtractDef {
+                        ref xml_namespace,
+                        ref xml_name,
+                        ref parts,
+                    }) => {
+                        let item_iter_ty_ident =
+                            scope.make_member_type_name(&self.member, "AsXmlIterator");
+                        let state_ty_ident = quote::format_ident!("{}State", item_iter_ty_ident,);
+                        let mut item_iter_ty = ty_from_ident(item_iter_ty_ident.clone());
+                        item_iter_ty.path.segments[0].arguments =
+                            PathArguments::AngleBracketed(AngleBracketedGenericArguments {
+                                colon2_token: None,
+                                lt_token: token::Lt::default(),
+                                args: [GenericArgument::Lifetime(lifetime.clone())]
+                                    .into_iter()
+                                    .collect(),
+                                gt_token: token::Gt::default(),
+                            });
+                        let item_iter_ty = item_iter_ty.into();
 
-            FieldKind::Child {
-                default_: _,
-                amount: AmountConstraint::Any(_),
-            } => {
-                let AsItemsScope { ref lifetime, .. } = scope;
-
-                // This should give us the type of element stored in the
-                // collection.
-                let element_ty = into_iterator_item_ty(self.ty.clone());
-
-                // And this is the collection type we actually work with --
-                // as_xml_iter uses references after all.
-                let ty = ref_ty(self.ty.clone(), lifetime.clone());
-
-                // as_xml_iter is called on the bare type (not the ref type)
-                let as_xml_iter = as_xml_iter_fn(element_ty.clone());
-
-                // And thus the iterator associated with AsXml is also derived
-                // from the bare type.
-                let item_iter = item_iter_ty(element_ty.clone(), lifetime.clone());
-
-                // But the iterator for iterating over the elements inside the
-                // collection must use the ref type.
-                let element_iter = into_iterator_iter_ty(ty.clone());
-
-                // And likewise the into_iter impl.
-                let into_iter = into_iterator_into_iter_fn(ty.clone());
-
-                let state_ty = Type::Tuple(TypeTuple {
-                    paren_token: token::Paren::default(),
-                    elems: [element_iter, option_ty(item_iter)].into_iter().collect(),
-                });
-
-                Ok(FieldIteratorPart::Content {
-                    extra_defs: TokenStream::default(),
-                    value: FieldTempInit {
-                        init: quote! {
-                            (#into_iter(#bound_name), ::core::option::Option::None)
-                        },
-                        ty: state_ty,
-                    },
-                    generator: quote! {
-                        loop {
-                            if let ::core::option::Option::Some(current) = #bound_name.1.as_mut() {
-                                if let ::core::option::Option::Some(item) = current.next() {
-                                    break ::core::option::Option::Some(item).transpose();
+                        let extra_defs = parts
+                            .make_as_item_iter_statemachine(
+                                &container_name.child(self.member.clone()),
+                                &state_ty_ident,
+                                "",
+                                lifetime,
+                            )?
+                            .with_augmented_init(|init| {
+                                quote! {
+                                    let name = (
+                                        ::xso::exports::rxml::Namespace::from(#xml_namespace),
+                                        ::std::borrow::Cow::Borrowed(#xml_name),
+                                    );
+                                    #init
                                 }
-                            }
-                            if let ::core::option::Option::Some(item) = #bound_name.0.next() {
-                                #bound_name.1 = ::core::option::Option::Some(#as_xml_iter(item)?)
-                            } else {
-                                break ::core::result::Result::Ok(::core::option::Option::None)
-                            }
-                        }
-                    },
-                })
-            }
+                            })
+                            .compile()
+                            .render(
+                                &Visibility::Inherited,
+                                &Type::Tuple(TypeTuple {
+                                    paren_token: token::Paren::default(),
+                                    elems: [ref_ty(item_ty.clone(), lifetime.clone())]
+                                        .into_iter()
+                                        .collect(),
+                                }),
+                                &state_ty_ident,
+                                lifetime,
+                                &item_iter_ty,
+                            )?;
 
-            FieldKind::Extract {
-                ref xml_namespace,
-                ref xml_name,
-                ref parts,
-            } => {
-                let AsItemsScope { ref lifetime, .. } = scope;
-                let item_iter_ty_ident = scope.make_member_type_name(&self.member, "AsXmlIterator");
-                let state_ty_ident = quote::format_ident!("{}State", item_iter_ty_ident,);
-                let mut item_iter_ty = ty_from_ident(item_iter_ty_ident.clone());
-                item_iter_ty.path.segments[0].arguments =
-                    PathArguments::AngleBracketed(AngleBracketedGenericArguments {
-                        colon2_token: None,
-                        lt_token: token::Lt::default(),
-                        args: [GenericArgument::Lifetime(lifetime.clone())]
-                            .into_iter()
-                            .collect(),
-                        gt_token: token::Gt::default(),
-                    });
-                let item_iter_ty = item_iter_ty.into();
+                        (
+                            extra_defs,
+                            quote! { (&#bound_name,) },
+                            quote! { #item_iter_ty_ident::new },
+                            item_iter_ty,
+                        )
+                    }
+                    None => {
+                        let as_xml_iter = as_xml_iter_fn(item_ty.clone());
+                        let item_iter = item_iter_ty(item_ty.clone(), lifetime.clone());
 
-                let extra_defs = parts
-                    .make_as_item_iter_statemachine(
-                        &container_name.child(self.member.clone()),
-                        &state_ty_ident,
-                        "",
-                        lifetime,
-                    )?
-                    .with_augmented_init(|init| {
-                        quote! {
-                            let name = (
-                                ::xso::exports::rxml::Namespace::from(#xml_namespace),
-                                ::std::borrow::Cow::Borrowed(#xml_name),
-                            );
-                            #init
-                        }
-                    })
-                    .compile()
-                    .render(
-                        &Visibility::Inherited,
-                        &Type::Tuple(TypeTuple {
-                            paren_token: token::Paren::default(),
-                            elems: [ref_ty(self.ty.clone(), lifetime.clone())]
-                                .into_iter()
-                                .collect(),
-                        }),
-                        &state_ty_ident,
-                        lifetime,
-                        &item_iter_ty,
-                    )?;
+                        (
+                            TokenStream::default(),
+                            quote! { #bound_name },
+                            quote! { #as_xml_iter },
+                            item_iter,
+                        )
+                    }
+                };
 
-                Ok(FieldIteratorPart::Content {
-                    extra_defs,
-                    value: FieldTempInit {
-                        init: quote! {
-                            #item_iter_ty_ident::new((&#bound_name,))?
+                match amount {
+                    AmountConstraint::FixedSingle(_) => Ok(FieldIteratorPart::Content {
+                        extra_defs,
+                        value: FieldTempInit {
+                            init: quote! {
+                                #as_xml_iter(#fetch)?
+                            },
+                            ty: iter_ty,
                         },
-                        ty: item_iter_ty,
-                    },
-                    generator: quote! {
-                        #bound_name.next().transpose()
-                    },
-                })
+                        generator: quote! {
+                            #bound_name.next().transpose()
+                        },
+                    }),
+                    AmountConstraint::Any(_) => {
+                        // This is the collection type we actually work
+                        // with -- as_xml_iter uses references after all.
+                        let ty = ref_ty(self.ty.clone(), lifetime.clone());
+
+                        // But the iterator for iterating over the elements
+                        // inside the collection must use the ref type.
+                        let element_iter = into_iterator_iter_ty(ty.clone());
+
+                        // And likewise the into_iter impl.
+                        let into_iter = into_iterator_into_iter_fn(ty.clone());
+
+                        let state_ty = Type::Tuple(TypeTuple {
+                            paren_token: token::Paren::default(),
+                            elems: [element_iter, option_ty(iter_ty)].into_iter().collect(),
+                        });
+
+                        Ok(FieldIteratorPart::Content {
+                            extra_defs,
+                            value: FieldTempInit {
+                                init: quote! {
+                                    (#into_iter(#bound_name), ::core::option::Option::None)
+                                },
+                                ty: state_ty,
+                            },
+                            generator: quote! {
+                                loop {
+                                    if let ::core::option::Option::Some(current) = #bound_name.1.as_mut() {
+                                        if let ::core::option::Option::Some(item) = current.next() {
+                                            break ::core::option::Option::Some(item).transpose();
+                                        }
+                                    }
+                                    if let ::core::option::Option::Some(item) = #bound_name.0.next() {
+                                        #bound_name.1 = ::core::option::Option::Some(#as_xml_iter({ let #bound_name = item; #fetch })?)
+                                    } else {
+                                        break ::core::result::Result::Ok(::core::option::Option::None)
+                                    }
+                                }
+                            },
+                        })
+                    }
+                }
             }
         }
     }
