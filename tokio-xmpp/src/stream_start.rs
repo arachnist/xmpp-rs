@@ -1,7 +1,7 @@
 use futures::{sink::SinkExt, stream::StreamExt};
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio_util::codec::Framed;
-use xmpp_parsers::{jid::Jid, ns, stream_features::StreamFeatures};
+use xmpp_parsers::{jid::Jid, ns, stream_features::StreamFeatures, Error as ParsersError};
 
 use crate::error::{Error, ProtocolError};
 use crate::xmpp_codec::{Packet, XmppCodec};
@@ -50,9 +50,9 @@ pub async fn start<S: AsyncRead + AsyncWrite + Unpin>(
         loop {
             match stream.next().await {
                 Some(Ok(Packet::Stanza(stanza))) => {
-                    if let Ok(stream_features) = StreamFeatures::try_from(stanza) {
-                        return Ok(XMPPStream::new(jid, stream, ns, stream_id, stream_features));
-                    }
+                    let stream_features = StreamFeatures::try_from(stanza)
+                        .map_err(|e| Error::Protocol(ParsersError::from(e).into()))?;
+                    return Ok(XMPPStream::new(jid, stream, ns, stream_id, stream_features));
                 }
                 Some(Ok(_)) => {}
                 Some(Err(e)) => return Err(e.into()),
