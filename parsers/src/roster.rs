@@ -4,8 +4,12 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use crate::iq::{IqGetPayload, IqResultPayload, IqSetPayload};
+use xso::{AsXml, FromXml};
+
 use jid::BareJid;
+
+use crate::iq::{IqGetPayload, IqResultPayload, IqSetPayload};
+use crate::ns;
 
 generate_elem_id!(
     /// Represents a group a contact is part of.
@@ -67,22 +71,22 @@ generate_element!(
     ]
 );
 
-generate_element!(
-    /// The contact list of the user.
-    Roster, "query", ROSTER,
-    attributes: [
-        /// Version of the contact list.
-        ///
-        /// This is an opaque string that should only be sent back to the server on
-        /// a new connection, if this client is storing the contact list between
-        /// connections.
-        ver: Option<String> = "ver"
-    ],
-    children: [
-        /// List of the contacts of the user.
-        items: Vec<Item> = ("item", ROSTER) => Item
-    ]
-);
+/// The contact list of the user.
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::ROSTER, name = "query")]
+pub struct Roster {
+    /// Version of the contact list.
+    ///
+    /// This is an opaque string that should only be sent back to the server on
+    /// a new connection, if this client is storing the contact list between
+    /// connections.
+    #[xml(attribute(default))]
+    pub ver: Option<String>,
+
+    /// List of the contacts of the user.
+    #[xml(child(n = ..))]
+    pub items: Vec<Item>,
+}
 
 impl IqGetPayload for Roster {}
 impl IqSetPayload for Roster {}
@@ -273,7 +277,7 @@ mod tests {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Unknown child in query element.");
+        assert_eq!(message, "Unknown child in Roster element.");
 
         let elem: Element = "<query xmlns='jabber:iq:roster' coucou=''/>"
             .parse()
@@ -283,7 +287,7 @@ mod tests {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Unknown attribute in query element.");
+        assert_eq!(message, "Unknown attribute in Roster element.");
     }
 
     #[test]

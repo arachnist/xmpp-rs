@@ -15,18 +15,18 @@ use jid::Jid;
 use minidom::Element;
 use xso::error::{Error, FromElementError};
 
-generate_element!(
-    /// A list of affiliations you have on a service, or on a node.
-    Affiliations, "affiliations", PUBSUB_OWNER,
-    attributes: [
-        /// The node name this request pertains to.
-        node: Required<NodeName> = "node",
-    ],
-    children: [
-        /// The actual list of affiliation elements.
-        affiliations: Vec<Affiliation> = ("affiliation", PUBSUB_OWNER) => Affiliation
-    ]
-);
+/// A list of affiliations you have on a service, or on a node.
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::PUBSUB_OWNER, name = "affiliations")]
+pub struct Affiliations {
+    /// The node name this request pertains to.
+    #[xml(attribute)]
+    pub node: NodeName,
+
+    /// The actual list of affiliation elements.
+    #[xml(child(n = ..))]
+    pub affiliations: Vec<Affiliation>,
+}
 
 /// An affiliation element.
 #[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
@@ -94,18 +94,18 @@ pub struct Purge {
     pub node: NodeName,
 }
 
-generate_element!(
-    /// A request for current subscriptions.
-    Subscriptions, "subscriptions", PUBSUB_OWNER,
-    attributes: [
-        /// The node to query.
-        node: Required<NodeName> = "node",
-    ],
-    children: [
-        /// The list of subscription elements returned.
-        subscriptions: Vec<SubscriptionElem> = ("subscription", PUBSUB_OWNER) => SubscriptionElem
-    ]
-);
+/// A request for current subscriptions.
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::PUBSUB_OWNER, name = "subscriptions")]
+pub struct Subscriptions {
+    /// The node to query.
+    #[xml(attribute)]
+    pub node: NodeName,
+
+    /// The list of subscription elements returned.
+    #[xml(child(n = ..))]
+    pub subscriptions: Vec<SubscriptionElem>,
+}
 
 /// A subscription element, describing the state of a subscription.
 #[derive(FromXml, AsXml, PartialEq, Debug, Clone)]

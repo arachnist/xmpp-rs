@@ -13,14 +13,14 @@ use crate::hashes::Sha1HexAttribute;
 use crate::ns;
 use crate::pubsub::PubSubPayload;
 
-generate_element!(
-    /// Communicates information about an avatar.
-    Metadata, "metadata", AVATAR_METADATA,
-    children: [
-        /// List of information elements describing this avatar.
-        infos: Vec<Info> = ("info", AVATAR_METADATA) => Info
-    ]
-);
+/// Communicates information about an avatar.
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::AVATAR_METADATA, name = "metadata")]
+pub struct Metadata {
+    /// List of information elements describing this avatar.
+    #[xml(child(n = ..))]
+    pub infos: Vec<Info>,
+}
 
 impl PubSubPayload for Metadata {}
 

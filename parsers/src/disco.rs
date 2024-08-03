@@ -220,25 +220,26 @@ pub struct Item {
     pub name: Option<String>,
 }
 
-generate_element!(
-    /// Structure representing a `<query
-    /// xmlns='http://jabber.org/protocol/disco#items'/>` element.
-    ///
-    /// It should only be used in an `<iq type='result'/>`, as it can only
-    /// represent the result, and not a request.
-    DiscoItemsResult, "query", DISCO_ITEMS,
-    attributes: [
-        /// Node on which we have done this discovery.
-        node: Option<String> = "node"
-    ],
-    children: [
-        /// List of items pointed by this entity.
-        items: Vec<Item> = ("item", DISCO_ITEMS) => Item,
+/// Structure representing a `<query
+/// xmlns='http://jabber.org/protocol/disco#items'/>` element.
+///
+/// It should only be used in an `<iq type='result'/>`, as it can only
+/// represent the result, and not a request.
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::DISCO_ITEMS, name = "query")]
+pub struct DiscoItemsResult {
+    /// Node on which we have done this discovery.
+    #[xml(attribute(default))]
+    pub node: Option<String>,
 
-        /// Optional paging via Result Set Management
-        rsm: Option<crate::rsm::SetResult> = ("set", RSM) => SetResult,
-    ]
-);
+    /// List of items pointed by this entity.
+    #[xml(child(n = ..))]
+    pub items: Vec<Item>,
+
+    /// Optional paging via Result Set Management
+    #[xml(child(default))]
+    pub rsm: Option<SetResult>,
+}
 
 impl IqResultPayload for DiscoItemsResult {}
 

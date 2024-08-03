@@ -38,18 +38,18 @@ impl Content {
     }
 }
 
-generate_element!(
-    /// A semantic group of contents.
-    Group, "group", JINGLE_GROUPING,
-    attributes: [
-        /// Semantics of the grouping.
-        semantics: Required<Semantics> = "semantics",
-    ],
-    children: [
-        /// List of contents that should be grouped with each other.
-        contents: Vec<Content> = ("content", JINGLE_GROUPING) => Content
-    ]
-);
+/// A semantic group of contents.
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::JINGLE_GROUPING, name = "group")]
+pub struct Group {
+    /// Semantics of the grouping.
+    #[xml(attribute)]
+    pub semantics: Semantics,
+
+    /// List of contents that should be grouped with each other.
+    #[xml(child(n = ..))]
+    pub contents: Vec<Content>,
+}
 
 #[cfg(test)]
 mod tests {

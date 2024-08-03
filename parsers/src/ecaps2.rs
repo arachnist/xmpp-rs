@@ -4,6 +4,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use xso::{AsXml, FromXml};
+
 use crate::data_forms::DataForm;
 use crate::disco::{DiscoInfoQuery, DiscoInfoResult, Feature, Identity};
 use crate::hashes::{Algo, Hash};
@@ -16,16 +18,16 @@ use sha2::{Sha256, Sha512};
 use sha3::{Sha3_256, Sha3_512};
 use xso::error::Error;
 
-generate_element!(
-    /// Represents a set of capability hashes, all of them must correspond to
-    /// the same input [disco#info](../disco/struct.DiscoInfoResult.html),
-    /// using different [algorithms](../hashes/enum.Algo.html).
-    ECaps2, "c", ECAPS2,
-    children: [
-        /// Hashes of the [disco#info](../disco/struct.DiscoInfoResult.html).
-        hashes: Vec<Hash> = ("hash", HASHES) => Hash
-    ]
-);
+/// Represents a set of capability hashes, all of them must correspond to
+/// the same input [disco#info](../disco/struct.DiscoInfoResult.html),
+/// using different [algorithms](../hashes/enum.Algo.html).
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::ECAPS2, name = "c")]
+pub struct ECaps2 {
+    /// Hashes of the [disco#info](../disco/struct.DiscoInfoResult.html).
+    #[xml(child(n = ..))]
+    pub hashes: Vec<Hash>,
+}
 
 impl PresencePayload for ECaps2 {}
 
@@ -230,7 +232,7 @@ mod tests {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Unknown child in c element.");
+        assert_eq!(message, "Unknown child in ECaps2 element.");
     }
 
     #[test]

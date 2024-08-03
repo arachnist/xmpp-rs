@@ -762,6 +762,20 @@ macro_rules! impl_pubsub_item {
             }
         }
 
+        impl ::xso::FromXml for $item {
+            type Builder = ::xso::minidom_compat::FromEventsViaElement<$item>;
+
+            fn from_events(
+                qname: ::xso::exports::rxml::QName,
+                attrs: ::xso::exports::rxml::AttrMap,
+            ) -> Result<Self::Builder, ::xso::error::FromEventsError> {
+                if qname.0 != crate::ns::$ns || qname.1 != "item" {
+                    return Err(::xso::error::FromEventsError::Mismatch { name: qname, attrs });
+                }
+                Self::Builder::new(qname, attrs)
+            }
+        }
+
         impl From<$item> for minidom::Element {
             fn from(item: $item) -> minidom::Element {
                 minidom::Element::builder("item", ns::$ns)
@@ -769,6 +783,14 @@ macro_rules! impl_pubsub_item {
                     .attr("publisher", item.0.publisher)
                     .append_all(item.0.payload)
                     .build()
+            }
+        }
+
+        impl ::xso::AsXml for $item {
+            type ItemIter<'x> = ::xso::minidom_compat::AsItemsViaElement<'x>;
+
+            fn as_xml_iter(&self) -> Result<Self::ItemIter<'_>, ::xso::error::Error> {
+                ::xso::minidom_compat::AsItemsViaElement::new(self.clone())
             }
         }
 

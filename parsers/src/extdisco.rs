@@ -104,37 +104,37 @@ impl IqGetPayload for Service {}
 #[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = ns::EXT_DISCO, name = "services")]
 pub struct ServicesQuery {
-    /// TODO
+    /// The type of service to filter for.
     #[xml(attribute(default, name = "type"))]
     pub type_: Option<Type>,
 }
 
 impl IqGetPayload for ServicesQuery {}
 
-generate_element!(
-    /// Structure representing a `<services xmlns='urn:xmpp:extdisco:2'/>` element.
-    ServicesResult, "services", EXT_DISCO,
-    attributes: [
-        /// TODO
-        type_: Option<Type> = "type",
-    ],
-    children: [
-        /// List of services.
-        services: Vec<Service> = ("service", EXT_DISCO) => Service
-    ]
-);
+/// Structure representing a `<services xmlns='urn:xmpp:extdisco:2'/>` element.
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::EXT_DISCO, name = "services")]
+pub struct ServicesResult {
+    /// The service type which was requested.
+    #[xml(attribute(name = "type", default))]
+    pub type_: Option<Type>,
+
+    /// List of services.
+    #[xml(child(n = ..))]
+    pub services: Vec<Service>,
+}
 
 impl IqResultPayload for ServicesResult {}
 impl IqSetPayload for ServicesResult {}
 
-generate_element!(
-    /// Structure representing a `<credentials xmlns='urn:xmpp:extdisco:2'/>` element.
-    Credentials, "credentials", EXT_DISCO,
-    children: [
-        /// List of services.
-        services: Vec<Service> = ("service", EXT_DISCO) => Service
-    ]
-);
+/// Structure representing a `<credentials xmlns='urn:xmpp:extdisco:2'/>` element.
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::EXT_DISCO, name = "credentials")]
+pub struct Credentials {
+    /// List of services.
+    #[xml(child(n = ..))]
+    pub services: Vec<Service>,
+}
 
 impl IqGetPayload for Credentials {}
 impl IqResultPayload for Credentials {}

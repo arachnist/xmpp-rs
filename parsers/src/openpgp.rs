@@ -48,14 +48,14 @@ pub struct PubKeyMeta {
     pub date: DateTime,
 }
 
-generate_element!(
-    /// List of public key metadata
-    PubKeysMeta, "public-key-list", OX,
-    children: [
-        /// Public keys
-        pubkeys: Vec<PubKeyMeta> = ("pubkey-metadata", OX) => PubKeyMeta
-    ]
-);
+/// List of public key metadata
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::OX, name = "public-key-list")]
+pub struct PubKeysMeta {
+    /// Public keys
+    #[xml(child(n = ..))]
+    pub pubkeys: Vec<PubKeyMeta>,
+}
 
 impl PubSubPayload for PubKeysMeta {}
 

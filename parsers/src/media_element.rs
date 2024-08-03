@@ -27,22 +27,23 @@ pub struct Uri {
     pub uri: String,
 }
 
-generate_element!(
-    /// References a media element, to be used in [data
-    /// forms](../data_forms/index.html).
-    MediaElement, "media", MEDIA_ELEMENT,
-    attributes: [
-        /// The recommended display width in pixels.
-        width: Option<usize> = "width",
+/// References a media element, to be used in [data
+/// forms](../data_forms/index.html).
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::MEDIA_ELEMENT, name = "media")]
+pub struct MediaElement {
+    /// The recommended display width in pixels.
+    #[xml(attribute(default))]
+    pub width: Option<usize>,
 
-        /// The recommended display height in pixels.
-        height: Option<usize> = "height"
-    ],
-    children: [
-        /// A list of URIs referencing this media.
-        uris: Vec<Uri> = ("uri", MEDIA_ELEMENT) => Uri
-    ]
-);
+    /// The recommended display height in pixels.
+    #[xml(attribute(default))]
+    pub height: Option<usize>,
+
+    /// A list of URIs referencing this media.
+    #[xml(child(n = ..))]
+    pub uris: Vec<Uri>,
+}
 
 #[cfg(test)]
 mod tests {
@@ -162,7 +163,7 @@ mod tests {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Unknown child in media element.");
+        assert_eq!(message, "Unknown child in MediaElement element.");
     }
 
     #[test]

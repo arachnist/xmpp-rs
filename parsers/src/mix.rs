@@ -113,21 +113,21 @@ impl Join {
     }
 }
 
-generate_element!(
-    /// Update a given subscription.
-    UpdateSubscription, "update-subscription", MIX_CORE,
-    attributes: [
-        /// The JID of the user to be affected.
-        // TODO: why is it not a participant id instead?
-        jid: Option<BareJid> = "jid",
-    ],
-    children: [
-        /// The list of additional nodes to subscribe to.
-        // TODO: what happens when we are already subscribed?  Also, how do we unsubscribe from
-        // just one?
-        subscribes: Vec<Subscribe> = ("subscribe", MIX_CORE) => Subscribe
-    ]
-);
+/// Update a given subscription.
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::MIX_CORE, name = "update-subscription")]
+pub struct UpdateSubscription {
+    /// The JID of the user to be affected.
+    // TODO: why is it not a participant id instead?
+    #[xml(attribute(default))]
+    pub jid: Option<BareJid>,
+
+    /// The list of additional nodes to subscribe to.
+    // TODO: what happens when we are already subscribed?  Also, how do we unsubscribe from
+    // just one?
+    #[xml(child(n = ..))]
+    pub subscribes: Vec<Subscribe>,
+}
 
 impl IqSetPayload for UpdateSubscription {}
 impl IqResultPayload for UpdateSubscription {}

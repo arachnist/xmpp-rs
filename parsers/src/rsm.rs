@@ -172,6 +172,20 @@ impl TryFrom<Element> for SetResult {
     }
 }
 
+impl FromXml for SetResult {
+    type Builder = minidom_compat::FromEventsViaElement<SetResult>;
+
+    fn from_events(
+        qname: rxml::QName,
+        attrs: rxml::AttrMap,
+    ) -> Result<Self::Builder, FromEventsError> {
+        if qname.0 != crate::ns::RSM || qname.1 != "set" {
+            return Err(FromEventsError::Mismatch { name: qname, attrs });
+        }
+        Self::Builder::new(qname, attrs)
+    }
+}
+
 impl From<SetResult> for Element {
     fn from(set: SetResult) -> Element {
         let first = set.first.clone().map(|first| {
@@ -190,6 +204,14 @@ impl From<SetResult> for Element {
                     .map(|count| Element::builder("count", ns::RSM).append(format!("{}", count))),
             )
             .build()
+    }
+}
+
+impl AsXml for SetResult {
+    type ItemIter<'x> = minidom_compat::AsItemsViaElement<'x>;
+
+    fn as_xml_iter(&self) -> Result<Self::ItemIter<'_>, Error> {
+        minidom_compat::AsItemsViaElement::new(self.clone())
     }
 }
 

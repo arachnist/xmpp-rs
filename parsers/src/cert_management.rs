@@ -56,14 +56,14 @@ generate_elem_id!(
     SASL_CERT
 );
 
-generate_element!(
-    /// A list of resources currently using this certificate.
-    Users, "users", SASL_CERT,
-    children: [
-        /// Resources currently using this certificate.
-        resources: Vec<Resource> = ("resource", SASL_CERT) => Resource
-    ]
-);
+/// A list of resources currently using this certificate.
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::SASL_CERT, name = "users")]
+pub struct Users {
+    /// Resources currently using this certificate.
+    #[xml(child(n = ..))]
+    pub resources: Vec<Resource>,
+}
 
 generate_element!(
     /// An X.509 certificate being set for this user.
@@ -83,14 +83,14 @@ generate_element!(
     ]
 );
 
-generate_element!(
-    /// Server answers with the current list of X.509 certificates.
-    ListCertsResponse, "items", SASL_CERT,
-    children: [
-        /// List of certificates.
-        items: Vec<Item> = ("item", SASL_CERT) => Item
-    ]
-);
+/// Server answers with the current list of X.509 certificates.
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::SASL_CERT, name = "items")]
+pub struct ListCertsResponse {
+    /// List of certificates.
+    #[xml(child(n = ..))]
+    pub items: Vec<Item>,
+}
 
 impl IqResultPayload for ListCertsResponse {}
 

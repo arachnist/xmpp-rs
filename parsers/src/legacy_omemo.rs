@@ -19,15 +19,15 @@ pub struct Device {
     pub id: u32,
 }
 
-generate_element!(
-    /// A user's device list contains the OMEMO device ids of all the user's
-    /// devicse. These can be used to look up bundles and build a session.
-    DeviceList, "list", LEGACY_OMEMO,
-    children: [
-        /// List of devices
-        devices: Vec<Device> = ("device", LEGACY_OMEMO) => Device
-    ]
-);
+/// A user's device list contains the OMEMO device ids of all the user's
+/// devicse. These can be used to look up bundles and build a session.
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::LEGACY_OMEMO, name = "list")]
+pub struct DeviceList {
+    /// List of devices
+    #[xml(child(n = ..))]
+    pub devices: Vec<Device>,
+}
 
 impl PubSubPayload for DeviceList {}
 
@@ -64,15 +64,15 @@ pub struct IdentityKey {
     pub data: Vec<u8>,
 }
 
-generate_element!(
+/// List of (single use) PreKeys
+/// Part of a device's bundle
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::LEGACY_OMEMO, name = "prekeys")]
+pub struct Prekeys {
     /// List of (single use) PreKeys
-    /// Part of a device's bundle
-    Prekeys, "prekeys", LEGACY_OMEMO,
-    children: [
-        /// List of (single use) PreKeys
-        keys: Vec<PreKeyPublic> = ("preKeyPublic", LEGACY_OMEMO) => PreKeyPublic,
-    ]
-);
+    #[xml(child(n = ..))]
+    pub keys: Vec<PreKeyPublic>,
+}
 
 /// PreKey public key
 /// Part of a device's bundle
@@ -113,22 +113,23 @@ pub struct Bundle {
 
 impl PubSubPayload for Bundle {}
 
-generate_element!(
-    /// The header contains encrypted keys for a message
-    Header, "header", LEGACY_OMEMO,
-    attributes: [
-        /// The device id of the sender
-        sid: Required<u32> = "sid",
-    ],
-    children: [
-        /// The key that the payload message is encrypted with, separately
-        /// encrypted for each recipient device.
-        keys: Vec<Key> = ("key", LEGACY_OMEMO) => Key,
+/// The header contains encrypted keys for a message
+#[derive(FromXml, AsXml, Debug, PartialEq, Clone)]
+#[xml(namespace = ns::LEGACY_OMEMO, name = "header")]
+pub struct Header {
+    /// The device id of the sender
+    #[xml(attribute)]
+    pub sid: u32,
 
-        /// IV used for payload encryption
-        iv: Required<IV> = ("iv", LEGACY_OMEMO) => IV
-    ]
-);
+    /// The key that the payload message is encrypted with, separately
+    /// encrypted for each recipient device.
+    #[xml(child(n = ..))]
+    pub keys: Vec<Key>,
+
+    /// IV used for payload encryption
+    #[xml(child)]
+    pub iv: IV,
+}
 
 /// IV used for payload encryption
 #[derive(FromXml, AsXml, PartialEq, Debug, Clone)]

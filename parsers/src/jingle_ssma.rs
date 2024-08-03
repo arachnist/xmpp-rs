@@ -8,18 +8,18 @@ use xso::{AsXml, FromXml};
 
 use crate::ns;
 
-generate_element!(
-    /// Source element for the ssrc SDP attribute.
-    Source, "source", JINGLE_SSMA,
-    attributes: [
-        /// Maps to the ssrc-id parameter.
-        id: Required<u32> = "ssrc",
-    ],
-    children: [
-        /// List of attributes for this source.
-        parameters: Vec<Parameter> = ("parameter", JINGLE_SSMA) => Parameter
-    ]
-);
+/// Source element for the ssrc SDP attribute.
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::JINGLE_SSMA, name = "source")]
+pub struct Source {
+    /// Maps to the ssrc-id parameter.
+    #[xml(attribute = "ssrc")]
+    pub id: u32,
+
+    /// List of attributes for this source.
+    #[xml(child(n = ..))]
+    pub parameters: Vec<Parameter>,
+}
 
 impl Source {
     /// Create a new SSMA Source element.
@@ -67,18 +67,18 @@ generate_attribute!(
     }
 );
 
-generate_element!(
-    /// Element grouping multiple ssrc.
-    Group, "ssrc-group", JINGLE_SSMA,
-    attributes: [
-        /// The semantics of this group.
-        semantics: Required<Semantics> = "semantics",
-    ],
-    children: [
-        /// The various ssrc concerned by this group.
-        sources: Vec<Source> = ("source", JINGLE_SSMA) => Source
-    ]
-);
+/// Element grouping multiple ssrc.
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::JINGLE_SSMA, name = "ssrc-group")]
+pub struct Group {
+    /// The semantics of this group.
+    #[xml(attribute)]
+    pub semantics: Semantics,
+
+    /// The various ssrc concerned by this group.
+    #[xml(child(n = ..))]
+    pub sources: Vec<Source>,
+}
 
 #[cfg(test)]
 mod tests {

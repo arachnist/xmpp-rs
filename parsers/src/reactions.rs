@@ -9,18 +9,18 @@ use xso::{AsXml, FromXml};
 use crate::message::MessagePayload;
 use crate::ns;
 
-generate_element!(
-    /// Container for a set of reactions.
-    Reactions, "reactions", REACTIONS,
-    attributes: [
-        /// The id of the message these reactions apply to.
-        id: Required<String> = "id",
-    ],
-    children: [
-        /// The list of reactions.
-        reactions: Vec<Reaction> = ("reaction", REACTIONS) => Reaction,
-    ]
-);
+/// Container for a set of reactions.
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::REACTIONS, name = "reactions")]
+pub struct Reactions {
+    /// The id of the message these reactions apply to.
+    #[xml(attribute)]
+    pub id: String,
+
+    /// The list of reactions.
+    #[xml(child(n = ..))]
+    pub reactions: Vec<Reaction>,
+}
 
 impl MessagePayload for Reactions {}
 

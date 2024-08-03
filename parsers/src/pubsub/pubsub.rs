@@ -21,18 +21,18 @@ use minidom::Element;
 
 // TODO: a better solution would be to split this into a query and a result elements, like for
 // XEP-0030.
-generate_element!(
-    /// A list of affiliations you have on a service, or on a node.
-    Affiliations, "affiliations", PUBSUB,
-    attributes: [
-        /// The optional node name this request pertains to.
-        node: Option<NodeName> = "node",
-    ],
-    children: [
-        /// The actual list of affiliation elements.
-        affiliations: Vec<Affiliation> = ("affiliation", PUBSUB) => Affiliation
-    ]
-);
+/// A list of affiliations you have on a service, or on a node.
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::PUBSUB, name = "affiliations")]
+pub struct Affiliations {
+    /// The optional node name this request pertains to.
+    #[xml(attribute(default))]
+    pub node: Option<NodeName>,
+
+    /// The actual list of affiliation elements.
+    #[xml(child(n = ..))]
+    pub affiliations: Vec<Affiliation>,
+}
 
 /// An affiliation element.
 #[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
@@ -77,25 +77,27 @@ pub struct Default {
     // type_: Option<String>,
 }
 
-generate_element!(
-    /// A request for a list of items.
-    Items, "items", PUBSUB,
-    attributes: [
-        // TODO: should be an xs:positiveInteger, that is, an unbounded int ≥ 1.
-        /// Maximum number of items returned.
-        max_items: Option<u32> = "max_items",
+/// A request for a list of items.
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::PUBSUB, name = "items")]
+pub struct Items {
+    // TODO: should be an xs:positiveInteger, that is, an unbounded int ≥ 1.
+    /// Maximum number of items returned.
+    #[xml(attribute(name = "max_items" /*sic!*/, default))]
+    pub max_items: Option<u32>,
 
-        /// The node queried by this request.
-        node: Required<NodeName> = "node",
+    /// The node queried by this request.
+    #[xml(attribute)]
+    pub node: NodeName,
 
-        /// The subscription identifier related to this request.
-        subid: Option<SubscriptionId> = "subid",
-    ],
-    children: [
-        /// The actual list of items returned.
-        items: Vec<Item> = ("item", PUBSUB) => Item
-    ]
-);
+    /// The subscription identifier related to this request.
+    #[xml(attribute(default))]
+    pub subid: Option<SubscriptionId>,
+
+    /// The actual list of items returned.
+    #[xml(child(n = ..))]
+    pub items: Vec<Item>,
+}
 
 impl Items {
     /// Create a new items request.
@@ -136,18 +138,18 @@ pub struct Options {
     pub form: Option<DataForm>,
 }
 
-generate_element!(
-    /// Request to publish items to a node.
-    Publish, "publish", PUBSUB,
-    attributes: [
-        /// The target node for this operation.
-        node: Required<NodeName> = "node",
-    ],
-    children: [
-        /// The items you want to publish.
-        items: Vec<Item> = ("item", PUBSUB) => Item
-    ]
-);
+/// Request to publish items to a node.
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::PUBSUB, name = "publish")]
+pub struct Publish {
+    /// The target node for this operation.
+    #[xml(attribute)]
+    pub node: NodeName,
+
+    /// The items you want to publish.
+    #[xml(child(n = ..))]
+    pub items: Vec<Item>,
+}
 
 /// The options associated to a publish request.
 #[derive(FromXml, AsXml, Debug, PartialEq, Clone)]
@@ -259,18 +261,18 @@ pub struct Subscribe {
     pub node: Option<NodeName>,
 }
 
-generate_element!(
-    /// A request for current subscriptions.
-    Subscriptions, "subscriptions", PUBSUB,
-    attributes: [
-        /// The node to query.
-        node: Option<NodeName> = "node",
-    ],
-    children: [
-        /// The list of subscription elements returned.
-        subscription: Vec<SubscriptionElem> = ("subscription", PUBSUB) => SubscriptionElem
-    ]
-);
+/// A request for current subscriptions.
+#[derive(FromXml, AsXml, Debug, PartialEq, Clone)]
+#[xml(namespace = ns::PUBSUB, name = "subscriptions")]
+pub struct Subscriptions {
+    /// The node to query.
+    #[xml(attribute(default))]
+    pub node: Option<NodeName>,
+
+    /// The list of subscription elements returned.
+    #[xml(child(n = ..))]
+    pub subscription: Vec<SubscriptionElem>,
+}
 
 /// A subscription element, describing the state of a subscription.
 #[derive(FromXml, AsXml, Debug, PartialEq, Clone)]

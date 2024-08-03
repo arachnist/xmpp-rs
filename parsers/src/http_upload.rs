@@ -5,8 +5,9 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 use xso::{
-    error::{Error, FromElementError},
-    AsXml, FromXml,
+    error::{Error, FromElementError, FromEventsError},
+    exports::rxml,
+    minidom_compat, AsXml, FromXml,
 };
 
 use crate::iq::{IqGetPayload, IqResultPayload};
@@ -68,6 +69,20 @@ impl TryFrom<Element> for Header {
     }
 }
 
+impl FromXml for Header {
+    type Builder = minidom_compat::FromEventsViaElement<Header>;
+
+    fn from_events(
+        qname: rxml::QName,
+        attrs: rxml::AttrMap,
+    ) -> Result<Self::Builder, FromEventsError> {
+        if qname.0 != ns::HTTP_UPLOAD || qname.1 != "header" {
+            return Err(FromEventsError::Mismatch { name: qname, attrs });
+        }
+        Self::Builder::new(qname, attrs)
+    }
+}
+
 impl From<Header> for Element {
     fn from(elem: Header) -> Element {
         let (attr, val) = match elem {
@@ -83,18 +98,26 @@ impl From<Header> for Element {
     }
 }
 
-generate_element!(
-    /// Put URL
-    Put, "put", HTTP_UPLOAD,
-    attributes: [
-        /// URL
-        url: Required<String> = "url",
-    ],
-    children: [
-        /// Header list
-        headers: Vec<Header> = ("header", HTTP_UPLOAD) => Header
-    ]
-);
+impl AsXml for Header {
+    type ItemIter<'x> = minidom_compat::AsItemsViaElement<'x>;
+
+    fn as_xml_iter(&self) -> Result<Self::ItemIter<'_>, Error> {
+        minidom_compat::AsItemsViaElement::new(self.clone())
+    }
+}
+
+/// Put URL
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::HTTP_UPLOAD, name = "put")]
+pub struct Put {
+    /// URL
+    #[xml(attribute)]
+    pub url: String,
+
+    /// Header list
+    #[xml(child(n = ..))]
+    pub headers: Vec<Header>,
+}
 
 /// Get URL
 #[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
