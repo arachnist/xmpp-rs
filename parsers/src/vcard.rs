@@ -15,7 +15,7 @@
 
 use xso::{
     error::Error,
-    text::{Base64, StripWhitespace},
+    text::{Base64, StripWhitespace, TextCodec},
     AsXml, FromXml,
 };
 
@@ -50,7 +50,7 @@ pub struct Type {
 #[xml(namespace = ns::VCARD, name = "BINVAL")]
 pub struct Binval {
     /// The actual data.
-    #[xml(text(codec = Base64<StripWhitespace>))]
+    #[xml(text(codec = Base64.filtered(StripWhitespace)))]
     pub data: Vec<u8>,
 }
 

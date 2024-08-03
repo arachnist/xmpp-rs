@@ -298,76 +298,66 @@ pub(crate) fn as_xml_text_fn(ty: Type) -> Expr {
     })
 }
 
-/// Construct a [`syn::TypePath`] referring to
-/// `<#codec_ty as ::xso::TextCodec::<#for_ty>>` and return the
-/// [`syn::Span`] of the `codec_ty` alongside it.
-fn text_codec_of(codec_ty: Type, for_ty: Type) -> (Span, TypePath) {
-    let span = codec_ty.span();
+/// Construct a [`syn::Path`] referring to `::xso::TextCodec::<#for_ty>`,
+/// returing the span of `for_ty` alongside it.
+fn text_codec_of(for_ty: Type) -> (Span, Path) {
+    let span = for_ty.span();
     (
         span,
-        TypePath {
-            qself: Some(QSelf {
-                lt_token: syn::token::Lt { spans: [span] },
-                ty: Box::new(codec_ty),
-                position: 2,
-                as_token: Some(syn::token::As { span }),
-                gt_token: syn::token::Gt { spans: [span] },
+        Path {
+            leading_colon: Some(syn::token::PathSep {
+                spans: [span, span],
             }),
-            path: Path {
-                leading_colon: Some(syn::token::PathSep {
-                    spans: [span, span],
-                }),
-                segments: [
-                    PathSegment {
-                        ident: Ident::new("xso", span),
-                        arguments: PathArguments::None,
-                    },
-                    PathSegment {
-                        ident: Ident::new("TextCodec", span),
-                        arguments: PathArguments::AngleBracketed(AngleBracketedGenericArguments {
-                            colon2_token: Some(syn::token::PathSep {
-                                spans: [span, span],
-                            }),
-                            lt_token: syn::token::Lt { spans: [span] },
-                            args: [GenericArgument::Type(for_ty)].into_iter().collect(),
-                            gt_token: syn::token::Gt { spans: [span] },
+            segments: [
+                PathSegment {
+                    ident: Ident::new("xso", span),
+                    arguments: PathArguments::None,
+                },
+                PathSegment {
+                    ident: Ident::new("TextCodec", span),
+                    arguments: PathArguments::AngleBracketed(AngleBracketedGenericArguments {
+                        colon2_token: Some(syn::token::PathSep {
+                            spans: [span, span],
                         }),
-                    },
-                ]
-                .into_iter()
-                .collect(),
-            },
+                        lt_token: syn::token::Lt { spans: [span] },
+                        args: [GenericArgument::Type(for_ty)].into_iter().collect(),
+                        gt_token: syn::token::Gt { spans: [span] },
+                    }),
+                },
+            ]
+            .into_iter()
+            .collect(),
         },
     )
 }
 
 /// Construct a [`syn::Expr`] referring to
-/// `<#codec_ty as ::xso::TextCodec::<#for_ty>>::encode`.
-pub(crate) fn text_codec_encode_fn(codec_ty: Type, for_ty: Type) -> Expr {
-    let (span, mut ty) = text_codec_of(codec_ty, for_ty);
-    ty.path.segments.push(PathSegment {
+/// `::xso::TextCodec::<#for_ty>::encode`.
+pub(crate) fn text_codec_encode_fn(for_ty: Type) -> Expr {
+    let (span, mut path) = text_codec_of(for_ty);
+    path.segments.push(PathSegment {
         ident: Ident::new("encode", span),
         arguments: PathArguments::None,
     });
     Expr::Path(ExprPath {
         attrs: Vec::new(),
-        qself: ty.qself,
-        path: ty.path,
+        qself: None,
+        path: path,
     })
 }
 
 /// Construct a [`syn::Expr`] referring to
-/// `<#codec_ty as ::xso::TextCodec::<#for_ty>>::decode`.
-pub(crate) fn text_codec_decode_fn(codec_ty: Type, for_ty: Type) -> Expr {
-    let (span, mut ty) = text_codec_of(codec_ty, for_ty);
-    ty.path.segments.push(PathSegment {
+/// `::xso::TextCodec::<#for_ty>::decode`.
+pub(crate) fn text_codec_decode_fn(for_ty: Type) -> Expr {
+    let (span, mut path) = text_codec_of(for_ty);
+    path.segments.push(PathSegment {
         ident: Ident::new("decode", span),
         arguments: PathArguments::None,
     });
     Expr::Path(ExprPath {
         attrs: Vec::new(),
-        qself: ty.qself,
-        path: ty.path,
+        qself: None,
+        path: path,
     })
 }
 

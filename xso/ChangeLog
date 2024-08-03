@@ -1,5 +1,22 @@
 Version NEXT:
 0000-00-00 Jonas Schäfer <jonas@zombofant.net>
+    * Breaking
+      - The methods of `TextCodec<T>` now have `&self` receivers. This also
+        implies that `#[xml(text(codec = ..))]` now takes expressions instead
+        of type paths.
+
+        Because all implementations provided by `xso` were in fact unit
+        structs, this should not change most invocations, with two exceptions:
+
+        1. The type argument of `Base64` was removed. Replace all
+           `Base64<Foo>` references with `Base64.filtered(Foo)` to update
+           your code.
+
+        2. `FixedHex<N>` is not a valid expression. You will have to update
+           your code to use `FixedHex::<N>` instead.
+
+        This change overall allows for more flexibility in the implementation
+        of text codecs.
     * Added
       - Support for child elements in derive macros. Child elements may also
         be wrapped in Option or Box.

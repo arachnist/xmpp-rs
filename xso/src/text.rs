@@ -6,7 +6,6 @@
 
 //! Module containing implementations for conversions to/from XML text.
 
-#[cfg(feature = "base64")]
 use core::marker::PhantomData;
 
 use std::borrow::Cow;
@@ -138,23 +137,67 @@ convert_via_fromstr_and_display! {
 /// [`FromXml`][`macro@crate::FromXml`] derive macro for details.
 pub trait TextCodec<T> {
     /// Decode a string value into the type.
-    fn decode(s: String) -> Result<T, Error>;
+    fn decode(&self, s: String) -> Result<T, Error>;
 
     /// Encode the type as string value.
     ///
     /// If this returns `None`, the string value is not emitted at all.
-    fn encode(value: &T) -> Result<Option<Cow<'_, str>>, Error>;
+    fn encode<'x>(&self, value: &'x T) -> Result<Option<Cow<'x, str>>, Error>;
+
+    /// Apply a filter to this codec.
+    ///
+    /// Filters preprocess strings before they are handed to the codec for
+    /// parsing, allowing to, for example, make the codec ignore irrelevant
+    /// content by stripping it.
+    // NOTE: The bound on T is needed because any given type A may implement
+    // TextCodec for any number of types. If we pass T down to the `Filtered`
+    // struct, rustc can do type inferrence on which `TextCodec`
+    // implementation the `filtered` method is supposed to have been called
+    // on.
+    fn filtered<F: TextFilter>(self, filter: F) -> Filtered<F, Self, T>
+    where
+        // placing the bound here (instead of on the `TextCodec<T>` trait
+        // itself) preserves object-safety of TextCodec<T>.
+        Self: Sized,
+    {
+        Filtered {
+            filter,
+            codec: self,
+            bound: PhantomData,
+        }
+    }
+}
+
+/// Wrapper struct to apply a filter to a codec.
+///
+/// You can construct a value of this type via [`TextCodec::filtered`].
+// NOTE: see the note on TextCodec::filtered for why we bind `T` here, too.
+pub struct Filtered<F, C, T> {
+    filter: F,
+    codec: C,
+    bound: PhantomData<T>,
+}
+
+impl<T, F: TextFilter, C: TextCodec<T>> TextCodec<T> for Filtered<F, C, T> {
+    fn decode(&self, s: String) -> Result<T, Error> {
+        let s = self.filter.preprocess(s);
+        self.codec.decode(s)
+    }
+
+    fn encode<'x>(&self, value: &'x T) -> Result<Option<Cow<'x, str>>, Error> {
+        self.codec.encode(value)
+    }
 }
 
 /// Text codec which does no transform.
 pub struct Plain;
 
 impl TextCodec<String> for Plain {
-    fn decode(s: String) -> Result<String, Error> {
+    fn decode(&self, s: String) -> Result<String, Error> {
         Ok(s)
     }
 
-    fn encode(value: &String) -> Result<Option<Cow<'_, str>>, Error> {
+    fn encode<'x>(&self, value: &'x String) -> Result<Option<Cow<'x, str>>, Error> {
         Ok(Some(Cow::Borrowed(value.as_str())))
     }
 }
@@ -163,7 +206,7 @@ impl TextCodec<String> for Plain {
 pub struct EmptyAsNone;
 
 impl TextCodec<Option<String>> for EmptyAsNone {
-    fn decode(s: String) -> Result<Option<String>, Error> {
+    fn decode(&self, s: String) -> Result<Option<String>, Error> {
         if s.is_empty() {
             Ok(None)
         } else {
@@ -171,7 +214,7 @@ impl TextCodec<Option<String>> for EmptyAsNone {
         }
     }
 
-    fn encode(value: &Option<String>) -> Result<Option<Cow<'_, str>>, Error> {
+    fn encode<'x>(&self, value: &'x Option<String>) -> Result<Option<Cow<'x, str>>, Error> {
         Ok(match value.as_ref() {
             Some(v) if !v.is_empty() => Some(Cow::Borrowed(v.as_str())),
             Some(_) | None => None,
@@ -183,7 +226,7 @@ impl TextCodec<Option<String>> for EmptyAsNone {
 pub struct EmptyAsError;
 
 impl TextCodec<String> for EmptyAsError {
-    fn decode(s: String) -> Result<String, Error> {
+    fn decode(&self, s: String) -> Result<String, Error> {
         if s.is_empty() {
             Err(Error::Other("Empty text node."))
         } else {
@@ -191,7 +234,7 @@ impl TextCodec<String> for EmptyAsError {
         }
     }
 
-    fn encode(value: &String) -> Result<Option<Cow<'_, str>>, Error> {
+    fn encode<'x>(&self, value: &'x String) -> Result<Option<Cow<'x, str>>, Error> {
         if value.is_empty() {
             Err(Error::Other("Empty text node."))
         } else {
@@ -205,14 +248,14 @@ impl TextCodec<String> for EmptyAsError {
 /// This may be used by codecs to allow to customize some of their behaviour.
 pub trait TextFilter {
     /// Process the incoming string and return the result of the processing.
-    fn preprocess(s: String) -> String;
+    fn preprocess(&self, s: String) -> String;
 }
 
 /// Text preprocessor which returns the input unchanged.
 pub struct NoFilter;
 
 impl TextFilter for NoFilter {
-    fn preprocess(s: String) -> String {
+    fn preprocess(&self, s: String) -> String {
         s
     }
 }
@@ -221,7 +264,7 @@ impl TextFilter for NoFilter {
 pub struct StripWhitespace;
 
 impl TextFilter for StripWhitespace {
-    fn preprocess(s: String) -> String {
+    fn preprocess(&self, s: String) -> String {
         let s: String = s
             .chars()
             .filter(|ch| *ch != ' ' && *ch != '\n' && *ch != '\t')
@@ -237,56 +280,54 @@ impl TextFilter for StripWhitespace {
 /// will make the implementation ignore any whitespace within the text.
 #[cfg(feature = "base64")]
 #[cfg_attr(docsrs, doc(cfg(feature = "base64")))]
-pub struct Base64<Filter: TextFilter = NoFilter>(PhantomData<Filter>);
+pub struct Base64;
 
 #[cfg(feature = "base64")]
 #[cfg_attr(docsrs, doc(cfg(feature = "base64")))]
-impl<Filter: TextFilter> TextCodec<Vec<u8>> for Base64<Filter> {
-    fn decode(s: String) -> Result<Vec<u8>, Error> {
-        let value = Filter::preprocess(s);
+impl TextCodec<Vec<u8>> for Base64 {
+    fn decode(&self, s: String) -> Result<Vec<u8>, Error> {
         StandardBase64Engine
-            .decode(value.as_bytes())
+            .decode(s.as_bytes())
             .map_err(Error::text_parse_error)
     }
 
-    fn encode(value: &Vec<u8>) -> Result<Option<Cow<'_, str>>, Error> {
+    fn encode<'x>(&self, value: &'x Vec<u8>) -> Result<Option<Cow<'x, str>>, Error> {
         Ok(Some(Cow::Owned(StandardBase64Engine.encode(&value))))
     }
 }
 
 #[cfg(feature = "base64")]
 #[cfg_attr(docsrs, doc(cfg(feature = "base64")))]
-impl<'x, Filter: TextFilter> TextCodec<Cow<'x, [u8]>> for Base64<Filter> {
-    fn decode(s: String) -> Result<Cow<'x, [u8]>, Error> {
-        let value = Filter::preprocess(s);
+impl<'x> TextCodec<Cow<'x, [u8]>> for Base64 {
+    fn decode(&self, s: String) -> Result<Cow<'x, [u8]>, Error> {
         StandardBase64Engine
-            .decode(value.as_bytes())
+            .decode(s.as_bytes())
             .map_err(Error::text_parse_error)
             .map(Cow::Owned)
     }
 
-    fn encode<'a>(value: &'a Cow<'x, [u8]>) -> Result<Option<Cow<'a, str>>, Error> {
+    fn encode<'a>(&self, value: &'a Cow<'x, [u8]>) -> Result<Option<Cow<'a, str>>, Error> {
         Ok(Some(Cow::Owned(StandardBase64Engine.encode(&value))))
     }
 }
 
 #[cfg(feature = "base64")]
 #[cfg_attr(docsrs, doc(cfg(feature = "base64")))]
-impl<T, Filter: TextFilter> TextCodec<Option<T>> for Base64<Filter>
+impl<T> TextCodec<Option<T>> for Base64
 where
-    Base64<Filter>: TextCodec<T>,
+    Base64: TextCodec<T>,
 {
-    fn decode(s: String) -> Result<Option<T>, Error> {
+    fn decode(&self, s: String) -> Result<Option<T>, Error> {
         if s.is_empty() {
             return Ok(None);
         }
-        Ok(Some(Self::decode(s)?))
+        Ok(Some(self.decode(s)?))
     }
 
-    fn encode(decoded: &Option<T>) -> Result<Option<Cow<'_, str>>, Error> {
+    fn encode<'x>(&self, decoded: &'x Option<T>) -> Result<Option<Cow<'x, str>>, Error> {
         decoded
             .as_ref()
-            .map(Self::encode)
+            .map(|x| self.encode(x))
             .transpose()
             .map(Option::flatten)
     }
@@ -298,7 +339,7 @@ where
 pub struct FixedHex<const N: usize>;
 
 impl<const N: usize> TextCodec<[u8; N]> for FixedHex<N> {
-    fn decode(s: String) -> Result<[u8; N], Error> {
+    fn decode(&self, s: String) -> Result<[u8; N], Error> {
         if s.len() != 2 * N {
             return Err(Error::Other("Invalid length"));
         }
@@ -312,7 +353,7 @@ impl<const N: usize> TextCodec<[u8; N]> for FixedHex<N> {
         Ok(bytes)
     }
 
-    fn encode(value: &[u8; N]) -> Result<Option<Cow<'_, str>>, Error> {
+    fn encode<'x>(&self, value: &'x [u8; N]) -> Result<Option<Cow<'x, str>>, Error> {
         let mut bytes = String::with_capacity(N * 2);
         for byte in value {
             bytes.extend(format!("{:02x}", byte).chars());
@@ -325,17 +366,17 @@ impl<T, const N: usize> TextCodec<Option<T>> for FixedHex<N>
 where
     FixedHex<N>: TextCodec<T>,
 {
-    fn decode(s: String) -> Result<Option<T>, Error> {
+    fn decode(&self, s: String) -> Result<Option<T>, Error> {
         if s.is_empty() {
             return Ok(None);
         }
-        Ok(Some(Self::decode(s)?))
+        Ok(Some(self.decode(s)?))
     }
 
-    fn encode(decoded: &Option<T>) -> Result<Option<Cow<'_, str>>, Error> {
+    fn encode<'x>(&self, decoded: &'x Option<T>) -> Result<Option<Cow<'x, str>>, Error> {
         decoded
             .as_ref()
-            .map(Self::encode)
+            .map(|x| self.encode(x))
             .transpose()
             .map(Option::flatten)
     }
@@ -345,7 +386,7 @@ where
 pub struct ColonSeparatedHex;
 
 impl TextCodec<Vec<u8>> for ColonSeparatedHex {
-    fn decode(s: String) -> Result<Vec<u8>, Error> {
+    fn decode(&self, s: String) -> Result<Vec<u8>, Error> {
         assert_eq!((s.len() + 1) % 3, 0);
         let mut bytes = Vec::with_capacity((s.len() + 1) / 3);
         for i in 0..(1 + s.len()) / 3 {
@@ -359,7 +400,7 @@ impl TextCodec<Vec<u8>> for ColonSeparatedHex {
         Ok(bytes)
     }
 
-    fn encode(decoded: &Vec<u8>) -> Result<Option<Cow<'_, str>>, Error> {
+    fn encode<'x>(&self, decoded: &'x Vec<u8>) -> Result<Option<Cow<'x, str>>, Error> {
         // TODO: Super inefficient!
         let mut bytes = Vec::with_capacity(decoded.len());
         for byte in decoded {

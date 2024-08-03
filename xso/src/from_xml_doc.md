@@ -35,6 +35,7 @@ such:
   is also a path.
 - *string literal*: A string literal, like `"hello world!"`.
 - *type*: A Rust type.
+- *expression*: A Rust expression.
 - *ident*: A Rust identifier.
 - flag: Has no value. The key's mere presence has relevance and it must not be
   followed by a `=` sign.
@@ -258,9 +259,9 @@ element.
 
 | Key | Value type | Description |
 | --- | --- | --- |
-| `codec` | *type* | Optional [`TextCodec`] implementation which is used to encode or decode the field. |
+| `codec` | *expression* | Optional [`TextCodec`] implementation which is used to encode or decode the field. |
 
-If `codec` is given, the given `codec` must implement
+If `codec` is given, the given `codec` value must implement
 [`TextCodec<T>`][`TextCodec`] where `T` is the type of the field.
 
 If `codec` is *not* given, the field's type must implement [`FromXmlText`] for

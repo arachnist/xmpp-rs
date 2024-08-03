@@ -408,7 +408,7 @@ pub(crate) enum XmlFieldMeta {
     /// `#[xml(text)]`
     Text {
         /// The path to the optional codec type.
-        codec: Option<Type>,
+        codec: Option<Expr>,
     },
 
     /// `#[xml(child)`
@@ -497,7 +497,7 @@ impl XmlFieldMeta {
 
     /// Parse a `#[xml(text)]` meta.
     fn text_from_meta(meta: ParseNestedMeta<'_>) -> Result<Self> {
-        let mut codec: Option<Type> = None;
+        let mut codec: Option<Expr> = None;
         if meta.input.peek(Token![=]) {
             Ok(Self::Text {
                 codec: Some(meta.value()?.parse()?),

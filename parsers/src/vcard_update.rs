@@ -30,7 +30,7 @@ pub struct VCardUpdate {
 #[xml(namespace = ns::VCARD_UPDATE, name = "photo")]
 pub struct Photo {
     /// The SHA1 hash of the avatar. Empty when there is no photo.
-    #[xml(text(codec = FixedHex<20>))]
+    #[xml(text(codec = FixedHex::<20>))]
     pub data: Option<[u8; 20]>,
 }
 

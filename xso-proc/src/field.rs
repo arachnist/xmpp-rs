@@ -148,7 +148,7 @@ enum FieldKind {
     /// The field maps to the character data of the element.
     Text {
         /// Optional codec to use
-        codec: Option<Type>,
+        codec: Option<Expr>,
     },
 
     /// The field maps to a child
@@ -321,10 +321,10 @@ impl FieldDef {
                 let FromEventsScope { ref text, .. } = scope;
                 let field_access = scope.access_field(&self.member);
                 let finalize = match codec {
-                    Some(codec_ty) => {
-                        let decode = text_codec_decode_fn(codec_ty.clone(), self.ty.clone());
+                    Some(codec) => {
+                        let decode = text_codec_decode_fn(self.ty.clone());
                         quote! {
-                            #decode(#field_access)?
+                            #decode(&#codec, #field_access)?
                         }
                     }
                     None => {
@@ -429,9 +429,9 @@ impl FieldDef {
 
             FieldKind::Text { ref codec } => {
                 let generator = match codec {
-                    Some(codec_ty) => {
-                        let encode = text_codec_encode_fn(codec_ty.clone(), self.ty.clone());
-                        quote! { #encode(#bound_name)? }
+                    Some(codec) => {
+                        let encode = text_codec_encode_fn(self.ty.clone());
+                        quote! { #encode(&#codec, #bound_name)? }
                     }
                     None => {
                         let as_xml_text = as_xml_text_fn(self.ty.clone());

@@ -5,7 +5,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 use xso::{
-    text::{Base64, StripWhitespace},
+    text::{Base64, StripWhitespace, TextCodec},
     AsXml, FromXml,
 };
 
@@ -58,7 +58,7 @@ pub struct Info {
 #[xml(namespace = ns::AVATAR_DATA, name = "data")]
 pub struct Data {
     /// Vector of bytes representing the avatar’s image.
-    #[xml(text(codec = Base64<StripWhitespace>))]
+    #[xml(text(codec = Base64.filtered(StripWhitespace)))]
     pub data: Vec<u8>,
 }
 
