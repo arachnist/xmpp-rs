@@ -11,20 +11,11 @@
 //!
 //! See [ModernXMPP docs](https://docs.modernxmpp.org/client/groupchat/#bookmarks) on how to handle all historic
 //! and newer specifications for your clients.
-//!
-//! This module exposes the [`Autojoin`][crate::bookmarks2::Autojoin] boolean flag, the [`Conference`][crate::bookmarks2::Conference] chatroom element, and the [BOOKMARKS2][crate::ns::BOOKMARKS2] XML namespace.
 
 use xso::{AsXml, FromXml};
 
 use crate::ns;
 use minidom::Element;
-
-generate_attribute!(
-    /// Whether a conference bookmark should be joined automatically.
-    Autojoin,
-    "autojoin",
-    bool
-);
 
 /// Potential extensions in a conference.
 #[derive(FromXml, AsXml, Debug, Clone, Default)]
@@ -41,7 +32,7 @@ pub struct Extensions {
 pub struct Conference {
     /// Whether a conference bookmark should be joined automatically.
     #[xml(attribute(default))]
-    pub autojoin: Autojoin,
+    pub autojoin: bool,
 
     /// A user-defined name for this conference.
     #[xml(attribute(default))]
@@ -86,12 +77,12 @@ mod tests {
 
     #[test]
     fn simple() {
-        let elem: Element = "<conference xmlns='urn:xmpp:bookmarks:1'/>"
+        let elem: Element = "<conference xmlns='urn:xmpp:bookmarks:1' autojoin='false'/>"
             .parse()
             .unwrap();
         let elem1 = elem.clone();
         let conference = Conference::try_from(elem).unwrap();
-        assert_eq!(conference.autojoin, Autojoin::False);
+        assert_eq!(conference.autojoin, false);
         assert_eq!(conference.name, None);
         assert_eq!(conference.nick, None);
         assert_eq!(conference.password, None);
@@ -104,7 +95,7 @@ mod tests {
     fn complete() {
         let elem: Element = "<conference xmlns='urn:xmpp:bookmarks:1' autojoin='true' name='Test MUC'><nick>Coucou</nick><password>secret</password><extensions><test xmlns='urn:xmpp:unknown' /></extensions></conference>".parse().unwrap();
         let conference = Conference::try_from(elem).unwrap();
-        assert_eq!(conference.autojoin, Autojoin::True);
+        assert_eq!(conference.autojoin, true);
         assert_eq!(conference.name, Some(String::from("Test MUC")));
         assert_eq!(conference.clone().nick.unwrap(), "Coucou");
         assert_eq!(conference.clone().password.unwrap(), "secret");
@@ -122,7 +113,7 @@ mod tests {
         // let conference = Conference::try_from(payload).unwrap();
         let conference = Conference::try_from(payload).unwrap();
         println!("FOO: conference: {:?}", conference);
-        assert_eq!(conference.autojoin, Autojoin::True);
+        assert_eq!(conference.autojoin, true);
         assert_eq!(conference.name, Some(String::from("Test MUC")));
         assert_eq!(conference.clone().nick.unwrap(), "Coucou");
         assert_eq!(conference.clone().password.unwrap(), "secret");
@@ -139,7 +130,7 @@ mod tests {
         let item = items.pop().unwrap();
         let payload = item.payload.clone().unwrap();
         let conference = Conference::try_from(payload).unwrap();
-        assert_eq!(conference.autojoin, Autojoin::True);
+        assert_eq!(conference.autojoin, true);
         assert_eq!(conference.name, Some(String::from("Test MUC")));
         assert_eq!(conference.clone().nick.unwrap(), "Coucou");
         assert_eq!(conference.clone().password.unwrap(), "secret");

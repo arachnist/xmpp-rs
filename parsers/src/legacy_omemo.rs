@@ -140,13 +140,6 @@ pub struct IV {
     pub data: Vec<u8>,
 }
 
-generate_attribute!(
-    /// prekey attribute for the key element.
-    IsPreKey,
-    "prekey",
-    bool
-);
-
 /// Part of the OMEMO element header
 #[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = ns::LEGACY_OMEMO, name = "key")]
@@ -158,7 +151,7 @@ pub struct Key {
     /// The key element MUST be tagged with a prekey attribute set to true
     /// if a PreKeySignalMessage is being used.
     #[xml(attribute(default))]
-    pub prekey: IsPreKey,
+    pub prekey: bool,
 
     /// The 16 bytes key and the GCM authentication tag concatenated together
     /// and encrypted using the corresponding long-standing SignalProtocol
@@ -303,7 +296,7 @@ mod tests {
                 keys: vec![
                     Key {
                         rid: 1236,
-                        prekey: IsPreKey::True,
+                        prekey: true,
                         data: vec![
                             51, 8, 233, 244, 1, 18, 33, 5, 114, 150, 199, 11, 62, 152, 255, 30, 90,
                             48, 105, 56, 136, 177, 160, 99, 239, 113, 194, 84, 73, 101, 94, 149,
@@ -321,7 +314,7 @@ mod tests {
                     },
                     Key {
                         rid: 26052318,
-                        prekey: IsPreKey::False,
+                        prekey: false,
                         data: vec![
                             51, 10, 33, 5, 53, 122, 118, 155, 166, 47, 83, 177, 3, 211, 29, 32, 89,
                             174, 216, 77, 125, 249, 194, 22, 12, 117, 152, 126, 23, 110, 110, 250,
@@ -334,7 +327,7 @@ mod tests {
                     },
                     Key {
                         rid: 1164059891,
-                        prekey: IsPreKey::False,
+                        prekey: false,
                         data: vec![
                             51, 10, 33, 5, 89, 225, 207, 218, 111, 18, 61, 108, 215, 6, 132, 30,
                             233, 57, 170, 148, 42, 133, 74, 233, 106, 252, 156, 23, 61, 33, 171,

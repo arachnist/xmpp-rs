@@ -14,19 +14,13 @@ generate_elem_id!(
     Mechanism, "mechanism", FAST
 );
 
-// TODO: Replace this with a proper bool once we can derive FromXml and AsXml on FastQuery.
-generate_attribute!(
-    /// Whether TLS zero-roundtrip is possible.
-    Tls0Rtt, "tls-0rtt", bool
-);
-
 /// This is the `<fast/>` element sent by the server as a SASL2 inline feature.
 #[derive(FromXml, AsXml, Debug, Clone, PartialEq)]
 #[xml(namespace = ns::FAST, name = "fast")]
 pub struct FastQuery {
     /// Whether TLS zero-roundtrip is possible.
     #[xml(attribute(default, name = "tls-0rtt"))]
-    pub tls_0rtt: Tls0Rtt,
+    pub tls_0rtt: bool,
 
     /// A list of `<mechanism/>` elements, listing all server allowed mechanisms.
     #[xml(child(n = ..))]
@@ -86,7 +80,7 @@ mod tests {
             .parse()
             .unwrap();
         let request = FastQuery::try_from(elem).unwrap();
-        assert_eq!(request.tls_0rtt, Tls0Rtt::False);
+        assert_eq!(request.tls_0rtt, false);
         assert_eq!(request.mechanisms, [Mechanism(String::from("FOO-BAR"))]);
 
         let elem: Element = "<fast xmlns='urn:xmpp:fast:0' count='123'/>"

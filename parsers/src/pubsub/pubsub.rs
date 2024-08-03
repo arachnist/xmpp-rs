@@ -160,13 +160,6 @@ pub struct PublishOptions {
     pub form: Option<DataForm>,
 }
 
-generate_attribute!(
-    /// Whether a retract request should notify subscribers or not.
-    Notify,
-    "notify",
-    bool
-);
-
 /// A request to retract some items from a node.
 #[derive(FromXml, AsXml, Debug, PartialEq, Clone)]
 #[xml(namespace = ns::PUBSUB, name = "retract")]
@@ -177,7 +170,7 @@ pub struct Retract {
 
     /// Whether a retract request should notify subscribers or not.
     #[xml(attribute(default))]
-    pub notify: Notify,
+    pub notify: bool,
 
     /// The items affected by this request.
     #[xml(child(n = ..))]

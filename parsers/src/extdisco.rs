@@ -48,14 +48,6 @@ generate_attribute!(
     }
 );
 
-generate_attribute!(
-    /// Username and password credentials are required and will need to be requested if not already
-    /// provided.
-    Restricted,
-    "restricted",
-    bool
-);
-
 /// Structure representing a `<service xmlns='urn:xmpp:extdisco:2'/>` element.
 #[derive(FromXml, AsXml, Debug, PartialEq, Clone)]
 #[xml(namespace = ns::EXT_DISCO, name = "service")]
@@ -88,7 +80,7 @@ pub struct Service {
     /// A boolean value indicating that username and password credentials are required and will
     /// need to be requested if not already provided.
     #[xml(attribute(default))]
-    restricted: Restricted,
+    restricted: bool,
 
     /// The underlying transport protocol to be used when communicating with the service (typically
     /// either TCP or UDP).
@@ -160,7 +152,6 @@ mod tests {
     fn test_size() {
         assert_size!(Action, 1);
         assert_size!(Transport, 1);
-        assert_size!(Restricted, 1);
         assert_size!(Type, 1);
         assert_size!(Service, 84);
         assert_size!(ServicesQuery, 1);
@@ -173,7 +164,6 @@ mod tests {
     fn test_size() {
         assert_size!(Action, 1);
         assert_size!(Transport, 1);
-        assert_size!(Restricted, 1);
         assert_size!(Type, 1);
         assert_size!(Service, 144);
         assert_size!(ServicesQuery, 1);
@@ -191,7 +181,7 @@ mod tests {
         assert!(service.name.is_none());
         assert!(service.password.is_none());
         assert_eq!(service.port.unwrap(), 9998);
-        assert_eq!(service.restricted, Restricted::False);
+        assert_eq!(service.restricted, false);
         assert_eq!(service.transport.unwrap(), Transport::Udp);
         assert_eq!(service.type_, Type::Stun);
         assert!(service.username.is_none());

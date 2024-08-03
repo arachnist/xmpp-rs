@@ -28,6 +28,8 @@ XXXX-YY-ZZ RELEASER <admin@example.com>
       - The bookmarks2 Conference `extensions` child is now an
         `Option<Extensions>` instead of a `Vec<Element>`, to distinguish
         between it being absent or empty (!472).
+      - Replace all boolean attributes with the `bool` type, so that we can
+        use them just like normal booleans (!476).
     * Improvements:
       - Keep unsupported vCard elements as `minidom::Element`, so that they
         get serialized back instead of being dropped.  We now also test for

@@ -25,13 +25,6 @@ impl A {
     }
 }
 
-generate_attribute!(
-    /// Whether to allow resumption of a previous stream.
-    ResumeAttr,
-    "resume",
-    bool
-);
-
 /// Client request for enabling stream management.
 #[derive(FromXml, AsXml, PartialEq, Debug, Clone, Default)]
 #[xml(namespace = ns::SM, name = "enable")]
@@ -43,7 +36,7 @@ pub struct Enable {
 
     /// Whether the client wants to be allowed to resume the stream.
     #[xml(attribute(default))]
-    pub resume: ResumeAttr,
+    pub resume: bool,
 }
 
 impl Enable {
@@ -60,7 +53,7 @@ impl Enable {
 
     /// Asks for resumption to be possible.
     pub fn with_resume(mut self) -> Self {
-        self.resume = ResumeAttr::True;
+        self.resume = true;
         self
     }
 }
@@ -90,7 +83,7 @@ pub struct Enabled {
 
     /// Whether stream resumption is allowed.
     #[xml(attribute(default))]
-    pub resume: ResumeAttr,
+    pub resume: bool,
 }
 
 /// A stream management error happened.
@@ -196,7 +189,6 @@ mod tests {
     #[test]
     fn test_size() {
         assert_size!(A, 4);
-        assert_size!(ResumeAttr, 1);
         assert_size!(Enable, 12);
         assert_size!(StreamId, 12);
         assert_size!(Enabled, 36);
@@ -213,7 +205,6 @@ mod tests {
     #[test]
     fn test_size() {
         assert_size!(A, 4);
-        assert_size!(ResumeAttr, 1);
         assert_size!(Enable, 12);
         assert_size!(StreamId, 24);
         assert_size!(Enabled, 64);
@@ -256,14 +247,14 @@ mod tests {
             .unwrap();
         let enable = Enable::try_from(elem).unwrap();
         assert_eq!(enable.max, None);
-        assert_eq!(enable.resume, ResumeAttr::True);
+        assert_eq!(enable.resume, true);
 
         let elem: Element = "<enabled xmlns='urn:xmpp:sm:3' resume='true' id='coucou' max='600'/>"
             .parse()
             .unwrap();
         let enabled = Enabled::try_from(elem).unwrap();
         let previd = enabled.id.unwrap();
-        assert_eq!(enabled.resume, ResumeAttr::True);
+        assert_eq!(enabled.resume, true);
         assert_eq!(previd, StreamId(String::from("coucou")));
         assert_eq!(enabled.max, Some(600));
         assert_eq!(enabled.location, None);

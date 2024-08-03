@@ -12,15 +12,13 @@
 //! See [ModernXMPP docs](https://docs.modernxmpp.org/client/groupchat/#bookmarks) on how to handle all historic
 //! and newer specifications for your clients.
 //!
-//! This module exposes the [`Autojoin`][crate::bookmarks::Autojoin] boolean flag, the [`Conference`][crate::bookmarks::Conference] chatroom element, and the [`crate::ns::BOOKMARKS`] XML namespace.
-//!
 //! The [`Conference`][crate::bookmarks::Conference] struct used in [`private::Query`][`crate::private::Query`] is the one from this module. Only the querying mechanism changes from a legacy PubSub implementation here, to a legacy Private XML Query implementation in that other module. The [`Conference`][crate::bookmarks2::Conference] element from the [`bookmarks2`][crate::bookmarks2] module is a different structure, but conversion is possible from [`bookmarks::Conference`][crate::bookmarks::Conference] to [`bookmarks2::Conference`][crate::bookmarks2::Conference] via the [`Conference::into_bookmarks2`][crate::bookmarks::Conference::into_bookmarks2] method.
 
 use xso::{AsXml, FromXml};
 
 use jid::BareJid;
 
-pub use crate::bookmarks2::{self, Autojoin};
+pub use crate::bookmarks2;
 use crate::ns;
 
 /// A conference bookmark.
@@ -29,7 +27,7 @@ use crate::ns;
 pub struct Conference {
     /// Whether a conference bookmark should be joined automatically.
     #[xml(attribute(default))]
-    pub autojoin: Autojoin,
+    pub autojoin: bool,
 
     /// The JID of the conference.
     #[xml(attribute)]
@@ -139,7 +137,7 @@ mod tests {
         assert_eq!(storage.urls[0].clone().name.unwrap(), "Example");
         assert_eq!(storage.urls[0].url, "https://example.org/");
         assert_eq!(storage.conferences.len(), 1);
-        assert_eq!(storage.conferences[0].autojoin, Autojoin::True);
+        assert_eq!(storage.conferences[0].autojoin, true);
         assert_eq!(
             storage.conferences[0].jid,
             BareJid::new("test-muc@muc.localhost").unwrap()

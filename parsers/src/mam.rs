@@ -137,20 +137,13 @@ pub struct Result_ {
 
 impl MessagePayload for Result_ {}
 
-generate_attribute!(
-    /// True when the end of a MAM query has been reached.
-    Complete,
-    "complete",
-    bool
-);
-
 /// Notes the end of a page in a query.
 #[derive(FromXml, AsXml, Debug, Clone, PartialEq)]
 #[xml(namespace = ns::MAM, name = "fin")]
 pub struct Fin {
     /// True when the end of a MAM query has been reached.
     #[xml(attribute(default))]
-    pub complete: Complete,
+    pub complete: bool,
 
     /// Describes the current page, it should contain at least [first]
     /// (with an [index]) and [last], and generally [count].
@@ -223,7 +216,6 @@ mod tests {
         assert_size!(QueryId, 12);
         assert_size!(Query, 120);
         assert_size!(Result_, 164);
-        assert_size!(Complete, 1);
         assert_size!(Fin, 44);
         assert_size!(Start, 28);
         assert_size!(End, 28);
@@ -237,7 +229,6 @@ mod tests {
         assert_size!(QueryId, 24);
         assert_size!(Query, 240);
         assert_size!(Result_, 312);
-        assert_size!(Complete, 1);
         assert_size!(Fin, 88);
         assert_size!(Start, 40);
         assert_size!(End, 40);
@@ -446,7 +437,7 @@ mod tests {
 
     #[test]
     fn test_serialize_fin() {
-        let reference: Element = "<fin xmlns='urn:xmpp:mam:2'><set xmlns='http://jabber.org/protocol/rsm'><first index='0'>28482-98726-73623</first><last>09af3-cc343-b409f</last></set></fin>"
+        let reference: Element = "<fin xmlns='urn:xmpp:mam:2' complete='false'><set xmlns='http://jabber.org/protocol/rsm'><first index='0'>28482-98726-73623</first><last>09af3-cc343-b409f</last></set></fin>"
         .parse()
         .unwrap();
 
@@ -458,7 +449,7 @@ mod tests {
 
         let fin = Fin {
             set,
-            complete: Complete::default(),
+            complete: false,
         };
         let serialized: Element = fin.into();
         assert_eq!(serialized, reference);

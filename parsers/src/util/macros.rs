@@ -214,62 +214,6 @@ macro_rules! generate_attribute {
             }
         }
     );
-    ($(#[$meta:meta])* $elem:ident, $name:tt, bool) => (
-        $(#[$meta])*
-        #[derive(Debug, Clone, PartialEq)]
-        pub enum $elem {
-            /// True value, represented by either 'true' or '1'.
-            True,
-            /// False value, represented by either 'false' or '0'.
-            False,
-        }
-        impl ::std::str::FromStr for $elem {
-            type Err = xso::error::Error;
-            fn from_str(s: &str) -> Result<Self, xso::error::Error> {
-                Ok(match s {
-                    "true" | "1" => $elem::True,
-                    "false" | "0" => $elem::False,
-                    _ => return Err(xso::error::Error::Other(concat!("Unknown value for '", $name, "' attribute."))),
-                })
-            }
-        }
-        impl ::xso::FromXmlText for $elem {
-            fn from_xml_text(s: String) -> Result<$elem, xso::error::Error> {
-                match s.parse::<bool>().map_err(xso::error::Error::text_parse_error)? {
-                    true => Ok(Self::True),
-                    false => Ok(Self::False),
-                }
-            }
-        }
-        impl ::xso::AsXmlText for $elem {
-            fn as_xml_text(&self) -> Result<::std::borrow::Cow<'_, str>, xso::error::Error> {
-                match self {
-                    Self::True => Ok(::std::borrow::Cow::Borrowed("true")),
-                    Self::False => Ok(::std::borrow::Cow::Borrowed("false")),
-                }
-            }
-
-            fn as_optional_xml_text(&self) -> Result<Option<::std::borrow::Cow<'_, str>>, xso::error::Error> {
-                match self {
-                    Self::True => Ok(Some(::std::borrow::Cow::Borrowed("true"))),
-                    Self::False => Ok(None),
-                }
-            }
-        }
-        impl ::minidom::IntoAttributeValue for $elem {
-            fn into_attribute_value(self) -> Option<String> {
-                match self {
-                    $elem::True => Some(String::from("true")),
-                    $elem::False => None
-                }
-            }
-        }
-        impl ::std::default::Default for $elem {
-            fn default() -> $elem {
-                $elem::False
-            }
-        }
-    );
     ($(#[$meta:meta])* $elem:ident, $name:tt, $type:tt, Default = $default:expr) => (
         $(#[$meta])*
         #[derive(Debug, Clone, PartialEq)]
