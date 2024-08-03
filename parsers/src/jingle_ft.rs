@@ -16,23 +16,23 @@ use xso::{
     AsXml, FromXml,
 };
 
-generate_element!(
-    /// Represents a range in a file.
-    #[derive(Default)]
-    Range, "range", JINGLE_FT,
-    attributes: [
-        /// The offset in bytes from the beginning of the file.
-        offset: Default<u64> = "offset",
+/// Represents a range in a file.
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone, Default)]
+#[xml(namespace = ns::JINGLE_FT, name = "range")]
+pub struct Range {
+    /// The offset in bytes from the beginning of the file.
+    #[xml(attribute(default))]
+    pub offset: u64,
 
-        /// The length in bytes of the range, or None to be the entire
-        /// remaining of the file.
-        length: Option<u64> = "length"
-    ],
-    children: [
-        /// List of hashes for this range.
-        hashes: Vec<Hash> = ("hash", HASHES) => Hash
-    ]
-);
+    /// The length in bytes of the range, or None to be the entire
+    /// remaining of the file.
+    #[xml(attribute(default))]
+    pub length: Option<u64>,
+
+    /// List of hashes for this range.
+    #[xml(child(n = ..))]
+    pub hashes: Vec<Hash>,
+}
 
 impl Range {
     /// Creates a new range.
@@ -632,6 +632,6 @@ mod tests {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Unknown attribute in range element.");
+        assert_eq!(message, "Unknown attribute in Range element.");
     }
 }

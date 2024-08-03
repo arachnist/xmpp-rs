@@ -11,15 +11,14 @@ use xso::{AsXml, FromXml};
 use crate::jingle_ice_udp::Type;
 use crate::ns;
 
-generate_element!(
-    /// Wrapper element for an raw UDP transport.
-    #[derive(Default)]
-    Transport, "transport", JINGLE_RAW_UDP,
-    children: [
-        /// List of candidates for this raw UDP session.
-        candidates: Vec<Candidate> = ("candidate", JINGLE_RAW_UDP) => Candidate
-    ]
-);
+/// Wrapper element for an raw UDP transport.
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone, Default)]
+#[xml(namespace = ns::JINGLE_RAW_UDP, name = "transport")]
+pub struct Transport {
+    /// List of candidates for this raw UDP session.
+    #[xml(child(n = ..))]
+    pub candidates: Vec<Candidate>,
+}
 
 impl Transport {
     /// Create a new ICE-UDP transport.

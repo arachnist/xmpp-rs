@@ -219,31 +219,31 @@ generate_attribute!(
 pub struct Item {
     /// The affiliation of this user with the room.
     #[xml(attribute)]
-    affiliation: Affiliation,
+    pub affiliation: Affiliation,
 
     /// The real JID of this user, if you are allowed to see it.
     #[xml(attribute(default))]
-    jid: Option<FullJid>,
+    pub jid: Option<FullJid>,
 
     /// The current nickname of this user.
     #[xml(attribute(default))]
-    nick: Option<String>,
+    pub nick: Option<String>,
 
     /// The current role of this user.
     #[xml(attribute)]
-    role: Role,
+    pub role: Role,
 
     /// The actor affected by this item.
     #[xml(child(default))]
-    actor: Option<Actor>,
+    pub actor: Option<Actor>,
 
     /// Whether this continues a one-to-one discussion.
     #[xml(child(default))]
-    continue_: Option<Continue>,
+    pub continue_: Option<Continue>,
 
     /// A reason for this item.
     #[xml(child(default))]
-    reason: Option<Reason>,
+    pub reason: Option<Reason>,
 }
 
 impl Item {
@@ -293,16 +293,18 @@ impl Item {
     }
 }
 
-generate_element!(
-    /// The main muc#user element.
-    MucUser, "x", MUC_USER, children: [
-        /// List of statuses applying to this item.
-        status: Vec<Status> = ("status", MUC_USER) => Status,
+/// The main muc#user element.
+#[derive(FromXml, AsXml, Debug, PartialEq, Clone)]
+#[xml(namespace = ns::MUC_USER, name = "x")]
+pub struct MucUser {
+    /// List of statuses applying to this item.
+    #[xml(child(n = ..))]
+    pub status: Vec<Status>,
 
-        /// List of items.
-        items: Vec<Item> = ("item", MUC_USER) => Item
-    ]
-);
+    /// List of items.
+    #[xml(child(n = ..))]
+    pub items: Vec<Item>,
+}
 
 impl Default for MucUser {
     fn default() -> Self {
@@ -380,7 +382,7 @@ mod tests {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Unknown child in x element.");
+        assert_eq!(message, "Unknown child in MucUser element.");
     }
 
     #[test]
@@ -407,7 +409,7 @@ mod tests {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Unknown attribute in x element.");
+        assert_eq!(message, "Unknown attribute in MucUser element.");
     }
 
     #[test]

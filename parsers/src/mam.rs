@@ -144,24 +144,24 @@ generate_attribute!(
     bool
 );
 
-generate_element!(
-    /// Notes the end of a page in a query.
-    Fin, "fin", MAM,
-    attributes: [
-        /// True when the end of a MAM query has been reached.
-        complete: Default<Complete> = "complete",
-    ],
-    children: [
-        /// Describes the current page, it should contain at least [first]
-        /// (with an [index]) and [last], and generally [count].
-        ///
-        /// [first]: ../rsm/struct.SetResult.html#structfield.first
-        /// [index]: ../rsm/struct.SetResult.html#structfield.first_index
-        /// [last]: ../rsm/struct.SetResult.html#structfield.last
-        /// [count]: ../rsm/struct.SetResult.html#structfield.count
-        set: Required<SetResult> = ("set", RSM) => SetResult
-    ]
-);
+/// Notes the end of a page in a query.
+#[derive(FromXml, AsXml, Debug, Clone, PartialEq)]
+#[xml(namespace = ns::MAM, name = "fin")]
+pub struct Fin {
+    /// True when the end of a MAM query has been reached.
+    #[xml(attribute(default))]
+    pub complete: Complete,
+
+    /// Describes the current page, it should contain at least [first]
+    /// (with an [index]) and [last], and generally [count].
+    ///
+    /// [first]: ../rsm/struct.SetResult.html#structfield.first
+    /// [index]: ../rsm/struct.SetResult.html#structfield.first_index
+    /// [last]: ../rsm/struct.SetResult.html#structfield.last
+    /// [count]: ../rsm/struct.SetResult.html#structfield.count
+    #[xml(child)]
+    pub set: SetResult,
+}
 
 impl IqResultPayload for Fin {}
 

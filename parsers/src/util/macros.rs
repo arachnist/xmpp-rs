@@ -300,6 +300,24 @@ macro_rules! generate_attribute_enum {
                 })
             }
         }
+
+        impl ::xso::FromXml for $elem {
+            type Builder = ::xso::minidom_compat::FromEventsViaElement<$elem>;
+
+            fn from_events(
+                qname: ::xso::exports::rxml::QName,
+                attrs: ::xso::exports::rxml::AttrMap,
+            ) -> Result<Self::Builder, ::xso::error::FromEventsError> {
+                if qname.0 != crate::ns::$ns || qname.1 != $name {
+                    return Err(::xso::error::FromEventsError::Mismatch {
+                        name: qname,
+                        attrs,
+                    })
+                }
+                Self::Builder::new(qname, attrs)
+            }
+        }
+
         impl From<$elem> for minidom::Element {
             fn from(elem: $elem) -> minidom::Element {
                 minidom::Element::builder($name, crate::ns::$ns)
@@ -307,6 +325,14 @@ macro_rules! generate_attribute_enum {
                          $($elem::$enum => $enum_name,)+
                      })
                      .build()
+            }
+        }
+
+        impl ::xso::AsXml for $elem {
+            type ItemIter<'x> = ::xso::minidom_compat::AsItemsViaElement<'x>;
+
+            fn as_xml_iter(&self) -> Result<Self::ItemIter<'_>, ::xso::error::Error> {
+                ::xso::minidom_compat::AsItemsViaElement::new(self.clone())
             }
         }
     );

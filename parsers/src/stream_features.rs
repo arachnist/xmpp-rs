@@ -45,24 +45,14 @@ pub struct RequiredStartTls;
 #[xml(namespace = ns::BIND, name = "bind")]
 pub struct Bind;
 
-generate_element!(
-    /// List of supported SASL mechanisms
-    #[derive(Default)]
-    SaslMechanisms, "mechanisms", SASL,
-    children: [
-        /// List of information elements describing this avatar.
-        mechanisms: Vec<SaslMechanism> = ("mechanism", SASL) => SaslMechanism,
-    ]
-);
-
-// TODO: Uncomment me when xso supports collections, see
-// https://gitlab.com/xmpp-rs/xmpp-rs/-/issues/136
-// #[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
-// #[xml(namespace = ns::SASL, name = "mechanisms")]
-// pub struct SaslMechanisms {
-//     #[xml(child(default))]
-//     mechanisms: Vec<SaslMechanism>,
-// }
+/// List of supported SASL mechanisms
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone, Default)]
+#[xml(namespace = ns::SASL, name = "mechanisms")]
+pub struct SaslMechanisms {
+    /// List of information elements describing this avatar.
+    #[xml(child(n = ..))]
+    pub mechanisms: Vec<SaslMechanism>,
+}
 
 /// The name of a SASL mechanism.
 #[derive(FromXml, AsXml, PartialEq, Debug, Clone)]

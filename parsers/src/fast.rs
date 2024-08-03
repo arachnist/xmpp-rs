@@ -20,18 +20,18 @@ generate_attribute!(
     Tls0Rtt, "tls-0rtt", bool
 );
 
-generate_element!(
 /// This is the `<fast/>` element sent by the server as a SASL2 inline feature.
-FastQuery, "fast", FAST,
-attributes: [
+#[derive(FromXml, AsXml, Debug, Clone, PartialEq)]
+#[xml(namespace = ns::FAST, name = "fast")]
+pub struct FastQuery {
     /// Whether TLS zero-roundtrip is possible.
-    tls_0rtt: Default<Tls0Rtt> = "tls-0rtt",
-],
-children: [
+    #[xml(attribute(default, name = "tls-0rtt"))]
+    pub tls_0rtt: Tls0Rtt,
+
     /// A list of `<mechanism/>` elements, listing all server allowed mechanisms.
-    mechanisms: Vec<Mechanism> = ("mechanism", FAST) => Mechanism
-]
-);
+    #[xml(child(n = ..))]
+    pub mechanisms: Vec<Mechanism>,
+}
 
 /// This is the `<fast/>` element the client MUST include within its SASL2 authentication request.
 #[derive(FromXml, AsXml, Debug, Clone, PartialEq)]

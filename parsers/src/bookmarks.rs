@@ -75,18 +75,18 @@ pub struct Url {
     pub url: String,
 }
 
-generate_element!(
-    /// Container element for multiple bookmarks.
-    #[derive(Default)]
-    Storage, "storage", BOOKMARKS,
-    children: [
-        /// Conferences the user has expressed an interest in.
-        conferences: Vec<Conference> = ("conference", BOOKMARKS) => Conference,
+/// Container element for multiple bookmarks.
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone, Default)]
+#[xml(namespace = ns::BOOKMARKS, name = "storage")]
+pub struct Storage {
+    /// Conferences the user has expressed an interest in.
+    #[xml(child(n = ..))]
+    pub conferences: Vec<Conference>,
 
-        /// URLs the user is interested in.
-        urls: Vec<Url> = ("url", BOOKMARKS) => Url
-    ]
-);
+    /// URLs the user is interested in.
+    #[xml(child(n = ..))]
+    pub urls: Vec<Url>,
+}
 
 impl Storage {
     /// Create an empty bookmarks storage.

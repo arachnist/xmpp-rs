@@ -167,21 +167,22 @@ generate_attribute!(
     bool
 );
 
-generate_element!(
-    /// A request to retract some items from a node.
-    Retract, "retract", PUBSUB,
-    attributes: [
-        /// The node affected by this request.
-        node: Required<NodeName> = "node",
+/// A request to retract some items from a node.
+#[derive(FromXml, AsXml, Debug, PartialEq, Clone)]
+#[xml(namespace = ns::PUBSUB, name = "retract")]
+pub struct Retract {
+    /// The node affected by this request.
+    #[xml(attribute)]
+    pub node: NodeName,
 
-        /// Whether a retract request should notify subscribers or not.
-        notify: Default<Notify> = "notify",
-    ],
-    children: [
-        /// The items affected by this request.
-        items: Vec<Item> = ("item", PUBSUB) => Item
-    ]
-);
+    /// Whether a retract request should notify subscribers or not.
+    #[xml(attribute(default))]
+    pub notify: Notify,
+
+    /// The items affected by this request.
+    #[xml(child(n = ..))]
+    pub items: Vec<Item>,
+}
 
 /// Indicate that the subscription can be configured.
 #[derive(Debug, Clone, PartialEq)]
