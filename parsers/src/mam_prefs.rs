@@ -4,11 +4,11 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use xso::{AsXml, FromXml};
+
 use crate::iq::{IqGetPayload, IqResultPayload, IqSetPayload};
 use crate::ns;
 use jid::Jid;
-use minidom::{Element, Node};
-use xso::error::{Error, FromElementError};
 
 generate_attribute!(
     /// Notes the default archiving preference for the user.
@@ -26,16 +26,20 @@ generate_attribute!(
 );
 
 /// Controls the archiving preferences of the user.
-#[derive(Debug, Clone)]
+#[derive(FromXml, AsXml, Debug, Clone, PartialEq)]
+#[xml(namespace = ns::MAM, name = "prefs")]
 pub struct Prefs {
     /// The default preference for JIDs in neither
     /// [always](#structfield.always) or [never](#structfield.never) lists.
+    #[xml(attribute = "default")]
     pub default_: DefaultPrefs,
 
     /// The set of JIDs for which to always store messages in the archive.
+    #[xml(extract(default, fields(extract(n = .., name = "jid", fields(text(type_ = Jid))))))]
     pub always: Vec<Jid>,
 
     /// The set of JIDs for which to never store messages in the archive.
+    #[xml(extract(default, fields(extract(n = .., name = "jid", fields(text(type_ = Jid))))))]
     pub never: Vec<Jid>,
 }
 
@@ -43,72 +47,11 @@ impl IqGetPayload for Prefs {}
 impl IqSetPayload for Prefs {}
 impl IqResultPayload for Prefs {}
 
-impl TryFrom<Element> for Prefs {
-    type Error = FromElementError;
-
-    fn try_from(elem: Element) -> Result<Prefs, FromElementError> {
-        check_self!(elem, "prefs", MAM);
-        check_no_unknown_attributes!(elem, "prefs", ["default"]);
-        let mut always = vec![];
-        let mut never = vec![];
-        for child in elem.children() {
-            if child.is("always", ns::MAM) {
-                for jid_elem in child.children() {
-                    if !jid_elem.is("jid", ns::MAM) {
-                        return Err(Error::Other("Invalid jid element in always.").into());
-                    }
-                    always.push(jid_elem.text().parse().map_err(Error::text_parse_error)?);
-                }
-            } else if child.is("never", ns::MAM) {
-                for jid_elem in child.children() {
-                    if !jid_elem.is("jid", ns::MAM) {
-                        return Err(Error::Other("Invalid jid element in never.").into());
-                    }
-                    never.push(jid_elem.text().parse().map_err(Error::text_parse_error)?);
-                }
-            } else {
-                return Err(Error::Other("Unknown child in prefs element.").into());
-            }
-        }
-        let default_ = get_attr!(elem, "default", Required);
-        Ok(Prefs {
-            default_,
-            always,
-            never,
-        })
-    }
-}
-
-fn serialise_jid_list(name: &str, jids: Vec<Jid>) -> ::std::option::IntoIter<Node> {
-    if jids.is_empty() {
-        None.into_iter()
-    } else {
-        Some(
-            Element::builder(name, ns::MAM)
-                .append_all(
-                    jids.into_iter()
-                        .map(|jid| Element::builder("jid", ns::MAM).append(jid)),
-                )
-                .into(),
-        )
-        .into_iter()
-    }
-}
-
-impl From<Prefs> for Element {
-    fn from(prefs: Prefs) -> Element {
-        Element::builder("prefs", ns::MAM)
-            .attr("default", prefs.default_)
-            .append_all(serialise_jid_list("always", prefs.always))
-            .append_all(serialise_jid_list("never", prefs.never))
-            .build()
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use jid::BareJid;
+    use minidom::Element;
 
     #[cfg(target_pointer_width = "32")]
     #[test]
