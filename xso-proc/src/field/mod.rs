@@ -7,21 +7,22 @@
 //! Compound (struct or enum variant) field types
 
 use proc_macro2::{Span, TokenStream};
-use quote::{quote, ToTokens};
 use syn::{spanned::Spanned, *};
 
 use rxml_validation::NcName;
 
 use crate::compound::Compound;
-use crate::error_message::{self, ParentRef};
+use crate::error_message::ParentRef;
 use crate::meta::{AmountConstraint, Flag, NameRef, NamespaceRef, QNameRef, XmlFieldMeta};
 use crate::scope::{AsItemsScope, FromEventsScope};
-use crate::types::{
-    as_optional_xml_text_fn, as_xml_iter_fn, as_xml_text_fn, default_fn, extend_fn, from_events_fn,
-    from_xml_builder_ty, from_xml_text_fn, into_iterator_into_iter_fn, into_iterator_item_ty,
-    into_iterator_iter_ty, item_iter_ty, option_as_xml_ty, option_ty, ref_ty, string_ty,
-    text_codec_decode_fn, text_codec_encode_fn, ty_from_ident,
-};
+
+mod attribute;
+mod child;
+mod text;
+
+use self::attribute::AttributeField;
+use self::child::{ChildField, ExtractDef};
+use self::text::TextField;
 
 /// Code slices necessary for declaring and initializing a temporary variable
 /// for parsing purposes.
@@ -140,204 +141,43 @@ pub(crate) enum FieldIteratorPart {
     },
 }
 
-/// Definition of what to extract from a child element.
-struct ExtractDef {
-    /// The XML namespace of the child to extract data from.
-    xml_namespace: NamespaceRef,
-
-    /// The XML name of the child to extract data from.
-    xml_name: NameRef,
-
-    /// Compound which contains the arguments of the `extract(..)` meta
-    /// (except the `from`), transformed into a struct with unnamed
-    /// fields.
+trait Field {
+    /// Construct the builder pieces for this field.
     ///
-    /// This is used to generate the parsing/serialisation code, by
-    /// essentially "declaring" a shim struct, as if it were a real Rust
-    /// struct, and using the result of the parsing process directly for
-    /// the field on which the `extract(..)` option was used, instead of
-    /// putting it into a Rust struct.
-    parts: Compound,
-}
-
-impl ExtractDef {
-    /// Construct
-    /// [`FieldBuilderPart::Nested::extra_defs`],
-    /// [`FieldBuilderPart::Nested::matcher`],
-    /// an expression which pulls the extraction result from
-    /// `substate_result`,
-    /// and the [`FieldBuilderPart::Nested::builder`] type.
-    fn make_from_xml_builder_parts(
+    /// `container_name` must be a reference to the compound's type, so that
+    /// it can be used for error messages.
+    ///
+    /// `member` and `ty` refer to the field itself.
+    fn make_builder_part(
         &self,
         scope: &FromEventsScope,
         container_name: &ParentRef,
         member: &Member,
-    ) -> Result<(TokenStream, TokenStream, TokenStream, Type)> {
-        let FromEventsScope {
-            ref substate_result,
-            ..
-        } = scope;
+        ty: &Type,
+    ) -> Result<FieldBuilderPart>;
 
-        let xml_namespace = &self.xml_namespace;
-        let xml_name = &self.xml_name;
-
-        let from_xml_builder_ty_ident = scope.make_member_type_name(member, "FromXmlBuilder");
-        let state_ty_ident = quote::format_ident!("{}State", from_xml_builder_ty_ident,);
-
-        let extra_defs = self.parts.make_from_events_statemachine(
-            &state_ty_ident,
-            &container_name.child(member.clone()),
-            "",
-        )?.with_augmented_init(|init| quote! {
-            if name.0 == #xml_namespace && name.1 == #xml_name {
-                #init
-            } else {
-                ::core::result::Result::Err(::xso::error::FromEventsError::Mismatch { name, attrs })
-            }
-        }).compile().render(
-            &Visibility::Inherited,
-            &from_xml_builder_ty_ident,
-            &state_ty_ident,
-            &self.parts.to_tuple_ty().into(),
-        )?;
-        let from_xml_builder_ty = ty_from_ident(from_xml_builder_ty_ident.clone()).into();
-
-        let matcher = quote! { #state_ty_ident::new(name, attrs).map(|x| #from_xml_builder_ty_ident(::core::option::Option::Some(x))) };
-
-        Ok((
-            extra_defs,
-            matcher,
-            // This little ".into()" here goes a long way. It relies on one of
-            // the most underrated trait implementations in the standard
-            // library: `impl From<T> for Option<T>`, which creates a
-            // `Some(_)` from a `T`. Why is it so great? Because there is also
-            // `impl From<Option<T>> for Option<T>` (obviously), which is just
-            // a move. So even without knowing the exact type of the substate
-            // result and the field, we can make an "downcast" to `Option<T>`
-            // if the field is of type `Option<T>`, and it does the right
-            // thing no matter whether the extracted field is of type
-            // `Option<T>` or `T`.
-            //
-            // And then, type inferrence does the rest: There is ambiguity
-            // there, of course, if we call `.into()` on a value of type
-            // `Option<T>`: Should Rust wrap it into another layer of
-            // `Option`, or should it just move the value? The answer lies in
-            // the type constraint imposed by the place the value is *used*,
-            // which is strictly bound by the field's type (so there is, in
-            // fact, no ambiguity). So this works all kinds of magic.
-            quote! { #substate_result.0.into() },
-            from_xml_builder_ty,
-        ))
-    }
-
-    /// Construct
-    /// [`FieldIteratorPart::Content::extra_defs`],
-    /// the [`FieldIteratorPart::Content::value`] init,
-    /// and the iterator type.
-    fn make_as_item_iter_parts(
+    /// Construct the iterator pieces for this field.
+    ///
+    /// `bound_name` must be the name to which the field's value is bound in
+    /// the iterator code.
+    ///
+    /// `member` and `ty` refer to the field itself.
+    ///
+    /// `bound_name` is the name under which the field's value is accessible
+    /// in the various parts of the code.
+    fn make_iterator_part(
         &self,
         scope: &AsItemsScope,
         container_name: &ParentRef,
         bound_name: &Ident,
         member: &Member,
-    ) -> Result<(TokenStream, TokenStream, Type)> {
-        let AsItemsScope { ref lifetime, .. } = scope;
+        ty: &Type,
+    ) -> Result<FieldIteratorPart>;
 
-        let xml_namespace = &self.xml_namespace;
-        let xml_name = &self.xml_name;
-
-        let item_iter_ty_ident = scope.make_member_type_name(member, "AsXmlIterator");
-        let state_ty_ident = quote::format_ident!("{}State", item_iter_ty_ident,);
-        let mut item_iter_ty = ty_from_ident(item_iter_ty_ident.clone());
-        item_iter_ty.path.segments[0].arguments =
-            PathArguments::AngleBracketed(AngleBracketedGenericArguments {
-                colon2_token: None,
-                lt_token: token::Lt::default(),
-                args: [GenericArgument::Lifetime(lifetime.clone())]
-                    .into_iter()
-                    .collect(),
-                gt_token: token::Gt::default(),
-            });
-        let item_iter_ty = item_iter_ty.into();
-
-        let extra_defs = self
-            .parts
-            .make_as_item_iter_statemachine(
-                &container_name.child(member.clone()),
-                &state_ty_ident,
-                "",
-                lifetime,
-            )?
-            .with_augmented_init(|init| {
-                quote! {
-                    let name = (
-                        ::xso::exports::rxml::Namespace::from(#xml_namespace),
-                        ::std::borrow::Cow::Borrowed(#xml_name),
-                    );
-                    #init
-                }
-            })
-            .compile()
-            .render(
-                &Visibility::Inherited,
-                &self.parts.to_ref_tuple_ty(lifetime).into(),
-                &state_ty_ident,
-                lifetime,
-                &item_iter_ty,
-            )?;
-
-        let item_iter_ty = option_as_xml_ty(item_iter_ty);
-        Ok((
-            extra_defs,
-            // Again we exploit the extreme usefulness of the
-            // `impl From<T> for Option<T>`. We already wrote extensively
-            // about that in [`make_from_xml_builder_parts`] implementation
-            // corresponding to this code above, and we will not repeat it
-            // here.
-            quote! {
-                ::xso::OptionAsXml::new(::core::option::Option::from(#bound_name).map(|#bound_name| {
-                    #item_iter_ty_ident::new((#bound_name,))
-                }).transpose()?)
-            },
-            item_iter_ty,
-        ))
+    /// Return true if and only if this field captures text content.
+    fn captures_text(&self) -> bool {
+        false
     }
-}
-
-/// Specify how the field is mapped to XML.
-enum FieldKind {
-    /// The field maps to an attribute.
-    Attribute {
-        /// The optional XML namespace of the attribute.
-        xml_namespace: Option<NamespaceRef>,
-
-        /// The XML name of the attribute.
-        xml_name: NameRef,
-
-        /// Flag indicating whether the value should be defaulted if the
-        /// attribute is absent.
-        default_: Flag,
-    },
-
-    /// The field maps to the character data of the element.
-    Text {
-        /// Optional codec to use
-        codec: Option<Expr>,
-    },
-
-    /// The field maps to a child
-    Child {
-        /// Flag indicating whether the value should be defaulted if the
-        /// child is absent.
-        default_: Flag,
-
-        /// Number of child elements allowed.
-        amount: AmountConstraint,
-
-        /// If set, the child element is not parsed as a field implementing
-        /// `FromXml` / `AsXml`, but instead its contents are extracted.
-        extract: Option<ExtractDef>,
-    },
 }
 
 fn default_name(span: Span, name: Option<NameRef>, field_ident: Option<&Ident>) -> Result<NameRef> {
@@ -362,150 +202,146 @@ fn default_name(span: Span, name: Option<NameRef>, field_ident: Option<&Ident>) 
     }
 }
 
-impl FieldKind {
-    /// Construct a new field implementation from the meta attributes.
-    ///
-    /// `field_ident` is, for some field types, used to infer an XML name if
-    /// it is not specified explicitly.
-    ///
-    /// `field_ty` is needed for type inferrence on extracted fields.
-    ///
-    /// `container_namespace` is used in some cases to insert a default
-    /// namespace.
-    fn from_meta(
-        meta: XmlFieldMeta,
-        field_ident: Option<&Ident>,
-        field_ty: &Type,
-        container_namespace: &NamespaceRef,
-    ) -> Result<Self> {
-        match meta {
-            XmlFieldMeta::Attribute {
-                span,
-                qname: QNameRef { namespace, name },
-                default_,
-                type_,
-            } => {
-                let xml_name = default_name(span, name, field_ident)?;
+/// Construct a new field implementation from the meta attributes.
+///
+/// `field_ident` is, for some field types, used to infer an XML name if
+/// it is not specified explicitly.
+///
+/// `field_ty` is needed for type inferrence on extracted fields.
+///
+/// `container_namespace` is used in some cases to insert a default
+/// namespace.
+fn new_field(
+    meta: XmlFieldMeta,
+    field_ident: Option<&Ident>,
+    field_ty: &Type,
+    container_namespace: &NamespaceRef,
+) -> Result<Box<dyn Field>> {
+    match meta {
+        XmlFieldMeta::Attribute {
+            span,
+            qname: QNameRef { namespace, name },
+            default_,
+            type_,
+        } => {
+            let xml_name = default_name(span, name, field_ident)?;
 
-                // This would've been taken via `XmlFieldMeta::take_type` if
-                // this field was within an extract where a `type_` is legal
-                // to have.
-                if let Some(type_) = type_ {
-                    return Err(Error::new_spanned(
-                        type_,
-                        "specifying `type_` on fields inside structs and enum variants is redundant and not allowed."
+            // This would've been taken via `XmlFieldMeta::take_type` if
+            // this field was within an extract where a `type_` is legal
+            // to have.
+            if let Some(type_) = type_ {
+                return Err(Error::new_spanned(
+                    type_,
+                    "specifying `type_` on fields inside structs and enum variants is redundant and not allowed."
+                ));
+            }
+
+            Ok(Box::new(AttributeField {
+                xml_name,
+                xml_namespace: namespace,
+                default_,
+            }))
+        }
+
+        XmlFieldMeta::Text {
+            span: _,
+            codec,
+            type_,
+        } => {
+            // This would've been taken via `XmlFieldMeta::take_type` if
+            // this field was within an extract where a `type_` is legal
+            // to have.
+            if let Some(type_) = type_ {
+                return Err(Error::new_spanned(
+                    type_,
+                    "specifying `type_` on fields inside structs and enum variants is redundant and not allowed."
+                ));
+            }
+
+            Ok(Box::new(TextField { codec }))
+        }
+
+        XmlFieldMeta::Child {
+            span: _,
+            default_,
+            amount,
+        } => {
+            if let Some(AmountConstraint::Any(ref amount_span)) = amount {
+                if let Flag::Present(ref flag_span) = default_ {
+                    let mut err =
+                        Error::new(*flag_span, "`default` has no meaning for child collections");
+                    err.combine(Error::new(
+                        *amount_span,
+                        "the field is treated as a collection because of this `n` value",
+                    ));
+                    return Err(err);
+                }
+            }
+
+            Ok(Box::new(ChildField {
+                default_,
+                amount: amount.unwrap_or(AmountConstraint::FixedSingle(Span::call_site())),
+                extract: None,
+            }))
+        }
+
+        XmlFieldMeta::Extract {
+            span,
+            default_,
+            qname: QNameRef { namespace, name },
+            amount,
+            fields,
+        } => {
+            let xml_namespace = namespace.unwrap_or_else(|| container_namespace.clone());
+            let xml_name = default_name(span, name, field_ident)?;
+
+            let mut field = {
+                let mut fields = fields.into_iter();
+                let Some(field) = fields.next() else {
+                    return Err(Error::new(
+                        span,
+                        "`#[xml(extract(..))]` must contain one `fields(..)` nested meta which contains at least one field meta."
+                    ));
+                };
+
+                if let Some(field) = fields.next() {
+                    return Err(Error::new(
+                        field.span(),
+                        "more than one extracted piece of data is currently not supported",
                     ));
                 }
 
-                Ok(Self::Attribute {
-                    xml_name,
-                    xml_namespace: namespace,
-                    default_,
-                })
-            }
+                field
+            };
 
-            XmlFieldMeta::Text {
-                span: _,
-                codec,
-                type_,
-            } => {
-                // This would've been taken via `XmlFieldMeta::take_type` if
-                // this field was within an extract where a `type_` is legal
-                // to have.
-                if let Some(type_) = type_ {
-                    return Err(Error::new_spanned(
-                        type_,
-                        "specifying `type_` on fields inside structs and enum variants is redundant and not allowed."
-                    ));
-                }
-
-                Ok(Self::Text { codec })
-            }
-
-            XmlFieldMeta::Child {
-                span: _,
-                default_,
-                amount,
-            } => {
-                if let Some(AmountConstraint::Any(ref amount_span)) = amount {
-                    if let Flag::Present(ref flag_span) = default_ {
-                        let mut err = Error::new(
-                            *flag_span,
-                            "`default` has no meaning for child collections",
-                        );
-                        err.combine(Error::new(
-                            *amount_span,
-                            "the field is treated as a collection because of this `n` value",
-                        ));
-                        return Err(err);
-                    }
-                }
-
-                Ok(Self::Child {
-                    default_,
-                    amount: amount.unwrap_or(AmountConstraint::FixedSingle(Span::call_site())),
-                    extract: None,
-                })
-            }
-
-            XmlFieldMeta::Extract {
-                span,
-                default_,
-                qname: QNameRef { namespace, name },
-                amount,
-                fields,
-            } => {
-                let xml_namespace = namespace.unwrap_or_else(|| container_namespace.clone());
-                let xml_name = default_name(span, name, field_ident)?;
-
-                let mut field = {
-                    let mut fields = fields.into_iter();
-                    let Some(field) = fields.next() else {
-                        return Err(Error::new(
-                            span,
-                            "`#[xml(extract(..))]` must contain one `fields(..)` nested meta which contains at least one field meta."
-                        ));
-                    };
-
-                    if let Some(field) = fields.next() {
+            let amount = amount.unwrap_or(AmountConstraint::FixedSingle(Span::call_site()));
+            let field_ty = match field.take_type() {
+                Some(v) => v,
+                None => match amount {
+                    // Only allow inferrence for single values: inferrence
+                    // for collections will always be wrong.
+                    AmountConstraint::FixedSingle(_) => field_ty.clone(),
+                    _ => {
                         return Err(Error::new(
                             field.span(),
-                            "more than one extracted piece of data is currently not supported",
+                            "extracted field must specify a type explicitly when extracting into a collection."
                         ));
                     }
+                },
+            };
+            let parts = Compound::from_field_defs(
+                [FieldDef::from_extract(field, 0, &field_ty, &xml_namespace)].into_iter(),
+            )?;
 
-                    field
-                };
-
-                let amount = amount.unwrap_or(AmountConstraint::FixedSingle(Span::call_site()));
-                let field_ty = match field.take_type() {
-                    Some(v) => v,
-                    None => match amount {
-                        // Only allow inferrence for single values: inferrence
-                        // for collections will always be wrong.
-                        AmountConstraint::FixedSingle(_) => field_ty.clone(),
-                        _ => {
-                            return Err(Error::new(
-                                field.span(),
-                                "extracted field must specify a type explicitly when extracting into a collection."
-                            ));
-                        }
-                    },
-                };
-                let parts = Compound::from_field_defs(
-                    [FieldDef::from_extract(field, 0, &field_ty, &xml_namespace)].into_iter(),
-                )?;
-
-                Ok(Self::Child {
-                    default_,
-                    amount,
-                    extract: Some(ExtractDef {
-                        xml_namespace,
-                        xml_name,
-                        parts,
-                    }),
-                })
-            }
+            Ok(Box::new(ChildField {
+                default_,
+                amount,
+                extract: Some(ExtractDef {
+                    xml_namespace,
+                    xml_name,
+                    parts,
+                }),
+            }))
         }
     }
 }
@@ -522,7 +358,7 @@ pub(crate) struct FieldDef {
     ty: Type,
 
     /// The way the field is mapped to XML.
-    kind: FieldKind,
+    inner: Box<dyn Field>,
 }
 
 impl FieldDef {
@@ -552,7 +388,7 @@ impl FieldDef {
         let ty = field.ty.clone();
 
         Ok(Self {
-            kind: FieldKind::from_meta(meta, ident, &ty, container_namespace)?,
+            inner: new_field(meta, ident, &ty, container_namespace)?,
             member,
             ty,
         })
@@ -572,7 +408,7 @@ impl FieldDef {
         Ok(Self {
             member: Member::Unnamed(Index { index, span }),
             ty: ty.clone(),
-            kind: FieldKind::from_meta(meta, None, ty, container_namespace)?,
+            inner: new_field(meta, None, ty, container_namespace)?,
         })
     }
 
@@ -596,182 +432,8 @@ impl FieldDef {
         scope: &FromEventsScope,
         container_name: &ParentRef,
     ) -> Result<FieldBuilderPart> {
-        match self.kind {
-            FieldKind::Attribute {
-                ref xml_name,
-                ref xml_namespace,
-                ref default_,
-            } => {
-                let FromEventsScope { ref attrs, .. } = scope;
-                let ty = self.ty.clone();
-
-                let missing_msg = error_message::on_missing_attribute(container_name, &self.member);
-
-                let xml_namespace = match xml_namespace {
-                    Some(v) => v.to_token_stream(),
-                    None => quote! {
-                        ::xso::exports::rxml::Namespace::none()
-                    },
-                };
-
-                let from_xml_text = from_xml_text_fn(ty.clone());
-
-                let on_absent = match default_ {
-                    Flag::Absent => quote! {
-                        return ::core::result::Result::Err(::xso::error::Error::Other(#missing_msg).into())
-                    },
-                    Flag::Present(_) => {
-                        let default_ = default_fn(ty.clone());
-                        quote! {
-                            #default_()
-                        }
-                    }
-                };
-
-                Ok(FieldBuilderPart::Init {
-                    value: FieldTempInit {
-                        init: quote! {
-                            match #attrs.remove(#xml_namespace, #xml_name).map(#from_xml_text).transpose()? {
-                                ::core::option::Option::Some(v) => v,
-                                ::core::option::Option::None => #on_absent,
-                            }
-                        },
-                        ty: self.ty.clone(),
-                    },
-                })
-            }
-
-            FieldKind::Text { ref codec } => {
-                let FromEventsScope { ref text, .. } = scope;
-                let field_access = scope.access_field(&self.member);
-                let finalize = match codec {
-                    Some(codec) => {
-                        let decode = text_codec_decode_fn(self.ty.clone());
-                        quote! {
-                            #decode(&#codec, #field_access)?
-                        }
-                    }
-                    None => {
-                        let from_xml_text = from_xml_text_fn(self.ty.clone());
-                        quote! { #from_xml_text(#field_access)? }
-                    }
-                };
-
-                Ok(FieldBuilderPart::Text {
-                    value: FieldTempInit {
-                        init: quote! { ::std::string::String::new() },
-                        ty: string_ty(Span::call_site()),
-                    },
-                    collect: quote! {
-                        #field_access.push_str(#text.as_str());
-                    },
-                    finalize,
-                })
-            }
-
-            FieldKind::Child {
-                ref default_,
-                ref amount,
-                ref extract,
-            } => {
-                let element_ty = match amount {
-                    AmountConstraint::FixedSingle(_) => self.ty.clone(),
-                    AmountConstraint::Any(_) => into_iterator_item_ty(self.ty.clone()),
-                };
-
-                let (extra_defs, matcher, fetch, builder) = match extract {
-                    Some(extract) => {
-                        extract.make_from_xml_builder_parts(scope, container_name, &self.member)?
-                    }
-                    None => {
-                        let FromEventsScope {
-                            ref substate_result,
-                            ..
-                        } = scope;
-
-                        let from_events = from_events_fn(element_ty.clone());
-                        let from_xml_builder = from_xml_builder_ty(element_ty.clone());
-
-                        let matcher = quote! { #from_events(name, attrs) };
-                        let builder = from_xml_builder;
-
-                        (
-                            TokenStream::default(),
-                            matcher,
-                            quote! { #substate_result },
-                            builder,
-                        )
-                    }
-                };
-
-                let field_access = scope.access_field(&self.member);
-                match amount {
-                    AmountConstraint::FixedSingle(_) => {
-                        let missing_msg =
-                            error_message::on_missing_child(container_name, &self.member);
-                        let duplicate_msg =
-                            error_message::on_duplicate_child(container_name, &self.member);
-
-                        let on_absent = match default_ {
-                            Flag::Absent => quote! {
-                                return ::core::result::Result::Err(::xso::error::Error::Other(#missing_msg).into())
-                            },
-                            Flag::Present(_) => {
-                                let default_ = default_fn(element_ty.clone());
-                                quote! {
-                                    #default_()
-                                }
-                            }
-                        };
-
-                        Ok(FieldBuilderPart::Nested {
-                            extra_defs,
-                            value: FieldTempInit {
-                                init: quote! { ::core::option::Option::None },
-                                ty: option_ty(self.ty.clone()),
-                            },
-                            matcher: quote! {
-                                match #matcher {
-                                    ::core::result::Result::Ok(v) => if #field_access.is_some() {
-                                        ::core::result::Result::Err(::xso::error::FromEventsError::Invalid(::xso::error::Error::Other(#duplicate_msg)))
-                                    } else {
-                                        ::core::result::Result::Ok(v)
-                                    },
-                                    ::core::result::Result::Err(e) => ::core::result::Result::Err(e),
-                                }
-                            },
-                            builder,
-                            collect: quote! {
-                                #field_access = ::core::option::Option::Some(#fetch);
-                            },
-                            finalize: quote! {
-                                match #field_access {
-                                    ::core::option::Option::Some(value) => value,
-                                    ::core::option::Option::None => #on_absent,
-                                }
-                            },
-                        })
-                    }
-                    AmountConstraint::Any(_) => {
-                        let ty_extend = extend_fn(self.ty.clone(), element_ty.clone());
-                        let ty_default = default_fn(self.ty.clone());
-                        Ok(FieldBuilderPart::Nested {
-                            extra_defs,
-                            value: FieldTempInit {
-                                init: quote! { #ty_default() },
-                                ty: self.ty.clone(),
-                            },
-                            matcher,
-                            builder,
-                            collect: quote! {
-                                #ty_extend(&mut #field_access, [#fetch]);
-                            },
-                            finalize: quote! { #field_access },
-                        })
-                    }
-                }
-            }
-        }
+        self.inner
+            .make_builder_part(scope, container_name, &self.member, &self.ty)
     }
 
     /// Construct the iterator pieces for this field.
@@ -784,141 +446,12 @@ impl FieldDef {
         container_name: &ParentRef,
         bound_name: &Ident,
     ) -> Result<FieldIteratorPart> {
-        match self.kind {
-            FieldKind::Attribute {
-                ref xml_name,
-                ref xml_namespace,
-                ..
-            } => {
-                let xml_namespace = match xml_namespace {
-                    Some(v) => quote! { ::xso::exports::rxml::Namespace::from(#v) },
-                    None => quote! {
-                        ::xso::exports::rxml::Namespace::NONE
-                    },
-                };
-
-                let as_optional_xml_text = as_optional_xml_text_fn(self.ty.clone());
-
-                Ok(FieldIteratorPart::Header {
-                    generator: quote! {
-                        #as_optional_xml_text(#bound_name)?.map(|#bound_name| ::xso::Item::Attribute(
-                            #xml_namespace,
-                            ::std::borrow::Cow::Borrowed(#xml_name),
-                            #bound_name,
-                        ));
-                    },
-                })
-            }
-
-            FieldKind::Text { ref codec } => {
-                let generator = match codec {
-                    Some(codec) => {
-                        let encode = text_codec_encode_fn(self.ty.clone());
-                        quote! { #encode(&#codec, #bound_name)? }
-                    }
-                    None => {
-                        let as_xml_text = as_xml_text_fn(self.ty.clone());
-                        quote! { ::core::option::Option::Some(#as_xml_text(#bound_name)?) }
-                    }
-                };
-
-                Ok(FieldIteratorPart::Text { generator })
-            }
-
-            FieldKind::Child {
-                default_: _,
-                ref amount,
-                ref extract,
-            } => {
-                let AsItemsScope { ref lifetime, .. } = scope;
-
-                let item_ty = match amount {
-                    AmountConstraint::FixedSingle(_) => self.ty.clone(),
-                    AmountConstraint::Any(_) => {
-                        // This should give us the type of element stored in the
-                        // collection.
-                        into_iterator_item_ty(self.ty.clone())
-                    }
-                };
-
-                let (extra_defs, init, iter_ty) = match extract {
-                    Some(extract) => extract.make_as_item_iter_parts(
-                        scope,
-                        container_name,
-                        bound_name,
-                        &self.member,
-                    )?,
-                    None => {
-                        let as_xml_iter = as_xml_iter_fn(item_ty.clone());
-                        let item_iter = item_iter_ty(item_ty.clone(), lifetime.clone());
-
-                        (
-                            TokenStream::default(),
-                            quote! { #as_xml_iter(#bound_name)? },
-                            item_iter,
-                        )
-                    }
-                };
-
-                match amount {
-                    AmountConstraint::FixedSingle(_) => Ok(FieldIteratorPart::Content {
-                        extra_defs,
-                        value: FieldTempInit { init, ty: iter_ty },
-                        generator: quote! {
-                            #bound_name.next().transpose()
-                        },
-                    }),
-                    AmountConstraint::Any(_) => {
-                        // This is the collection type we actually work
-                        // with -- as_xml_iter uses references after all.
-                        let ty = ref_ty(self.ty.clone(), lifetime.clone());
-
-                        // But the iterator for iterating over the elements
-                        // inside the collection must use the ref type.
-                        let element_iter = into_iterator_iter_ty(ty.clone());
-
-                        // And likewise the into_iter impl.
-                        let into_iter = into_iterator_into_iter_fn(ty.clone());
-
-                        let state_ty = Type::Tuple(TypeTuple {
-                            paren_token: token::Paren::default(),
-                            elems: [element_iter, option_ty(iter_ty)].into_iter().collect(),
-                        });
-
-                        Ok(FieldIteratorPart::Content {
-                            extra_defs,
-                            value: FieldTempInit {
-                                init: quote! {
-                                    (#into_iter(#bound_name), ::core::option::Option::None)
-                                },
-                                ty: state_ty,
-                            },
-                            generator: quote! {
-                                loop {
-                                    if let ::core::option::Option::Some(current) = #bound_name.1.as_mut() {
-                                        if let ::core::option::Option::Some(item) = current.next() {
-                                            break ::core::option::Option::Some(item).transpose();
-                                        }
-                                    }
-                                    if let ::core::option::Option::Some(item) = #bound_name.0.next() {
-                                        #bound_name.1 = ::core::option::Option::Some({
-                                            let #bound_name = item;
-                                            #init
-                                        });
-                                    } else {
-                                        break ::core::result::Result::Ok(::core::option::Option::None)
-                                    }
-                                }
-                            },
-                        })
-                    }
-                }
-            }
-        }
+        self.inner
+            .make_iterator_part(scope, container_name, bound_name, &self.member, &self.ty)
     }
 
     /// Return true if this field's parsing consumes text data.
     pub(crate) fn is_text_field(&self) -> bool {
-        matches!(self.kind, FieldKind::Text { .. })
+        self.inner.captures_text()
     }
 }
