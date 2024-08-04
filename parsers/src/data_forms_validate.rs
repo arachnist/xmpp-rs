@@ -4,19 +4,18 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use std::borrow::Cow;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
-use minidom::{Element, IntoAttributeValue};
-use xso::{
-    error::{Error, FromElementError},
-    AsXml, FromXml,
-};
+use minidom::IntoAttributeValue;
+use xso::{error::Error, AsXml, AsXmlText, FromXml, FromXmlText};
 
-use crate::ns::{self, XDATA_VALIDATE};
+use crate::ns;
 
 /// Validation Method
-#[derive(Debug, Clone, PartialEq)]
+#[derive(FromXml, AsXml, Debug, Clone, PartialEq)]
+#[xml(namespace = ns::XDATA_VALIDATE)]
 pub enum Method {
     /// … to indicate that the value(s) should simply match the field type and datatype constraints,
     /// the `<validate/>` element shall contain a `<basic/>` child element. Using `<basic/>` validation,
@@ -24,6 +23,7 @@ pub enum Method {
     /// the field type.
     ///
     /// <https://xmpp.org/extensions/xep-0122.html#usercases-validation.basic>
+    #[xml(name = "basic")]
     Basic,
 
     /// For "list-single" or "list-multi", to indicate that the user may enter a custom value
@@ -34,6 +34,7 @@ pub enum Method {
     /// "list-multi", with no options and all values automatically selected.
     ///
     /// <https://xmpp.org/extensions/xep-0122.html#usercases-validation.open>
+    #[xml(name = "open")]
     Open,
 
     /// To indicate that the value should fall within a certain range, the `<validate/>` element shall
@@ -51,10 +52,14 @@ pub enum Method {
     /// constraints.
     ///
     /// <https://xmpp.org/extensions/xep-0122.html#usercases-validation.range>
+    #[xml(name = "range")]
     Range {
         /// The 'min' attribute specifies the minimum allowable value.
+        #[xml(attribute(default))]
         min: Option<String>,
+
         /// The 'max' attribute specifies the maximum allowable value.
+        #[xml(attribute(default))]
         max: Option<String>,
     },
 
@@ -65,7 +70,8 @@ pub enum Method {
     /// character data only.
     ///
     /// <https://xmpp.org/extensions/xep-0122.html#usercases-validatoin.regex>
-    Regex(String),
+    #[xml(name = "regex")]
+    Regex(#[xml(text)] String),
 }
 
 /// Selection Ranges in "list-multi"
@@ -75,6 +81,7 @@ pub struct ListRange {
     /// The 'min' attribute specifies the minimum allowable number of selected/entered values.
     #[xml(attribute(default))]
     pub min: Option<u32>,
+
     /// The 'max' attribute specifies the maximum allowable number of selected/entered values.
     #[xml(attribute(default))]
     pub max: Option<u32>,
@@ -181,7 +188,8 @@ pub enum Datatype {
 }
 
 /// Validation rules for a DataForms Field.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(FromXml, AsXml, Debug, Clone, PartialEq)]
+#[xml(namespace = ns::XDATA_VALIDATE, name = "validate")]
 pub struct Validate {
     /// The 'datatype' attribute specifies the datatype. This attribute is OPTIONAL, and defaults
     /// to "xs:string". It MUST meet one of the following conditions:
@@ -191,6 +199,7 @@ pub struct Validate {
     /// - Start with "x:", and specify a user-defined datatype.
     ///
     /// Note that while "x:" allows for ad-hoc definitions, its use is NOT RECOMMENDED.
+    #[xml(attribute(default))]
     pub datatype: Option<Datatype>,
 
     /// The validation method. If no validation method is specified, form processors MUST
@@ -202,6 +211,7 @@ pub struct Validate {
     /// defined by that method.
     ///
     /// <https://xmpp.org/extensions/xep-0122.html#usecases-validation>
+    #[xml(child(default))]
     pub method: Option<Method>,
 
     /// For "list-multi", validation can indicate (via the `<list-range/>` element) that a minimum
@@ -215,106 +225,8 @@ pub struct Validate {
     /// selection constraints.
     ///
     /// <https://xmpp.org/extensions/xep-0122.html#usecases-ranges>
+    #[xml(child(default))]
     pub list_range: Option<ListRange>,
-}
-
-impl TryFrom<Element> for Validate {
-    type Error = FromElementError;
-
-    fn try_from(elem: Element) -> Result<Self, Self::Error> {
-        check_self!(elem, "validate", XDATA_VALIDATE);
-        check_no_unknown_attributes!(elem, "item", ["datatype"]);
-
-        let mut validate = Validate {
-            datatype: elem
-                .attr("datatype")
-                .map(Datatype::from_str)
-                .transpose()
-                .map_err(|err| FromElementError::Invalid(Error::TextParseError(err.into())))?,
-            method: None,
-            list_range: None,
-        };
-
-        for child in elem.children() {
-            match child {
-                _ if child.is("list-range", XDATA_VALIDATE) => {
-                    let list_range = ListRange::try_from(child.clone())?;
-                    if validate.list_range.is_some() {
-                        return Err(Error::Other(
-                            "Encountered unsupported number (n > 1) of list-range in validate element.",
-                        ).into());
-                    }
-                    validate.list_range = Some(list_range);
-                }
-                _ => {
-                    let method = Method::try_from(child.clone())?;
-                    if validate.method.is_some() {
-                        return Err(Error::Other(
-                            "Encountered unsupported number (n > 1) of validation methods in validate element.",
-                        ).into());
-                    }
-                    validate.method = Some(method);
-                }
-            }
-        }
-
-        Ok(validate)
-    }
-}
-
-impl From<Validate> for Element {
-    fn from(value: Validate) -> Self {
-        Element::builder("validate", XDATA_VALIDATE)
-            .attr("datatype", value.datatype)
-            .append_all(value.method)
-            .append_all(value.list_range)
-            .build()
-    }
-}
-
-impl TryFrom<Element> for Method {
-    type Error = Error;
-
-    fn try_from(elem: Element) -> Result<Self, Self::Error> {
-        let method = match elem {
-            _ if elem.is("basic", XDATA_VALIDATE) => {
-                check_no_attributes!(elem, "basic");
-                Method::Basic
-            }
-            _ if elem.is("open", XDATA_VALIDATE) => {
-                check_no_attributes!(elem, "open");
-                Method::Open
-            }
-            _ if elem.is("range", XDATA_VALIDATE) => {
-                check_no_unknown_attributes!(elem, "range", ["min", "max"]);
-                Method::Range {
-                    min: elem.attr("min").map(ToString::to_string),
-                    max: elem.attr("max").map(ToString::to_string),
-                }
-            }
-            _ if elem.is("regex", XDATA_VALIDATE) => {
-                check_no_attributes!(elem, "regex");
-                check_no_children!(elem, "regex");
-                Method::Regex(elem.text())
-            }
-            _ => return Err(Error::Other("Encountered invalid validation method.")),
-        };
-        Ok(method)
-    }
-}
-
-impl From<Method> for Element {
-    fn from(value: Method) -> Self {
-        match value {
-            Method::Basic => Element::builder("basic", XDATA_VALIDATE),
-            Method::Open => Element::builder("open", XDATA_VALIDATE),
-            Method::Range { min, max } => Element::builder("range", XDATA_VALIDATE)
-                .attr("min", min)
-                .attr("max", max),
-            Method::Regex(regex) => Element::builder("regex", XDATA_VALIDATE).append(regex),
-        }
-        .build()
-    }
 }
 
 impl FromStr for Datatype {
@@ -404,9 +316,22 @@ impl IntoAttributeValue for Datatype {
     }
 }
 
+impl FromXmlText for Datatype {
+    fn from_xml_text(s: String) -> Result<Datatype, Error> {
+        s.parse().map_err(Error::text_parse_error)
+    }
+}
+
+impl AsXmlText for Datatype {
+    fn as_xml_text(&self) -> Result<Cow<'_, str>, Error> {
+        Ok(Cow::Owned(self.to_string()))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use minidom::Element;
 
     #[test]
     fn test_parse_datatype() -> Result<(), DatatypeError> {
