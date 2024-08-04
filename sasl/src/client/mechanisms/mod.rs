@@ -10,5 +10,4 @@ pub use self::anonymous::Anonymous;
 pub use self::plain::Plain;
 
 #[cfg(feature = "scram")]
-#[cfg_attr(docsrs, doc(cfg(feature = "scram")))]
 pub use self::scram::Scram;

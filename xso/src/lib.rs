@@ -1,5 +1,5 @@
-#![cfg_attr(docsrs, feature(doc_cfg))]
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 /*!
@@ -23,7 +23,6 @@ use of this library in parsing XML streams like specified in RFC 6120.
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 pub mod error;
 #[cfg(feature = "minidom")]
-#[cfg_attr(docsrs, doc(cfg(feature = "minidom")))]
 pub mod minidom_compat;
 mod rxml_util;
 pub mod text;
@@ -46,7 +45,6 @@ pub use rxml_util::Item;
 #[doc = include_str!("from_xml_doc.md")]
 #[doc(inline)]
 #[cfg(feature = "macros")]
-#[cfg_attr(docsrs, doc(cfg(feature = "macros")))]
 pub use xso_proc::FromXml;
 
 /// # Make a struct or enum serialisable to XML
@@ -58,7 +56,6 @@ pub use xso_proc::FromXml;
 /// documented on [`macro@FromXml`].
 #[doc(inline)]
 #[cfg(feature = "macros")]
-#[cfg_attr(docsrs, doc(cfg(feature = "macros")))]
 pub use xso_proc::AsXml;
 
 /// Trait allowing to iterate a struct's contents as serialisable
@@ -419,7 +416,6 @@ pub fn transform<T: FromXml, F: AsXml>(from: F) -> Result<T, self::error::Error>
 /// function will return the element unharmed if its element header does not
 /// match the expectations of `T`.
 #[cfg(feature = "minidom")]
-#[cfg_attr(docsrs, doc(cfg(feature = "minidom")))]
 pub fn try_from_element<T: FromXml>(
     from: minidom::Element,
 ) -> Result<T, self::error::FromElementError> {

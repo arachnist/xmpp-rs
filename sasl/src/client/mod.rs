@@ -34,7 +34,6 @@ pub enum MechanismError {
 }
 
 #[cfg(feature = "scram")]
-#[cfg_attr(docsrs, doc(cfg(feature = "scram")))]
 impl From<DeriveError> for MechanismError {
     fn from(err: DeriveError) -> MechanismError {
         MechanismError::DeriveError(err)
@@ -42,7 +41,6 @@ impl From<DeriveError> for MechanismError {
 }
 
 #[cfg(feature = "scram")]
-#[cfg_attr(docsrs, doc(cfg(feature = "scram")))]
 impl From<InvalidLength> for MechanismError {
     fn from(err: InvalidLength) -> MechanismError {
         MechanismError::InvalidKeyLength(err)

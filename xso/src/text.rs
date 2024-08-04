@@ -20,7 +20,6 @@ macro_rules! convert_via_fromstr_and_display {
         $(
             $(
                 #[cfg $cfg]
-                #[cfg_attr(docsrs, doc(cfg $cfg))]
             )?
             impl FromXmlText for $t {
                 #[doc = concat!("Parse [`", stringify!($t), "`] from XML text via [`FromStr`][`core::str::FromStr`].")]
@@ -31,7 +30,6 @@ macro_rules! convert_via_fromstr_and_display {
 
             $(
                 #[cfg $cfg]
-                #[cfg_attr(docsrs, doc(cfg $cfg))]
             )?
             impl AsXmlText for $t {
                 #[doc = concat!("Convert [`", stringify!($t), "`] to XML text via [`Display`][`core::fmt::Display`].\n\nThis implementation never fails.")]
@@ -288,11 +286,9 @@ impl TextFilter for StripWhitespace {
 /// of incoming text data. Most interestingly, passing [`StripWhitespace`]
 /// will make the implementation ignore any whitespace within the text.
 #[cfg(feature = "base64")]
-#[cfg_attr(docsrs, doc(cfg(feature = "base64")))]
 pub struct Base64;
 
 #[cfg(feature = "base64")]
-#[cfg_attr(docsrs, doc(cfg(feature = "base64")))]
 impl TextCodec<Vec<u8>> for Base64 {
     fn decode(&self, s: String) -> Result<Vec<u8>, Error> {
         StandardBase64Engine
@@ -306,7 +302,6 @@ impl TextCodec<Vec<u8>> for Base64 {
 }
 
 #[cfg(feature = "base64")]
-#[cfg_attr(docsrs, doc(cfg(feature = "base64")))]
 impl<'x> TextCodec<Cow<'x, [u8]>> for Base64 {
     fn decode(&self, s: String) -> Result<Cow<'x, [u8]>, Error> {
         StandardBase64Engine
@@ -321,7 +316,6 @@ impl<'x> TextCodec<Cow<'x, [u8]>> for Base64 {
 }
 
 #[cfg(feature = "base64")]
-#[cfg_attr(docsrs, doc(cfg(feature = "base64")))]
 impl<T> TextCodec<Option<T>> for Base64
 where
     Base64: TextCodec<T>,
