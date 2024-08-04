@@ -19,23 +19,25 @@ pub struct VersionQuery;
 
 impl IqGetPayload for VersionQuery {}
 
-generate_element!(
-    /// Represents the answer about the software version we are using.
-    ///
-    /// It should only be used in an `<iq type='result'/>`, as it can only
-    /// represent the result, and not a request.
-    VersionResult, "query", VERSION,
-    children: [
-        /// The name of this client.
-        name: Required<String> = ("name", VERSION) => String,
+/// Represents the answer about the software version we are using.
+///
+/// It should only be used in an `<iq type='result'/>`, as it can only
+/// represent the result, and not a request.
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::VERSION, name = "query")]
+pub struct VersionResult {
+    /// The name of this client.
+    #[xml(extract(fields(text)))]
+    pub name: String,
 
-        /// The version of this client.
-        version: Required<String> = ("version", VERSION) => String,
+    /// The version of this client.
+    #[xml(extract(fields(text)))]
+    pub version: String,
 
-        /// The OS this client is running on.
-        os: Option<String> = ("os", VERSION) => String
-    ]
-);
+    /// The OS this client is running on.
+    #[xml(extract(default, fields(text(type_ = String))))]
+    pub os: Option<String>,
+}
 
 impl IqResultPayload for VersionResult {}
 
