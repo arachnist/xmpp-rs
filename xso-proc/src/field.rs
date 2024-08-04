@@ -160,6 +160,150 @@ struct ExtractDef {
     parts: Compound,
 }
 
+impl ExtractDef {
+    /// Construct
+    /// [`FieldBuilderPart::Nested::extra_defs`],
+    /// [`FieldBuilderPart::Nested::matcher`],
+    /// an expression which pulls the extraction result from
+    /// `substate_result`,
+    /// and the [`FieldBuilderPart::Nested::builder`] type.
+    fn make_from_xml_builder_parts(
+        &self,
+        scope: &FromEventsScope,
+        container_name: &ParentRef,
+        member: &Member,
+    ) -> Result<(TokenStream, TokenStream, TokenStream, Type)> {
+        let FromEventsScope {
+            ref substate_result,
+            ..
+        } = scope;
+
+        let xml_namespace = &self.xml_namespace;
+        let xml_name = &self.xml_name;
+
+        let from_xml_builder_ty_ident = scope.make_member_type_name(member, "FromXmlBuilder");
+        let state_ty_ident = quote::format_ident!("{}State", from_xml_builder_ty_ident,);
+
+        let extra_defs = self.parts.make_from_events_statemachine(
+            &state_ty_ident,
+            &container_name.child(member.clone()),
+            "",
+        )?.with_augmented_init(|init| quote! {
+            if name.0 == #xml_namespace && name.1 == #xml_name {
+                #init
+            } else {
+                ::core::result::Result::Err(::xso::error::FromEventsError::Mismatch { name, attrs })
+            }
+        }).compile().render(
+            &Visibility::Inherited,
+            &from_xml_builder_ty_ident,
+            &state_ty_ident,
+            &self.parts.to_tuple_ty().into(),
+        )?;
+        let from_xml_builder_ty = ty_from_ident(from_xml_builder_ty_ident.clone()).into();
+
+        let matcher = quote! { #state_ty_ident::new(name, attrs).map(|x| #from_xml_builder_ty_ident(::core::option::Option::Some(x))) };
+
+        Ok((
+            extra_defs,
+            matcher,
+            // This little ".into()" here goes a long way. It relies on one of
+            // the most underrated trait implementations in the standard
+            // library: `impl From<T> for Option<T>`, which creates a
+            // `Some(_)` from a `T`. Why is it so great? Because there is also
+            // `impl From<Option<T>> for Option<T>` (obviously), which is just
+            // a move. So even without knowing the exact type of the substate
+            // result and the field, we can make an "downcast" to `Option<T>`
+            // if the field is of type `Option<T>`, and it does the right
+            // thing no matter whether the extracted field is of type
+            // `Option<T>` or `T`.
+            //
+            // And then, type inferrence does the rest: There is ambiguity
+            // there, of course, if we call `.into()` on a value of type
+            // `Option<T>`: Should Rust wrap it into another layer of
+            // `Option`, or should it just move the value? The answer lies in
+            // the type constraint imposed by the place the value is *used*,
+            // which is strictly bound by the field's type (so there is, in
+            // fact, no ambiguity). So this works all kinds of magic.
+            quote! { #substate_result.0.into() },
+            from_xml_builder_ty,
+        ))
+    }
+
+    /// Construct
+    /// [`FieldIteratorPart::Content::extra_defs`],
+    /// the [`FieldIteratorPart::Content::value`] init,
+    /// and the iterator type.
+    fn make_as_item_iter_parts(
+        &self,
+        scope: &AsItemsScope,
+        container_name: &ParentRef,
+        bound_name: &Ident,
+        member: &Member,
+    ) -> Result<(TokenStream, TokenStream, Type)> {
+        let AsItemsScope { ref lifetime, .. } = scope;
+
+        let xml_namespace = &self.xml_namespace;
+        let xml_name = &self.xml_name;
+
+        let item_iter_ty_ident = scope.make_member_type_name(member, "AsXmlIterator");
+        let state_ty_ident = quote::format_ident!("{}State", item_iter_ty_ident,);
+        let mut item_iter_ty = ty_from_ident(item_iter_ty_ident.clone());
+        item_iter_ty.path.segments[0].arguments =
+            PathArguments::AngleBracketed(AngleBracketedGenericArguments {
+                colon2_token: None,
+                lt_token: token::Lt::default(),
+                args: [GenericArgument::Lifetime(lifetime.clone())]
+                    .into_iter()
+                    .collect(),
+                gt_token: token::Gt::default(),
+            });
+        let item_iter_ty = item_iter_ty.into();
+
+        let extra_defs = self
+            .parts
+            .make_as_item_iter_statemachine(
+                &container_name.child(member.clone()),
+                &state_ty_ident,
+                "",
+                lifetime,
+            )?
+            .with_augmented_init(|init| {
+                quote! {
+                    let name = (
+                        ::xso::exports::rxml::Namespace::from(#xml_namespace),
+                        ::std::borrow::Cow::Borrowed(#xml_name),
+                    );
+                    #init
+                }
+            })
+            .compile()
+            .render(
+                &Visibility::Inherited,
+                &self.parts.to_ref_tuple_ty(lifetime).into(),
+                &state_ty_ident,
+                lifetime,
+                &item_iter_ty,
+            )?;
+
+        let item_iter_ty = option_as_xml_ty(item_iter_ty);
+        Ok((
+            extra_defs,
+            // Again we exploit the extreme usefulness of the
+            // `impl From<T> for Option<T>`. We already wrote extensively
+            // about that in [`make_from_xml_builder_parts`] implementation
+            // corresponding to this code above, and we will not repeat it
+            // here.
+            quote! {
+                ::xso::OptionAsXml::new(::core::option::Option::from(#bound_name).map(|#bound_name| {
+                    #item_iter_ty_ident::new((#bound_name,))
+                }).transpose()?)
+            },
+            item_iter_ty,
+        ))
+    }
+}
+
 /// Specify how the field is mapped to XML.
 enum FieldKind {
     /// The field maps to an attribute.
@@ -530,81 +674,21 @@ impl FieldDef {
                 ref amount,
                 ref extract,
             } => {
-                let FromEventsScope {
-                    ref substate_result,
-                    ..
-                } = scope;
-                let field_access = scope.access_field(&self.member);
-
                 let element_ty = match amount {
                     AmountConstraint::FixedSingle(_) => self.ty.clone(),
                     AmountConstraint::Any(_) => into_iterator_item_ty(self.ty.clone()),
                 };
 
                 let (extra_defs, matcher, fetch, builder) = match extract {
-                    Some(ExtractDef {
-                        ref xml_namespace,
-                        ref xml_name,
-                        ref parts,
-                    }) => {
-                        let from_xml_builder_ty_ident =
-                            scope.make_member_type_name(&self.member, "FromXmlBuilder");
-                        let state_ty_ident =
-                            quote::format_ident!("{}State", from_xml_builder_ty_ident,);
-
-                        let extra_defs = parts.make_from_events_statemachine(
-                            &state_ty_ident,
-                            &container_name.child(self.member.clone()),
-                            "",
-                        )?.with_augmented_init(|init| quote! {
-                            if name.0 == #xml_namespace && name.1 == #xml_name {
-                                #init
-                            } else {
-                                ::core::result::Result::Err(::xso::error::FromEventsError::Mismatch { name, attrs })
-                            }
-                        }).compile().render(
-                            &Visibility::Inherited,
-                            &from_xml_builder_ty_ident,
-                            &state_ty_ident,
-                            &parts.to_tuple_ty().into(),
-                        )?;
-                        let from_xml_builder_ty =
-                            ty_from_ident(from_xml_builder_ty_ident.clone()).into();
-
-                        let matcher = quote! { #state_ty_ident::new(name, attrs).map(|x| #from_xml_builder_ty_ident(::core::option::Option::Some(x))) };
-
-                        (
-                            extra_defs,
-                            matcher,
-                            // This little ".into()" here goes a long way. It
-                            // relies on one of the most underrated trait
-                            // implementations in the standard library:
-                            // `impl From<T> for Option<T>`, which creates a
-                            // `Some(_)` from a `T`. Why is it so great?
-                            // Because there is also `impl From<Option<T>> for
-                            // Option<T>` (obviously), which is just a move.
-                            // So even without knowing the exact type of the
-                            // substate result and the field, we can make an
-                            // "downcast" to `Option<T>` if the field is of
-                            // type `Option<T>`, and it does the right thing
-                            // no matter whether the extracted field is of
-                            // type `Option<T>` or `T`.
-                            //
-                            // And then, type inferrence does the rest: There
-                            // is ambiguity there, of course, if we call
-                            // `.into()` on a value of type `Option<T>`:
-                            // Should Rust wrap it into another layer of
-                            // `Option`, or should it just move the value? The
-                            // answer lies in the type constraint imposed by
-                            // the place the value is *used*, which is
-                            // strictly bound by the field's type (so there
-                            // is, in fact, no ambiguity). So this works all
-                            // kinds of magic.
-                            quote! { #substate_result.0.into() },
-                            from_xml_builder_ty,
-                        )
+                    Some(extract) => {
+                        extract.make_from_xml_builder_parts(scope, container_name, &self.member)?
                     }
                     None => {
+                        let FromEventsScope {
+                            ref substate_result,
+                            ..
+                        } = scope;
+
                         let from_events = from_events_fn(element_ty.clone());
                         let from_xml_builder = from_xml_builder_ty(element_ty.clone());
 
@@ -620,6 +704,7 @@ impl FieldDef {
                     }
                 };
 
+                let field_access = scope.access_field(&self.member);
                 match amount {
                     AmountConstraint::FixedSingle(_) => {
                         let missing_msg =
@@ -757,67 +842,12 @@ impl FieldDef {
                 };
 
                 let (extra_defs, init, iter_ty) = match extract {
-                    Some(ExtractDef {
-                        ref xml_namespace,
-                        ref xml_name,
-                        ref parts,
-                    }) => {
-                        let item_iter_ty_ident =
-                            scope.make_member_type_name(&self.member, "AsXmlIterator");
-                        let state_ty_ident = quote::format_ident!("{}State", item_iter_ty_ident,);
-                        let mut item_iter_ty = ty_from_ident(item_iter_ty_ident.clone());
-                        item_iter_ty.path.segments[0].arguments =
-                            PathArguments::AngleBracketed(AngleBracketedGenericArguments {
-                                colon2_token: None,
-                                lt_token: token::Lt::default(),
-                                args: [GenericArgument::Lifetime(lifetime.clone())]
-                                    .into_iter()
-                                    .collect(),
-                                gt_token: token::Gt::default(),
-                            });
-                        let item_iter_ty = item_iter_ty.into();
-
-                        let extra_defs = parts
-                            .make_as_item_iter_statemachine(
-                                &container_name.child(self.member.clone()),
-                                &state_ty_ident,
-                                "",
-                                lifetime,
-                            )?
-                            .with_augmented_init(|init| {
-                                quote! {
-                                    let name = (
-                                        ::xso::exports::rxml::Namespace::from(#xml_namespace),
-                                        ::std::borrow::Cow::Borrowed(#xml_name),
-                                    );
-                                    #init
-                                }
-                            })
-                            .compile()
-                            .render(
-                                &Visibility::Inherited,
-                                &parts.to_ref_tuple_ty(lifetime).into(),
-                                &state_ty_ident,
-                                lifetime,
-                                &item_iter_ty,
-                            )?;
-
-                        let item_iter_ty = option_as_xml_ty(item_iter_ty);
-                        (
-                            extra_defs,
-                            // Again we exploit the extreme usefulness of the
-                            // `impl From<T> for Option<T>`. We already wrote
-                            // extensively about that in the FromXml
-                            // implementation corresponding to this code
-                            // above, and we will not repeat it here.
-                            quote! {
-                                ::xso::OptionAsXml::new(::core::option::Option::from(#bound_name).map(|#bound_name| {
-                                    #item_iter_ty_ident::new((#bound_name,))
-                                }).transpose()?)
-                            },
-                            item_iter_ty,
-                        )
-                    }
+                    Some(extract) => extract.make_as_item_iter_parts(
+                        scope,
+                        container_name,
+                        bound_name,
+                        &self.member,
+                    )?,
                     None => {
                         let as_xml_iter = as_xml_iter_fn(item_ty.clone());
                         let item_iter = item_iter_ty(item_ty.clone(), lifetime.clone());
