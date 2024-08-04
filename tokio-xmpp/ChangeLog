@@ -3,6 +3,8 @@ XXXX-YY-ZZ RELEASER <admin@example.com>
     * Breaking:
       - Remove `tokio_xmpp::ParseError` and `tokio_xmpp::starttls::ParseError` which were never used
       - Removed StreamFeatures from this crate, replaced with xmpp_parsers::stream_features::StreamFeatures (!400)
+      - `starttls::error::ConnectorError` variants have been merged with `starttls::error::Error`, except `ConnectorError::AllFailed`
+        which was not used and has been completely removed (!418)
 
 Version 4.0.0:
 2024-07-26 Maxime “pep” Buquet <pep@bouah.net>

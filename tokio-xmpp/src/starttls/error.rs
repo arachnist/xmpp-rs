@@ -13,8 +13,10 @@ use tokio_rustls::rustls::Error as TlsError;
 /// StartTLS ServerConnector Error
 #[derive(Debug)]
 pub enum Error {
-    /// Error resolving DNS and establishing a connection
-    Connection(ConnectorError),
+    /// DNS protocol error
+    Dns(ProtoError),
+    /// DNS resolution error
+    Resolve(ResolveError),
     /// DNS label conversion error, no details available from module
     /// `idna`
     Idna,
@@ -30,7 +32,8 @@ pub enum Error {
 impl fmt::Display for Error {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Error::Connection(e) => write!(fmt, "connection error: {}", e),
+            Error::Dns(e) => write!(fmt, "{:?}", e),
+            Error::Resolve(e) => write!(fmt, "{:?}", e),
             Error::Idna => write!(fmt, "IDNA error"),
             Error::Tls(e) => write!(fmt, "TLS error: {}", e),
             #[cfg(all(feature = "tls-rust", not(feature = "tls-native")))]
@@ -48,12 +51,6 @@ impl From<crate::error::Error> for Error {
     }
 }
 
-impl From<ConnectorError> for Error {
-    fn from(e: ConnectorError) -> Self {
-        Error::Connection(e)
-    }
-}
-
 impl From<TlsError> for Error {
     fn from(e: TlsError) -> Self {
         Error::Tls(e)
@@ -64,24 +61,5 @@ impl From<TlsError> for Error {
 impl From<InvalidDnsNameError> for Error {
     fn from(e: InvalidDnsNameError) -> Self {
         Error::DnsNameError(e)
-    }
-}
-
-/// Error establishing connection
-#[derive(Debug)]
-pub enum ConnectorError {
-    /// All attempts failed, no error available
-    AllFailed,
-    /// DNS protocol error
-    Dns(ProtoError),
-    /// DNS resolution error
-    Resolve(ResolveError),
-}
-
-impl StdError for ConnectorError {}
-
-impl std::fmt::Display for ConnectorError {
-    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(fmt, "{:?}", self)
     }
 }
