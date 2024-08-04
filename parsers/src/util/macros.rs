@@ -366,20 +366,6 @@ macro_rules! check_self {
     };
 }
 
-macro_rules! check_child {
-    ($elem:ident, $name:tt, $ns:ident) => {
-        check_child!($elem, $name, $ns, $name);
-    };
-    ($elem:ident, $name:tt, $ns:ident, $pretty_name:tt) => {
-        if !$elem.is($name, crate::ns::$ns) {
-            return Err(xso::error::Error::Other(
-                concat!("This is not a ", $pretty_name, " element.").into(),
-            )
-            .into());
-        }
-    };
-}
-
 macro_rules! check_ns_only {
     ($elem:ident, $name:tt, $ns:ident) => {
         if !$elem.has_ns(crate::ns::$ns) {

@@ -9,8 +9,6 @@ use xso::{AsXml, FromXml};
 use crate::iq::{IqGetPayload, IqResultPayload, IqSetPayload};
 use crate::ns;
 use jid::Jid;
-use minidom::Element;
-use xso::error::FromElementError;
 
 /// The element requesting the blocklist, the result iq will contain a
 /// [BlocklistResult].
@@ -20,70 +18,40 @@ pub struct BlocklistRequest;
 
 impl IqGetPayload for BlocklistRequest {}
 
-macro_rules! generate_blocking_element {
-    ($(#[$meta:meta])* $elem:ident, $name:tt) => (
-        $(#[$meta])*
-        #[derive(Debug, Clone)]
-        pub struct $elem {
-            /// List of JIDs affected by this command.
-            pub items: Vec<Jid>,
-        }
-
-        impl TryFrom<Element> for $elem {
-            type Error = FromElementError;
-
-            fn try_from(elem: Element) -> Result<$elem, FromElementError> {
-                check_self!(elem, $name, BLOCKING);
-                check_no_attributes!(elem, $name);
-                let mut items = vec!();
-                for child in elem.children() {
-                    check_child!(child, "item", BLOCKING);
-                    check_no_unknown_attributes!(child, "item", ["jid"]);
-                    check_no_children!(child, "item");
-                    items.push(get_attr!(child, "jid", Required));
-                }
-                Ok($elem { items })
-            }
-        }
-
-        impl From<$elem> for Element {
-            fn from(elem: $elem) -> Element {
-                Element::builder($name, ns::BLOCKING)
-                        .append_all(elem.items.into_iter().map(|jid| {
-                             Element::builder("item", ns::BLOCKING)
-                                     .attr("jid", jid)
-                         }))
-                        .build()
-            }
-        }
-    );
+/// The element containing the current blocklist, as a reply from
+/// [BlocklistRequest].
+#[derive(FromXml, AsXml, Debug, Clone, PartialEq)]
+#[xml(namespace = ns::BLOCKING, name = "blocklist")]
+pub struct BlocklistResult {
+    /// List of JIDs affected by this command.
+    #[xml(extract(n = .., name = "item", fields(attribute(name = "jid", type_ = Jid))))]
+    pub items: Vec<Jid>,
 }
-
-generate_blocking_element!(
-    /// The element containing the current blocklist, as a reply from
-    /// [BlocklistRequest].
-    BlocklistResult,
-    "blocklist"
-);
 
 impl IqResultPayload for BlocklistResult {}
 
+/// A query to block one or more JIDs.
 // TODO: Prevent zero elements from being allowed.
-generate_blocking_element!(
-    /// A query to block one or more JIDs.
-    Block,
-    "block"
-);
+#[derive(FromXml, AsXml, Debug, Clone, PartialEq)]
+#[xml(namespace = ns::BLOCKING, name = "block")]
+pub struct Block {
+    /// List of JIDs affected by this command.
+    #[xml(extract(n = .., name = "item", fields(attribute(name = "jid", type_ = Jid))))]
+    pub items: Vec<Jid>,
+}
 
 impl IqSetPayload for Block {}
 
-generate_blocking_element!(
-    /// A query to unblock one or more JIDs, or all of them.
-    ///
-    /// Warning: not putting any JID there means clearing out the blocklist.
-    Unblock,
-    "unblock"
-);
+/// A query to unblock one or more JIDs, or all of them.
+///
+/// Warning: not putting any JID there means clearing out the blocklist.
+#[derive(FromXml, AsXml, Debug, Clone, PartialEq)]
+#[xml(namespace = ns::BLOCKING, name = "unblock")]
+pub struct Unblock {
+    /// List of JIDs affected by this command.
+    #[xml(extract(n = .., name = "item", fields(attribute(name = "jid", type_ = Jid))))]
+    pub items: Vec<Jid>,
+}
 
 impl IqSetPayload for Unblock {}
 
@@ -94,9 +62,10 @@ pub struct Blocked;
 
 #[cfg(test)]
 mod tests {
-    use xso::error::Error;
+    use xso::error::{Error, FromElementError};
 
     use super::*;
+    use minidom::Element;
 
     #[cfg(target_pointer_width = "32")]
     #[test]
@@ -176,7 +145,7 @@ mod tests {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Unknown attribute in blocklist element.");
+        assert_eq!(message, "Unknown attribute in BlocklistResult element.");
 
         let elem: Element = "<block xmlns='urn:xmpp:blocking' coucou=''/>"
             .parse()
@@ -186,7 +155,7 @@ mod tests {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Unknown attribute in block element.");
+        assert_eq!(message, "Unknown attribute in Block element.");
 
         let elem: Element = "<unblock xmlns='urn:xmpp:blocking' coucou=''/>"
             .parse()
@@ -196,7 +165,7 @@ mod tests {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Unknown attribute in unblock element.");
+        assert_eq!(message, "Unknown attribute in Unblock element.");
     }
 
     #[cfg(not(feature = "disable-validation"))]
