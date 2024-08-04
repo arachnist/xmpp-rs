@@ -1035,6 +1035,25 @@ fn optional_attribute_extract_positive_present() {
 }
 
 #[test]
+fn optional_attribute_extract_positive_present_empty() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    match parse_str::<OptionalAttributeExtract>(
+        "<parent xmlns='urn:example:ns1'><child foo=''/></parent>",
+    ) {
+        Ok(OptionalAttributeExtract {
+            contents: Some(contents),
+        }) => {
+            assert_eq!(contents, "");
+        }
+        other => panic!("unexpected result: {:?}", other),
+    }
+}
+
+#[test]
 fn optional_attribute_extract_positive_absent() {
     #[allow(unused_imports)]
     use std::{
@@ -1057,6 +1076,18 @@ fn optional_attribute_extract_roundtrip_present() {
     };
     roundtrip_full::<OptionalAttributeExtract>(
         "<parent xmlns='urn:example:ns1'><child foo='hello world'/></parent>",
+    )
+}
+
+#[test]
+fn optional_attribute_extract_roundtrip_present_empty() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<OptionalAttributeExtract>(
+        "<parent xmlns='urn:example:ns1'><child foo=''/></parent>",
     )
 }
 
