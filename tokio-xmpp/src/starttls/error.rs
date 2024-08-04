@@ -10,6 +10,8 @@ use tokio_rustls::rustls::pki_types::InvalidDnsNameError;
 #[cfg(all(feature = "tls-rust", not(feature = "tls-native")))]
 use tokio_rustls::rustls::Error as TlsError;
 
+use super::ServerConnectorError;
+
 /// StartTLS ServerConnector Error
 #[derive(Debug)]
 pub enum Error {
@@ -25,41 +27,34 @@ pub enum Error {
     #[cfg(all(feature = "tls-rust", not(feature = "tls-native")))]
     /// DNS name parsing error
     DnsNameError(InvalidDnsNameError),
-    /// tokio-xmpp error
-    TokioXMPP(crate::error::Error),
 }
+
+impl ServerConnectorError for Error {}
 
 impl fmt::Display for Error {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Error::Dns(e) => write!(fmt, "{:?}", e),
-            Error::Resolve(e) => write!(fmt, "{:?}", e),
-            Error::Idna => write!(fmt, "IDNA error"),
-            Error::Tls(e) => write!(fmt, "TLS error: {}", e),
+            Self::Dns(e) => write!(fmt, "{:?}", e),
+            Self::Resolve(e) => write!(fmt, "{:?}", e),
+            Self::Idna => write!(fmt, "IDNA error"),
+            Self::Tls(e) => write!(fmt, "TLS error: {}", e),
             #[cfg(all(feature = "tls-rust", not(feature = "tls-native")))]
-            Error::DnsNameError(e) => write!(fmt, "DNS name error: {}", e),
-            Error::TokioXMPP(e) => write!(fmt, "TokioXMPP error: {}", e),
+            Self::DnsNameError(e) => write!(fmt, "DNS name error: {}", e),
         }
     }
 }
 
 impl StdError for Error {}
 
-impl From<crate::error::Error> for Error {
-    fn from(e: crate::error::Error) -> Self {
-        Error::TokioXMPP(e)
-    }
-}
-
 impl From<TlsError> for Error {
     fn from(e: TlsError) -> Self {
-        Error::Tls(e)
+        Self::Tls(e)
     }
 }
 
 #[cfg(all(feature = "tls-rust", not(feature = "tls-native")))]
 impl From<InvalidDnsNameError> for Error {
     fn from(e: InvalidDnsNameError) -> Self {
-        Error::DnsNameError(e)
+        Self::DnsNameError(e)
     }
 }

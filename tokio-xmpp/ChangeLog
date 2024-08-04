@@ -7,6 +7,10 @@ XXXX-YY-ZZ RELEASER <admin@example.com>
         which was not used and has been completely removed (!418)
       - `ProtocolError` and `AuthError` are no longer exported in crate root;
         access them from `error` module (!423)
+      - `connect::ServerConnector` no longer has `Error` associated type, the methods return tokio_xmpp::Error directly,
+        where Connection variant contains any error type that implements connect::ServerConnectorError (!421)
+      - `starttls::Error` no longer has `TokioXMPP` variant ; only tokio_xmpp::Error can contain starttls::Error,
+        not the other way around (!421)
 
 Version 4.0.0:
 2024-07-26 Maxime “pep” Buquet <pep@bouah.net>

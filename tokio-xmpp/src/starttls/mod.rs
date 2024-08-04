@@ -28,10 +28,11 @@ use tokio::{
 use xmpp_parsers::{jid::Jid, ns};
 
 use crate::error::ProtocolError;
+use crate::Error;
 use crate::{connect::ServerConnector, xmpp_codec::Packet, AsyncClient, SimpleClient};
 use crate::{connect::ServerConnectorError, xmpp_stream::XMPPStream};
 
-use self::error::Error;
+use self::error::Error as StartTlsError;
 use self::happy_eyeballs::{connect_to_host, connect_with_srv};
 
 mod client;
@@ -58,11 +59,8 @@ pub enum ServerConfig {
     },
 }
 
-impl ServerConnectorError for Error {}
-
 impl ServerConnector for ServerConfig {
     type Stream = TlsStream<TcpStream>;
-    type Error = Error;
     async fn connect(&self, jid: &Jid, ns: &str) -> Result<XMPPStream<Self::Stream>, Error> {
         // TCP connection
         let tcp_stream = match self {
@@ -100,11 +98,9 @@ impl ServerConnector for ServerConfig {
                 // TODO: Add support for TLS 1.2 and earlier.
                 Some(tokio_rustls::rustls::ProtocolVersion::TLSv1_3) => {
                     let data = vec![0u8; 32];
-                    let data = connection.export_keying_material(
-                        data,
-                        b"EXPORTER-Channel-Binding",
-                        None,
-                    )?;
+                    let data = connection
+                        .export_keying_material(data, b"EXPORTER-Channel-Binding", None)
+                        .map_err(|e| StartTlsError::Tls(e))?;
                     ChannelBinding::TlsExporter(data)
                 }
                 _ => ChannelBinding::None,
@@ -121,7 +117,8 @@ async fn get_tls_stream<S: AsyncRead + AsyncWrite + Unpin>(
     let stream = xmpp_stream.into_inner();
     let tls_stream = TlsConnector::from(NativeTlsConnector::builder().build().unwrap())
         .connect(&domain, stream)
-        .await?;
+        .await
+        .map_err(|e| StartTlsError::Tls(e))?;
     Ok(tls_stream)
 }
 
@@ -130,7 +127,7 @@ async fn get_tls_stream<S: AsyncRead + AsyncWrite + Unpin>(
     xmpp_stream: XMPPStream<S>,
 ) -> Result<TlsStream<S>, Error> {
     let domain = xmpp_stream.jid.domain().to_string();
-    let domain = ServerName::try_from(domain)?;
+    let domain = ServerName::try_from(domain).map_err(|e| StartTlsError::DnsNameError(e))?;
     let stream = xmpp_stream.into_inner();
     let root_store = RootCertStore {
         roots: webpki_roots::TLS_SERVER_ROOTS.into(),

@@ -4,13 +4,9 @@ use std::sync::Arc;
 
 use tokio::net::TcpStream;
 
-use crate::{
-    connect::{ServerConnector, ServerConnectorError},
-    xmpp_stream::XMPPStream,
-    Component,
-};
+use crate::{connect::ServerConnector, xmpp_stream::XMPPStream, Component};
 
-use self::error::Error;
+use crate::Error;
 
 mod component;
 pub mod error;
@@ -31,16 +27,13 @@ impl TcpServerConnector {
     }
 }
 
-impl ServerConnectorError for Error {}
-
 impl ServerConnector for TcpServerConnector {
     type Stream = TcpStream;
-    type Error = Error;
     async fn connect(
         &self,
         jid: &xmpp_parsers::jid::Jid,
         ns: &str,
-    ) -> Result<XMPPStream<Self::Stream>, Self::Error> {
+    ) -> Result<XMPPStream<Self::Stream>, Error> {
         let stream = TcpStream::connect(&*self.0)
             .await
             .map_err(|e| crate::Error::Io(e))?;

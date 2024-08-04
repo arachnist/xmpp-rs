@@ -1,4 +1,5 @@
-use super::error::Error;
+use super::error::Error as StartTlsError;
+use crate::Error;
 use futures::{future::select_ok, FutureExt};
 use hickory_resolver::{
     config::LookupIpStrategy, name_server::TokioConnectionProvider, IntoName, TokioAsyncResolver,
@@ -8,23 +9,21 @@ use std::net::SocketAddr;
 use tokio::net::TcpStream;
 
 pub async fn connect_to_host(domain: &str, port: u16) -> Result<TcpStream, Error> {
-    let ascii_domain = idna::domain_to_ascii(&domain).map_err(|_| Error::Idna)?;
+    let ascii_domain = idna::domain_to_ascii(&domain).map_err(|_| StartTlsError::Idna)?;
 
     if let Ok(ip) = ascii_domain.parse() {
-        return Ok(TcpStream::connect(&SocketAddr::new(ip, port))
-            .await
-            .map_err(|e| Error::from(crate::Error::Io(e)))?);
+        return Ok(TcpStream::connect(&SocketAddr::new(ip, port)).await?);
     }
 
     let (config, mut options) =
-        hickory_resolver::system_conf::read_system_conf().map_err(Error::Resolve)?;
+        hickory_resolver::system_conf::read_system_conf().map_err(StartTlsError::Resolve)?;
     options.ip_strategy = LookupIpStrategy::Ipv4AndIpv6;
     let resolver = TokioAsyncResolver::new(config, options, TokioConnectionProvider::default());
 
     let ips = resolver
         .lookup_ip(ascii_domain)
         .await
-        .map_err(Error::Resolve)?;
+        .map_err(StartTlsError::Resolve)?;
     // Happy Eyeballs: connect to all records in parallel, return the
     // first to succeed
     select_ok(
@@ -33,7 +32,7 @@ pub async fn connect_to_host(domain: &str, port: u16) -> Result<TcpStream, Error
     )
     .await
     .map(|(result, _)| result)
-    .map_err(|_| crate::Error::Disconnected.into())
+    .map_err(|_| crate::Error::Disconnected)
 }
 
 pub async fn connect_with_srv(
@@ -41,20 +40,18 @@ pub async fn connect_with_srv(
     srv: &str,
     fallback_port: u16,
 ) -> Result<TcpStream, Error> {
-    let ascii_domain = idna::domain_to_ascii(&domain).map_err(|_| Error::Idna)?;
+    let ascii_domain = idna::domain_to_ascii(&domain).map_err(|_| StartTlsError::Idna)?;
 
     if let Ok(ip) = ascii_domain.parse() {
         debug!("Attempting connection to {ip}:{fallback_port}");
-        return Ok(TcpStream::connect(&SocketAddr::new(ip, fallback_port))
-            .await
-            .map_err(|e| Error::from(crate::Error::Io(e)))?);
+        return Ok(TcpStream::connect(&SocketAddr::new(ip, fallback_port)).await?);
     }
 
-    let resolver = TokioAsyncResolver::tokio_from_system_conf().map_err(Error::Resolve)?;
+    let resolver = TokioAsyncResolver::tokio_from_system_conf().map_err(StartTlsError::Resolve)?;
 
     let srv_domain = format!("{}.{}.", srv, ascii_domain)
         .into_name()
-        .map_err(Error::Dns)?;
+        .map_err(StartTlsError::Dns)?;
     let srv_records = resolver.srv_lookup(srv_domain.clone()).await.ok();
 
     match srv_records {
