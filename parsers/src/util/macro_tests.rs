@@ -1287,3 +1287,236 @@ fn text_extract_attribute_vec_roundtrip() {
         "<parent xmlns='urn:example:ns1'><child attr='hello'/><child attr='world'/></parent>",
     )
 }
+
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = NS1, name = "parent")]
+struct TextOptionalExtract {
+    #[xml(extract(namespace = NS1, name = "child", default, fields(text(type_ = String))))]
+    contents: ::std::option::Option<String>,
+}
+
+#[test]
+fn text_optional_extract_positive_present() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    match parse_str::<TextOptionalExtract>(
+        "<parent xmlns='urn:example:ns1'><child>hello world</child></parent>",
+    ) {
+        Ok(TextOptionalExtract {
+            contents: Some(contents),
+        }) => {
+            assert_eq!(contents, "hello world");
+        }
+        other => panic!("unexpected result: {:?}", other),
+    }
+}
+
+#[test]
+fn text_optional_extract_positive_absent_child() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    match parse_str::<TextOptionalExtract>("<parent xmlns='urn:example:ns1'/>") {
+        Ok(TextOptionalExtract { contents: None }) => (),
+        other => panic!("unexpected result: {:?}", other),
+    }
+}
+
+#[test]
+fn text_optional_extract_roundtrip_present() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<TextOptionalExtract>(
+        "<parent xmlns='urn:example:ns1'><child>hello world!</child></parent>",
+    )
+}
+
+#[test]
+fn text_optional_extract_roundtrip_absent() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<TextOptionalExtract>("<parent xmlns='urn:example:ns1'/>")
+}
+
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = NS1, name = "parent")]
+struct OptionalAttributeOptionalExtract {
+    #[xml(extract(namespace = NS1, name = "child", default, fields(attribute(name = "foo", default))))]
+    contents: ::std::option::Option<String>,
+}
+
+#[test]
+fn optional_attribute_optional_extract_positive_present() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    match parse_str::<OptionalAttributeOptionalExtract>(
+        "<parent xmlns='urn:example:ns1'><child foo='hello world'/></parent>",
+    ) {
+        Ok(OptionalAttributeOptionalExtract {
+            contents: Some(contents),
+        }) => {
+            assert_eq!(contents, "hello world");
+        }
+        other => panic!("unexpected result: {:?}", other),
+    }
+}
+
+#[test]
+fn optional_attribute_optional_extract_positive_absent_attribute() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    match parse_str::<OptionalAttributeOptionalExtract>(
+        "<parent xmlns='urn:example:ns1'><child/></parent>",
+    ) {
+        Ok(OptionalAttributeOptionalExtract { contents: None }) => (),
+        other => panic!("unexpected result: {:?}", other),
+    }
+}
+
+#[test]
+fn optional_attribute_optional_extract_positive_absent_element() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    match parse_str::<OptionalAttributeOptionalExtract>("<parent xmlns='urn:example:ns1'/>") {
+        Ok(OptionalAttributeOptionalExtract { contents: None }) => (),
+        other => panic!("unexpected result: {:?}", other),
+    }
+}
+
+#[test]
+fn optional_attribute_optional_extract_roundtrip_present() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<OptionalAttributeOptionalExtract>(
+        "<parent xmlns='urn:example:ns1'><child foo='hello world'/></parent>",
+    )
+}
+
+#[test]
+fn optional_attribute_optional_extract_roundtrip_absent_attribute() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<OptionalAttributeOptionalExtract>(
+        "<parent xmlns='urn:example:ns1'><child/></parent>",
+    )
+}
+
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = NS1, name = "parent")]
+struct OptionalAttributeOptionalExtractDoubleOption {
+    #[xml(extract(namespace = NS1, name = "child", default, fields(attribute(name = "foo", type_ = ::std::option::Option<String>, default))))]
+    contents: ::std::option::Option<::std::option::Option<String>>,
+}
+
+#[test]
+fn optional_attribute_optional_extract_double_option_positive_present() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    match parse_str::<OptionalAttributeOptionalExtractDoubleOption>(
+        "<parent xmlns='urn:example:ns1'><child foo='hello world'/></parent>",
+    ) {
+        Ok(OptionalAttributeOptionalExtractDoubleOption {
+            contents: Some(Some(contents)),
+        }) => {
+            assert_eq!(contents, "hello world");
+        }
+        other => panic!("unexpected result: {:?}", other),
+    }
+}
+
+#[test]
+fn optional_attribute_optional_extract_double_option_positive_absent_attribute() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    match parse_str::<OptionalAttributeOptionalExtractDoubleOption>(
+        "<parent xmlns='urn:example:ns1'><child/></parent>",
+    ) {
+        Ok(OptionalAttributeOptionalExtractDoubleOption {
+            contents: Some(None),
+        }) => (),
+        other => panic!("unexpected result: {:?}", other),
+    }
+}
+
+#[test]
+fn optional_attribute_optional_extract_double_option_positive_absent_element() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    match parse_str::<OptionalAttributeOptionalExtractDoubleOption>(
+        "<parent xmlns='urn:example:ns1'/>",
+    ) {
+        Ok(OptionalAttributeOptionalExtractDoubleOption { contents: None }) => (),
+        other => panic!("unexpected result: {:?}", other),
+    }
+}
+
+#[test]
+fn optional_attribute_optional_extract_double_option_roundtrip_present() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<OptionalAttributeOptionalExtractDoubleOption>(
+        "<parent xmlns='urn:example:ns1'><child foo='hello world'/></parent>",
+    )
+}
+
+#[test]
+fn optional_attribute_optional_extract_double_option_roundtrip_absent_attribute() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<OptionalAttributeOptionalExtractDoubleOption>(
+        "<parent xmlns='urn:example:ns1'><child/></parent>",
+    )
+}
+
+#[test]
+fn optional_attribute_optional_extract_double_option_roundtrip_absent_child() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<OptionalAttributeOptionalExtractDoubleOption>(
+        "<parent xmlns='urn:example:ns1'/>",
+    )
+}

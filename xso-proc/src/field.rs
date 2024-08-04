@@ -19,8 +19,8 @@ use crate::scope::{AsItemsScope, FromEventsScope};
 use crate::types::{
     as_optional_xml_text_fn, as_xml_iter_fn, as_xml_text_fn, default_fn, extend_fn, from_events_fn,
     from_xml_builder_ty, from_xml_text_fn, into_iterator_into_iter_fn, into_iterator_item_ty,
-    into_iterator_iter_ty, item_iter_ty, option_ty, ref_ty, string_ty, text_codec_decode_fn,
-    text_codec_encode_fn, ty_from_ident,
+    into_iterator_iter_ty, item_iter_ty, option_as_xml_ty, option_ty, ref_ty, string_ty,
+    text_codec_decode_fn, text_codec_encode_fn, ty_from_ident,
 };
 
 /// Code slices necessary for declaring and initializing a temporary variable
@@ -306,6 +306,7 @@ impl FieldKind {
 
             XmlFieldMeta::Extract {
                 span,
+                default_,
                 qname: QNameRef { namespace, name },
                 amount,
                 fields,
@@ -352,7 +353,7 @@ impl FieldKind {
                 )?;
 
                 Ok(Self::Child {
-                    default_: Flag::Absent,
+                    default_,
                     amount,
                     extract: Some(ExtractDef {
                         xml_namespace,
@@ -565,12 +566,7 @@ impl FieldDef {
                             &Visibility::Inherited,
                             &from_xml_builder_ty_ident,
                             &state_ty_ident,
-                            &Type::Tuple(TypeTuple {
-                                paren_token: token::Paren::default(),
-                                elems: [
-                                    element_ty.clone(),
-                                ].into_iter().collect(),
-                            })
+                            &parts.to_tuple_ty().into(),
                         )?;
                         let from_xml_builder_ty =
                             ty_from_ident(from_xml_builder_ty_ident.clone()).into();
@@ -580,7 +576,31 @@ impl FieldDef {
                         (
                             extra_defs,
                             matcher,
-                            quote! { #substate_result.0 },
+                            // This little ".into()" here goes a long way. It
+                            // relies on one of the most underrated trait
+                            // implementations in the standard library:
+                            // `impl From<T> for Option<T>`, which creates a
+                            // `Some(_)` from a `T`. Why is it so great?
+                            // Because there is also `impl From<Option<T>> for
+                            // Option<T>` (obviously), which is just a move.
+                            // So even without knowing the exact type of the
+                            // substate result and the field, we can make an
+                            // "downcast" to `Option<T>` if the field is of
+                            // type `Option<T>`, and it does the right thing
+                            // no matter whether the extracted field is of
+                            // type `Option<T>` or `T`.
+                            //
+                            // And then, type inferrence does the rest: There
+                            // is ambiguity there, of course, if we call
+                            // `.into()` on a value of type `Option<T>`:
+                            // Should Rust wrap it into another layer of
+                            // `Option`, or should it just move the value? The
+                            // answer lies in the type constraint imposed by
+                            // the place the value is *used*, which is
+                            // strictly bound by the field's type (so there
+                            // is, in fact, no ambiguity). So this works all
+                            // kinds of magic.
+                            quote! { #substate_result.0.into() },
                             from_xml_builder_ty,
                         )
                     }
@@ -736,7 +756,7 @@ impl FieldDef {
                     }
                 };
 
-                let (extra_defs, fetch, as_xml_iter, iter_ty) = match extract {
+                let (extra_defs, init, iter_ty) = match extract {
                     Some(ExtractDef {
                         ref xml_namespace,
                         ref xml_name,
@@ -776,21 +796,25 @@ impl FieldDef {
                             .compile()
                             .render(
                                 &Visibility::Inherited,
-                                &Type::Tuple(TypeTuple {
-                                    paren_token: token::Paren::default(),
-                                    elems: [ref_ty(item_ty.clone(), lifetime.clone())]
-                                        .into_iter()
-                                        .collect(),
-                                }),
+                                &parts.to_ref_tuple_ty(lifetime).into(),
                                 &state_ty_ident,
                                 lifetime,
                                 &item_iter_ty,
                             )?;
 
+                        let item_iter_ty = option_as_xml_ty(item_iter_ty);
                         (
                             extra_defs,
-                            quote! { (&#bound_name,) },
-                            quote! { #item_iter_ty_ident::new },
+                            // Again we exploit the extreme usefulness of the
+                            // `impl From<T> for Option<T>`. We already wrote
+                            // extensively about that in the FromXml
+                            // implementation corresponding to this code
+                            // above, and we will not repeat it here.
+                            quote! {
+                                ::xso::OptionAsXml::new(::core::option::Option::from(#bound_name).map(|#bound_name| {
+                                    #item_iter_ty_ident::new((#bound_name,))
+                                }).transpose()?)
+                            },
                             item_iter_ty,
                         )
                     }
@@ -800,8 +824,7 @@ impl FieldDef {
 
                         (
                             TokenStream::default(),
-                            quote! { #bound_name },
-                            quote! { #as_xml_iter },
+                            quote! { #as_xml_iter(#bound_name)? },
                             item_iter,
                         )
                     }
@@ -810,12 +833,7 @@ impl FieldDef {
                 match amount {
                     AmountConstraint::FixedSingle(_) => Ok(FieldIteratorPart::Content {
                         extra_defs,
-                        value: FieldTempInit {
-                            init: quote! {
-                                #as_xml_iter(#fetch)?
-                            },
-                            ty: iter_ty,
-                        },
+                        value: FieldTempInit { init, ty: iter_ty },
                         generator: quote! {
                             #bound_name.next().transpose()
                         },
@@ -853,7 +871,10 @@ impl FieldDef {
                                         }
                                     }
                                     if let ::core::option::Option::Some(item) = #bound_name.0.next() {
-                                        #bound_name.1 = ::core::option::Option::Some(#as_xml_iter({ let #bound_name = item; #fetch })?)
+                                        #bound_name.1 = ::core::option::Option::Some({
+                                            let #bound_name = item;
+                                            #init
+                                        });
                                     } else {
                                         break ::core::result::Result::Ok(::core::option::Option::None)
                                     }

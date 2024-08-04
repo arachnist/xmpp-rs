@@ -680,6 +680,9 @@ pub(crate) enum XmlFieldMeta {
         /// The `n` flag.
         amount: Option<AmountConstraint>,
 
+        /// The `default` flag.
+        default_: Flag,
+
         /// The `fields` nested meta.
         fields: Vec<XmlFieldMeta>,
     },
@@ -859,8 +862,15 @@ impl XmlFieldMeta {
         let mut qname = QNameRef::default();
         let mut fields = None;
         let mut amount = None;
+        let mut default_ = Flag::Absent;
         meta.parse_nested_meta(|meta| {
-            if meta.path.is_ident("fields") {
+            if meta.path.is_ident("default") {
+                if default_.is_set() {
+                    return Err(Error::new_spanned(meta.path, "duplicate `default` key"));
+                }
+                default_ = (&meta.path).into();
+                Ok(())
+            } else if meta.path.is_ident("fields") {
                 if let Some((fields_span, _)) = fields.as_ref() {
                     let mut error = Error::new_spanned(meta.path, "duplicate `fields` meta");
                     error.combine(Error::new(*fields_span, "previous `fields` meta was here"));
@@ -889,6 +899,7 @@ impl XmlFieldMeta {
         let fields = fields.map(|(_, x)| x).unwrap_or_else(Vec::new);
         Ok(Self::Extract {
             span: meta.path.span(),
+            default_,
             qname,
             fields,
             amount,

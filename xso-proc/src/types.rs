@@ -753,3 +753,33 @@ pub(crate) fn ty_from_ident(ident: Ident) -> TypePath {
         path: ident.into(),
     }
 }
+
+/// Construct a [`syn::Type`] referring to `xso::OptionAsXml<#inner_ty>`.
+pub(crate) fn option_as_xml_ty(inner_ty: Type) -> Type {
+    let span = inner_ty.span();
+    Type::Path(TypePath {
+        qself: None,
+        path: Path {
+            leading_colon: Some(syn::token::PathSep {
+                spans: [span, span],
+            }),
+            segments: [
+                PathSegment {
+                    ident: Ident::new("xso", span),
+                    arguments: PathArguments::None,
+                },
+                PathSegment {
+                    ident: Ident::new("OptionAsXml", span),
+                    arguments: PathArguments::AngleBracketed(AngleBracketedGenericArguments {
+                        colon2_token: None,
+                        lt_token: token::Lt { spans: [span] },
+                        args: [GenericArgument::Type(inner_ty)].into_iter().collect(),
+                        gt_token: token::Gt { spans: [span] },
+                    }),
+                },
+            ]
+            .into_iter()
+            .collect(),
+        },
+    })
+}

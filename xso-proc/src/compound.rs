@@ -15,7 +15,7 @@ use crate::field::{FieldBuilderPart, FieldDef, FieldIteratorPart, FieldTempInit}
 use crate::meta::NamespaceRef;
 use crate::scope::{mangle_member, AsItemsScope, FromEventsScope};
 use crate::state::{AsItemsSubmachine, FromEventsSubmachine, State};
-use crate::types::{feed_fn, namespace_ty, ncnamestr_cow_ty, phantom_lifetime_ty};
+use crate::types::{feed_fn, namespace_ty, ncnamestr_cow_ty, phantom_lifetime_ty, ref_ty};
 
 /// A struct or enum variant's contents.
 pub(crate) struct Compound {
@@ -516,5 +516,28 @@ impl Compound {
                 Self::#element_head_start_state_ident { #dummy_ident: ::core::marker::PhantomData, #name_ident: name.1, #ns_ident: name.0, #start_init }
             },
         })
+    }
+
+    /// Construct a tuple type with this compound's field's types in the same
+    /// order as they appear in the compound.
+    pub(crate) fn to_tuple_ty(&self) -> TypeTuple {
+        TypeTuple {
+            paren_token: token::Paren::default(),
+            elems: self.fields.iter().map(|x| x.ty().clone()).collect(),
+        }
+    }
+
+    /// Construct a tuple type with references to this compound's field's
+    /// types in the same order as they appear in the compound, with the given
+    /// lifetime.
+    pub(crate) fn to_ref_tuple_ty(&self, lifetime: &Lifetime) -> TypeTuple {
+        TypeTuple {
+            paren_token: token::Paren::default(),
+            elems: self
+                .fields
+                .iter()
+                .map(|x| ref_ty(x.ty().clone(), lifetime.clone()))
+                .collect(),
+        }
     }
 }

@@ -86,6 +86,17 @@ pub trait AsXml {
 /// Helper iterator to convert an `Option<T>` to XML.
 pub struct OptionAsXml<T: Iterator>(Option<T>);
 
+impl<T: Iterator> OptionAsXml<T> {
+    /// Construct a new iterator, wrapping the given iterator.
+    ///
+    /// If `inner` is `None`, this iterator terminates immediately. Otherwise,
+    /// it yields the elements yielded by `inner` until `inner` finishes,
+    /// after which this iterator completes, too.
+    pub fn new(inner: Option<T>) -> Self {
+        Self(inner)
+    }
+}
+
 impl<'x, T: Iterator<Item = Result<Item<'x>, self::error::Error>>> Iterator for OptionAsXml<T> {
     type Item = Result<Item<'x>, self::error::Error>;
 

@@ -251,6 +251,11 @@ implement the `Default` trait for a `FromXml` derivation. `default` has no
 influence on `AsXml`. Combining `default` and `n` where `n` is not set to `1`
 is not supported and will cause a compile-time error.
 
+Using `default` with a type other than `Option<T>` will cause the
+serialisation to mismatch the deserialisation (i.e. the struct is then not
+roundtrip-safe), because the deserialisation does not compare the value
+against `default` (but has special provisions to work with `Option<T>`).
+
 ##### Example
 
 ```rust
@@ -313,6 +318,7 @@ The following keys can be used inside the `#[xml(extract(..))]` meta:
 | --- | --- | --- |
 | `namespace` | *string literal* or *path* | The XML namespace of the child element. |
 | `name` | *string literal* or *path* | The XML name of the child element. If it is a *path*, it must point at a `&'static NcNameStr`. |
+| `default` | flag | If present, an absent child will substitute the default value instead of raising an error. |
 | `n` | `1` or `..` | If `1`, a single element is parsed. If `..`, a collection is parsed. Defaults to `1`. |
 | `fields` | *nested* | A list of [field meta](#field-meta) which describe the contents of the child element. |
 
@@ -341,8 +347,30 @@ tuple-style struct. The macro generates serialisation/deserialisation code
 for that nameless tuple-style struct and uses it to serialise/deserialise
 the field.
 
+If `default` is specified and the child is absent in the source, the value
+is generated using [`core::default::Default`], requiring the field type to
+implement the `Default` trait for a `FromXml` derivation. `default` has no
+influence on `AsXml`. Combining `default` and `n` where `n` is not set to `1`
+is not supported and will cause a compile-time error.
+
+Mixing `default` on the `#[xml(extract)]` itself with `default` on the
+extracted inner fields creates non-roundtrip-safe parsing, unless you also
+use twice-nested [`core::option::Option`] types. That means that when
+deserialising a piece of XML and reserialising it without changing the
+contents of the struct in Rust, the resulting XML may not match the input.
+This is because to the serialiser, if only one layer of
+[`core::option::Option`] is used, it is not possible to distinguish which of
+the two layers were defaulted. The exact behaviour on serialisation in such a
+situation is *not guaranteed* and may change between versions of the `xso`
+crate, its dependencies, the standard library, or even rustc itself.
+
+Using `default` with a type other than `Option<T>` will cause the
+serialisation to mismatch the deserialisation, too (i.e. the struct is then
+not roundtrip-safe), because the deserialisation does not compare the value
+against `default` (but has special provisions to work with `Option<T>`).
+
 **Note:** Currently, only a single field can be extracted. This restriction
-will be lifted in the future. Collections are not supported yet, either.
+will be lifted in the future.
 
 Using `extract` instead of `child` combined with a specific struct declaration
 comes with trade-offs. On the one hand, using `extract` gives you flexibility
