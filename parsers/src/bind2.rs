@@ -4,6 +4,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use xso::{AsXml, FromXml};
+
 use crate::mam;
 use crate::ns;
 use minidom::Element;
@@ -11,68 +13,12 @@ use xso::error::{Error, FromElementError};
 
 /// Represents the `<bind/>` element, as sent by the server in SASL 2 to advertise which features
 /// can be enabled during the binding step.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(FromXml, AsXml, Debug, Clone, PartialEq)]
+#[xml(namespace = ns::BIND2, name = "bind")]
 pub struct BindFeature {
     /// The features that can be enabled by the client.
+    #[xml(extract(name = "inline", fields(extract(n = .., name = "feature", fields(attribute(name = "var", type_ = String))))))]
     pub inline_features: Vec<String>,
-}
-
-impl TryFrom<Element> for BindFeature {
-    type Error = FromElementError;
-
-    fn try_from(root: Element) -> Result<BindFeature, Self::Error> {
-        check_self!(root, "bind", BIND2);
-        check_no_attributes!(root, "bind");
-
-        let mut inline = None;
-        for child in root.children() {
-            if child.is("inline", ns::BIND2) {
-                if inline.is_some() {
-                    return Err(
-                        Error::Other("Bind must not have more than one inline element.").into(),
-                    );
-                }
-                check_no_attributes!(child, "inline");
-                inline = Some(child);
-            } else {
-                return Err(Error::Other("Unknown element in Bind.").into());
-            }
-        }
-
-        let mut inline_features = Vec::new();
-        if let Some(inline) = inline {
-            for child in inline.children() {
-                if child.is("feature", ns::BIND2) {
-                    check_no_children!(child, "feature");
-                    check_no_unknown_attributes!(child, "feature", ["var"]);
-                    let var = get_attr!(child, "var", Required);
-                    inline_features.push(var);
-                } else {
-                    return Err(Error::Other("Unknown element in Inline.").into());
-                }
-            }
-        }
-
-        Ok(BindFeature { inline_features })
-    }
-}
-
-impl From<BindFeature> for Element {
-    fn from(bind: BindFeature) -> Element {
-        Element::builder("bind", ns::BIND2)
-            .append_all(if bind.inline_features.is_empty() {
-                None
-            } else {
-                Some(
-                    Element::builder("inline", ns::BIND2).append_all(
-                        bind.inline_features
-                            .into_iter()
-                            .map(|var| Element::builder("feature", ns::BIND2).attr("var", var)),
-                    ),
-                )
-            })
-            .build()
-    }
 }
 
 /// Represents a `<bind/>` element, as sent by the client inline in the `<authenticate/>` SASL 2
