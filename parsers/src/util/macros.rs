@@ -275,6 +275,23 @@ macro_rules! generate_attribute {
                 $elem($default)
             }
         }
+        impl ::xso::FromXmlText for $elem {
+            fn from_xml_text(s: String) -> Result<$elem, xso::error::Error> {
+                s.parse().map_err(xso::error::Error::text_parse_error)
+            }
+        }
+        impl ::xso::AsXmlText for $elem {
+            fn as_xml_text(&self) -> Result<::std::borrow::Cow<'_, str>, xso::error::Error> {
+                Ok(::std::borrow::Cow::Owned(format!("{}", self.0)))
+            }
+
+            fn as_optional_xml_text(&self) -> Result<Option<::std::borrow::Cow<'_, str>>, xso::error::Error> {
+                match self.0 {
+                    $default => Ok(None),
+                    _ => Ok(Some(::std::borrow::Cow::Owned(format!("{}", self.0)))),
+                }
+            }
+        }
     );
 }
 
