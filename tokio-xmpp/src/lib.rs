@@ -38,8 +38,10 @@ pub use client::{
 };
 mod component;
 pub use crate::component::Component;
-mod error;
-pub use crate::error::{AuthError, Error, ProtocolError};
+/// Detailed error types
+pub mod error;
+/// Generic tokio_xmpp Error
+pub use crate::error::Error;
 
 // Re-exports
 pub use minidom;

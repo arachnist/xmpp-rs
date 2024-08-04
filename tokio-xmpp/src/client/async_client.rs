@@ -8,10 +8,10 @@ use xmpp_parsers::{jid::Jid, ns, stream_features::StreamFeatures};
 
 use super::connect::client_login;
 use crate::connect::{AsyncReadAndWrite, ServerConnector};
+use crate::error::{Error, ProtocolError};
 use crate::event::Event;
 use crate::xmpp_codec::Packet;
 use crate::xmpp_stream::{add_stanza_id, XMPPStream};
-use crate::{Error, ProtocolError};
 
 /// XMPP client connection and state
 ///

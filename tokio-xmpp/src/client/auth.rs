@@ -8,9 +8,9 @@ use std::str::FromStr;
 use tokio::io::{AsyncRead, AsyncWrite};
 use xmpp_parsers::sasl::{Auth, Challenge, Failure, Mechanism as XMPPMechanism, Response, Success};
 
+use crate::error::{AuthError, Error, ProtocolError};
 use crate::xmpp_codec::Packet;
 use crate::xmpp_stream::XMPPStream;
-use crate::{AuthError, Error, ProtocolError};
 
 pub async fn auth<S: AsyncRead + AsyncWrite + Unpin>(
     mut stream: XMPPStream<S>,

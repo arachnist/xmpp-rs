@@ -27,6 +27,7 @@ use tokio::{
 };
 use xmpp_parsers::{jid::Jid, ns};
 
+use crate::error::ProtocolError;
 use crate::{connect::ServerConnector, xmpp_codec::Packet, AsyncClient, SimpleClient};
 use crate::{connect::ServerConnectorError, xmpp_stream::XMPPStream};
 
@@ -80,7 +81,7 @@ impl ServerConnector for ServerConfig {
             // Encrypted XMPPStream
             Ok(XMPPStream::start(tls_stream, jid.clone(), ns.to_owned()).await?)
         } else {
-            return Err(crate::Error::Protocol(crate::ProtocolError::NoTls).into());
+            return Err(crate::Error::Protocol(ProtocolError::NoTls).into());
         }
     }
 
@@ -159,7 +160,7 @@ pub async fn starttls<S: AsyncRead + AsyncWrite + Unpin>(
             Some(Ok(Packet::Text(_))) => {}
             Some(Err(e)) => return Err(e.into()),
             _ => {
-                return Err(crate::Error::Protocol(crate::ProtocolError::NoTls).into());
+                return Err(crate::Error::Protocol(ProtocolError::NoTls).into());
             }
         }
     }

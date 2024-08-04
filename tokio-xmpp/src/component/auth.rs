@@ -2,9 +2,9 @@ use futures::stream::StreamExt;
 use tokio::io::{AsyncRead, AsyncWrite};
 use xmpp_parsers::{component::Handshake, ns};
 
+use crate::error::{AuthError, Error};
 use crate::xmpp_codec::Packet;
 use crate::xmpp_stream::XMPPStream;
-use crate::{AuthError, Error};
 
 pub async fn auth<S: AsyncRead + AsyncWrite + Unpin>(
     stream: &mut XMPPStream<S>,

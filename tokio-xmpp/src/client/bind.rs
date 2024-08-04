@@ -3,9 +3,9 @@ use tokio::io::{AsyncRead, AsyncWrite};
 use xmpp_parsers::bind::{BindQuery, BindResponse};
 use xmpp_parsers::iq::{Iq, IqType};
 
+use crate::error::{Error, ProtocolError};
 use crate::xmpp_codec::Packet;
 use crate::xmpp_stream::XMPPStream;
-use crate::{Error, ProtocolError};
 
 const BIND_REQ_ID: &str = "resource-bind";
 
