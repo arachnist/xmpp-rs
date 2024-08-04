@@ -63,17 +63,18 @@ impl History {
     }
 }
 
-generate_element!(
-    /// Represents a room join request.
-    #[derive(Default)]
-    Muc, "x", MUC, children: [
-        /// Password to use when the room is protected by a password.
-        password: Option<String> = ("password", MUC) => String,
+/// Represents a room join request.
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone, Default)]
+#[xml(namespace = ns::MUC, name = "x")]
+pub struct Muc {
+    /// Password to use when the room is protected by a password.
+    #[xml(extract(default, fields(text(type_ = String))))]
+    pub password: Option<String>,
 
-        /// Controls how much and how old we want to receive history on join.
-        history: Option<History> = ("history", MUC) => History
-    ]
-);
+    /// Controls how much and how old we want to receive history on join.
+    #[xml(child(default))]
+    pub history: Option<History>,
+}
 
 impl PresencePayload for Muc {}
 
@@ -121,7 +122,7 @@ mod tests {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Unknown child in x element.");
+        assert_eq!(message, "Unknown child in Muc element.");
     }
 
     #[test]
@@ -148,7 +149,7 @@ mod tests {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Unknown attribute in x element.");
+        assert_eq!(message, "Unknown attribute in Muc element.");
     }
 
     #[test]
