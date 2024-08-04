@@ -9,6 +9,12 @@ XXXX-YY-ZZ RELEASER <admin@example.com>
         are now of type `BareJid` (instead of `String`), as they should always
         have been. This influences various other places, such as these
         struct's constructors.
+      - The rtt module has been changed to make use of xso on enums. This
+        allows us to simplify the `Action` type to include all three possible
+        variants directly in the enum, rather than as separate types which are
+        then included in `Action`.  Also `Action::Erase::num` is now a wrapper
+        type around u32, which lets us implement a custom Default on it.
+        (!416)
     * New parsers/serialisers:
         - Stream Features (RFC 6120) (!400)
 
