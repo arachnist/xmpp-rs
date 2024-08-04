@@ -204,11 +204,11 @@ impl IqGetPayload for MetadataQuery {}
 pub struct MetadataResponse {
     /// Metadata about the first message in the archive.
     #[xml(child(default))]
-    start: Option<Start>,
+    pub start: Option<Start>,
 
     /// Metadata about the last message in the archive.
     #[xml(child(default))]
-    end: Option<End>,
+    pub end: Option<End>,
 }
 
 impl IqResultPayload for MetadataResponse {}
