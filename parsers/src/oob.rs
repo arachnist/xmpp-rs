@@ -4,19 +4,23 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use xso::{AsXml, FromXml};
+
 use crate::message::MessagePayload;
+use crate::ns;
 
-generate_element!(
-    /// Defines associated out of band url.
-    Oob, "x", OOB,
-    children: [
-        /// The associated URL.
-        url: Required<String> = ("url", OOB) => String,
+/// Defines associated out of band url.
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::OOB, name = "x")]
+pub struct Oob {
+    /// The associated URL.
+    #[xml(extract(fields(text)))]
+    pub url: String,
 
-        /// An optional description of the out of band data.
-        desc: Option<String> = ("desc", OOB) => String,
-    ]
-);
+    /// An optional description of the out of band data.
+    #[xml(extract(default, fields(text(type_ = String))))]
+    pub desc: Option<String>,
+}
 
 impl MessagePayload for Oob {}
 
@@ -63,6 +67,6 @@ mod tests {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Missing child url in x element.");
+        assert_eq!(message, "Missing child field 'url' in Oob element.");
     }
 }
