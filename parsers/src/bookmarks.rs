@@ -23,27 +23,30 @@ use jid::BareJid;
 pub use crate::bookmarks2::Autojoin;
 use crate::ns;
 
-generate_element!(
-    /// A conference bookmark.
-    Conference, "conference", BOOKMARKS,
-    attributes: [
-        /// Whether a conference bookmark should be joined automatically.
-        autojoin: Default<Autojoin> = "autojoin",
+/// A conference bookmark.
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::BOOKMARKS, name = "conference")]
+pub struct Conference {
+    /// Whether a conference bookmark should be joined automatically.
+    #[xml(attribute(default))]
+    pub autojoin: Autojoin,
 
-        /// The JID of the conference.
-        jid: Required<BareJid> = "jid",
+    /// The JID of the conference.
+    #[xml(attribute)]
+    pub jid: BareJid,
 
-        /// A user-defined name for this conference.
-        name: Option<String> = "name",
-    ],
-    children: [
-        /// The nick the user will use to join this conference.
-        nick: Option<String> = ("nick", BOOKMARKS) => String,
+    /// A user-defined name for this conference.
+    #[xml(attribute(default))]
+    pub name: Option<String>,
 
-        /// The password required to join this conference.
-        password: Option<String> = ("password", BOOKMARKS) => String
-    ]
-);
+    /// The nick the user will use to join this conference.
+    #[xml(extract(default, fields(text(type_ = String))))]
+    pub nick: Option<String>,
+
+    /// The password required to join this conference.
+    #[xml(extract(default, fields(text(type_ = String))))]
+    pub password: Option<String>,
+}
 
 impl Conference {
     /// Turns a XEP-0048 Conference element into a XEP-0402 "Bookmarks2" Conference element, in a
