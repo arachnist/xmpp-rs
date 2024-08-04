@@ -9,6 +9,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #![deny(missing_docs)]
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
 
 //! A minimal DOM crate built on top of rxml, targeting exclusively the subset of XML useful
 //! for XMPP.

@@ -22,6 +22,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #![warn(missing_docs)]
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
 
 pub use blake2;
 pub use jid;

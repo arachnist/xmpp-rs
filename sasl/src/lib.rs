@@ -1,5 +1,6 @@
 //#![deny(missing_docs)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
 
 //! This crate provides a framework for SASL authentication and a few authentication mechanisms.
 //!

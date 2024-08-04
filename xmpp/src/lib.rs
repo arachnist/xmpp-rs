@@ -5,6 +5,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #![deny(bare_trait_objects)]
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
 
 pub use tokio_xmpp;
 pub use tokio_xmpp::jid;

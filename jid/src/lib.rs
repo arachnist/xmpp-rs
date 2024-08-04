@@ -10,6 +10,7 @@
 
 #![no_std]
 #![deny(missing_docs)]
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
 
 //! Represents XMPP addresses, also known as JabberIDs (JIDs) for the [XMPP](https://xmpp.org/)
 //! protocol. A [`Jid`] can have between one and three parts in the form `node@domain/resource`:

@@ -7,6 +7,7 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 #![allow(rustdoc::private_intra_doc_links)]
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
 /*!
 # Macros for parsing XML into Rust structs, and vice versa
 

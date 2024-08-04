@@ -1,6 +1,7 @@
 //! XMPP implementation with asynchronous I/O using Tokio.
 
 #![deny(unsafe_code, missing_docs, bare_trait_objects)]
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
 
 #[cfg(all(
     not(xmpprs_doc_build),
