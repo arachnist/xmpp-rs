@@ -24,7 +24,7 @@ pub const XMLNS_XMLNS: &str = "http://www.w3.org/2000/xmlns/";
 
 macro_rules! reject_key {
     ($key:ident not on $not_allowed_on:literal $(only on $only_allowed_on:literal)?) => {
-        if let Some($key) = $key {
+        if let Some(ref $key) = $key {
             return Err(Error::new_spanned(
                 $key,
                 concat!(
@@ -43,9 +43,9 @@ macro_rules! reject_key {
     };
 
     ($key:ident flag not on $not_allowed_on:literal $(only on $only_allowed_on:literal)?) => {
-        if let Flag::Present($key) = $key {
+        if let Flag::Present(ref $key) = $key {
             return Err(Error::new(
-                $key,
+                *$key,
                 concat!(
                     "`",
                     stringify!($key),

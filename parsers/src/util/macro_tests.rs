@@ -1600,3 +1600,36 @@ fn transparent_struct_named_roundtrip() {
     };
     roundtrip_full::<TransparentStructNamed>("<attr xmlns='urn:example:ns1' foo='bar'/>");
 }
+
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml()]
+enum DynamicEnum {
+    #[xml(transparent)]
+    A(RequiredAttribute),
+
+    #[xml(namespace = NS2, name = "b")]
+    B {
+        #[xml(text)]
+        contents: String,
+    },
+}
+
+#[test]
+fn dynamic_enum_roundtrip_a() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<DynamicEnum>("<attr xmlns='urn:example:ns1' foo='bar'/>");
+}
+
+#[test]
+fn dynamic_enum_roundtrip_b() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<DynamicEnum>("<b xmlns='urn:example:ns2'>hello world</b>");
+}

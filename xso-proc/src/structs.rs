@@ -23,7 +23,7 @@ use crate::types::{
 /// The inner parts of the struct.
 ///
 /// This contains all data necessary for the matching logic.
-enum StructInner {
+pub(crate) enum StructInner {
     /// Single-field struct declared with `#[xml(transparent)]`.
     ///
     /// Transparent struct delegate all parsing and serialising to their
@@ -58,7 +58,7 @@ enum StructInner {
 }
 
 impl StructInner {
-    fn new(meta: XmlCompoundMeta, fields: &Fields) -> Result<Self> {
+    pub(crate) fn new(meta: XmlCompoundMeta, fields: &Fields) -> Result<Self> {
         // We destructure here so that we get informed when new fields are
         // added and can handle them, either by processing them or raising
         // an error if they are present.
@@ -150,7 +150,7 @@ impl StructInner {
         }
     }
 
-    fn make_from_events_statemachine(
+    pub(crate) fn make_from_events_statemachine(
         &self,
         state_ty_ident: &Ident,
         output_name: &ParentRef,
@@ -225,7 +225,7 @@ impl StructInner {
         }
     }
 
-    fn make_as_item_iter_statemachine(
+    pub(crate) fn make_as_item_iter_statemachine(
         &self,
         input_name: &ParentRef,
         state_ty_ident: &Ident,

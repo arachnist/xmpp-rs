@@ -81,9 +81,27 @@ implement [`FromXml`] in order to derive `FromXml` and [`AsXml`] in order to
 derive `AsXml`. The struct will be (de-)serialised exactly like the type of
 that single field. This allows a newtype-like pattern for XSO structs.
 
-### Enum meta
+### Enums
 
-The following keys are defined on enums:
+Two different `enum` flavors are supported:
+
+1. [**Name-switched enums**](#name-switched-enum-meta) have a fixed XML
+   namespace they match on and each variant corresponds to a different XML
+   element name within that namespace.
+
+2. [**Dynamic enums**](#dynamic-enum-meta) have entirely unrelated variants.
+
+At the source-code level, they are distinguished by the meta keys which are
+present on the `enum`: The different variants have different sets of mandatory
+keys and can thus be uniquely identified.
+
+#### Name-switched enum meta
+
+Name-switched enums match a fixed XML namespace and then select the enum
+variant based on the XML element's name. Name-switched enums are declared by
+setting the `namespace` key on a `enum` item.
+
+The following keys are defined on name-switched enums:
 
 | Key | Value type | Description |
 | --- | --- | --- |
@@ -92,10 +110,10 @@ The following keys are defined on enums:
 | `iterator` | optional *ident* | The name to use for the generated iterator type. |
 | `exhaustive` | *flag* | If present, the enum considers itself authoritative for its namespace; unknown elements within the namespace are rejected instead of treated as mismatch. |
 
-All variants of an enum live within the same namespace and are distinguished
-exclusively by their XML name within that namespace. The contents of the XML
-element (including attributes) is not inspected before selecting the variant
-when parsing XML.
+All variants of a name-switched enum live within the same namespace and are
+distinguished exclusively by their XML name within that namespace. The
+contents of the XML element (including attributes) is not inspected before
+selecting the variant when parsing XML.
 
 If *exhaustive* is set and an element is encountered which matches the
 namespace of the enum, but matches none of its variants, parsing will fail
@@ -109,7 +127,7 @@ Note that the *exhaustive* flag is orthogonal to the Rust attribute
 For details on `builder` and `iterator`, see the [Struct meta](#struct-meta)
 documentation above.
 
-#### Enum variant meta
+##### Name-switched enum variant meta
 
 | Key | Value type | Description |
 | --- | --- | --- |
@@ -119,7 +137,7 @@ Note that the `name` value must be a valid XML element name, without colons.
 The namespace prefix, if any, is assigned automatically at serialisation time
 and cannot be overridden.
 
-#### Example
+##### Example
 
 ```rust
 # use xso::FromXml;
@@ -142,6 +160,57 @@ let foo: Foo = xso::from_bytes(b"<a xmlns='urn:example' foo='hello'/>").unwrap()
 assert_eq!(foo, Foo::Variant1 { foo: "hello".to_string() });
 
 let foo: Foo = xso::from_bytes(b"<b xmlns='urn:example' bar='hello'/>").unwrap();
+assert_eq!(foo, Foo::Variant2 { bar: "hello".to_string() });
+```
+
+#### Dynamic enum meta
+
+Dynamic enums select their variants by attempting to match them in declaration
+order. Dynamic enums are declared by not setting the `namespace` key on an
+`enum` item.
+
+The following keys are defined on dynamic enums:
+
+| Key | Value type | Description |
+| --- | --- | --- |
+| `builder` | optional *ident* | The name to use for the generated builder type. |
+| `iterator` | optional *ident* | The name to use for the generated iterator type. |
+
+For details on `builder` and `iterator`, see the [Struct meta](#struct-meta)
+documentation above.
+
+##### Dynamic enum variant meta
+
+Dynamic enum variants are completely independent of one another and thus use
+the same meta structure as structs. See [Struct meta](#struct-meta) for
+details.
+
+The `builder`, `iterator` and `debug` keys cannot be used on dynmaic enum
+variants.
+
+##### Example
+
+```rust
+# use xso::FromXml;
+#[derive(FromXml, Debug, PartialEq)]
+#[xml()]
+enum Foo {
+    #[xml(namespace = "urn:example:ns1", name = "a")]
+    Variant1 {
+        #[xml(attribute)]
+        foo: String,
+    },
+    #[xml(namespace = "urn:example:ns2", name = "b")]
+    Variant2 {
+        #[xml(attribute)]
+        bar: String,
+    },
+}
+
+let foo: Foo = xso::from_bytes(b"<a xmlns='urn:example:ns1' foo='hello'/>").unwrap();
+assert_eq!(foo, Foo::Variant1 { foo: "hello".to_string() });
+
+let foo: Foo = xso::from_bytes(b"<b xmlns='urn:example:ns2' bar='hello'/>").unwrap();
 assert_eq!(foo, Foo::Variant2 { bar: "hello".to_string() });
 ```
 

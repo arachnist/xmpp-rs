@@ -17,9 +17,11 @@ use crate::compound::Compound;
 use crate::error_message::ParentRef;
 use crate::meta::{reject_key, Flag, NameRef, NamespaceRef, QNameRef, XmlCompoundMeta};
 use crate::state::{AsItemsStateMachine, FromEventsStateMachine};
+use crate::structs::StructInner;
 use crate::types::{ref_ty, ty_from_ident};
 
-/// The definition of an enum variant, switched on the XML element's name.
+/// The definition of an enum variant, switched on the XML element's name,
+/// inside a [`NameSwitchedEnum`].
 struct NameVariant {
     /// The XML name of the element to map the enum variant to.
     name: NameRef,
@@ -140,6 +142,8 @@ impl NameVariant {
     }
 }
 
+/// The definition of a enum which switches based on the XML element name,
+/// with the XML namespace fixed.
 struct NameSwitchedEnum {
     /// The XML namespace of the element to map the enum to.
     namespace: NamespaceRef,
@@ -153,36 +157,10 @@ struct NameSwitchedEnum {
 
 impl NameSwitchedEnum {
     fn new<'x, I: IntoIterator<Item = &'x Variant>>(
-        meta: XmlCompoundMeta,
+        namespace: NamespaceRef,
+        exhaustive: Flag,
         variant_iter: I,
     ) -> Result<Self> {
-        // We destructure here so that we get informed when new fields are
-        // added and can handle them, either by processing them or raising
-        // an error if they are present.
-        let XmlCompoundMeta {
-            span: meta_span,
-            qname: QNameRef { namespace, name },
-            exhaustive,
-            debug,
-            builder,
-            iterator,
-            transparent,
-        } = meta;
-
-        // These must've been cleared by the caller. Because these being set
-        // is a programming error (in xso-proc) and not a usage error, we
-        // assert here instead of using reject_key!.
-        assert!(builder.is_none());
-        assert!(iterator.is_none());
-        assert!(!debug.is_set());
-
-        reject_key!(name not on "enums" only on "their variants");
-        reject_key!(transparent flag not on "enums" only on "structs");
-
-        let Some(namespace) = namespace else {
-            return Err(Error::new(meta_span, "`namespace` is required on enums"));
-        };
-
         let mut variants = Vec::new();
         let mut seen_names = HashMap::new();
         for variant in variant_iter {
@@ -207,6 +185,7 @@ impl NameSwitchedEnum {
         })
     }
 
+    /// Build the deserialisation statemachine for the name-switched enum.
     fn make_from_events_statemachine(
         &self,
         target_ty_ident: &Ident,
@@ -241,6 +220,7 @@ impl NameSwitchedEnum {
         Ok(statemachine)
     }
 
+    /// Build the serialisation statemachine for the name-switched enum.
     fn make_as_item_iter_statemachine(
         &self,
         target_ty_ident: &Ident,
@@ -261,10 +241,211 @@ impl NameSwitchedEnum {
     }
 }
 
+/// The definition of an enum variant in a [`DynamicEnum`].
+struct DynamicVariant {
+    /// The identifier of the enum variant.
+    ident: Ident,
+
+    /// The definition of the struct-like which resembles the enum variant.
+    inner: StructInner,
+}
+
+impl DynamicVariant {
+    fn new(variant: &Variant) -> Result<Self> {
+        let ident = variant.ident.clone();
+        let meta = XmlCompoundMeta::parse_from_attributes(&variant.attrs)?;
+
+        // We destructure here so that we get informed when new fields are
+        // added and can handle them, either by processing them or raising
+        // an error if they are present.
+        let XmlCompoundMeta {
+            span: _,
+            qname: _, // used by StructInner
+            ref exhaustive,
+            ref debug,
+            ref builder,
+            ref iterator,
+            transparent: _, // used by StructInner
+        } = meta;
+
+        reject_key!(debug flag not on "enum variants" only on "enums and structs");
+        reject_key!(exhaustive flag not on "enum variants" only on "enums");
+        reject_key!(builder not on "enum variants" only on "enums and structs");
+        reject_key!(iterator not on "enum variants" only on "enums and structs");
+
+        let inner = StructInner::new(meta, &variant.fields)?;
+        Ok(Self { ident, inner })
+    }
+}
+
+/// The definition of an enum where each variant is a completely unrelated
+/// possible XML subtree.
+struct DynamicEnum {
+    /// The enum variants.
+    variants: Vec<DynamicVariant>,
+}
+
+impl DynamicEnum {
+    fn new<'x, I: IntoIterator<Item = &'x Variant>>(variant_iter: I) -> Result<Self> {
+        let mut variants = Vec::new();
+        for variant in variant_iter {
+            variants.push(DynamicVariant::new(variant)?);
+        }
+
+        Ok(Self { variants })
+    }
+
+    /// Build the deserialisation statemachine for the dynamic enum.
+    fn make_from_events_statemachine(
+        &self,
+        target_ty_ident: &Ident,
+        state_ty_ident: &Ident,
+    ) -> Result<FromEventsStateMachine> {
+        let mut statemachine = FromEventsStateMachine::new();
+        for variant in self.variants.iter() {
+            let submachine = variant.inner.make_from_events_statemachine(
+                state_ty_ident,
+                &ParentRef::Named(Path {
+                    leading_colon: None,
+                    segments: [
+                        PathSegment::from(target_ty_ident.clone()),
+                        variant.ident.clone().into(),
+                    ]
+                    .into_iter()
+                    .collect(),
+                }),
+                &variant.ident.to_string(),
+            )?;
+
+            statemachine.merge(submachine.compile());
+        }
+
+        Ok(statemachine)
+    }
+
+    /// Build the serialisation statemachine for the dynamic enum.
+    fn make_as_item_iter_statemachine(
+        &self,
+        target_ty_ident: &Ident,
+        state_ty_ident: &Ident,
+        item_iter_ty_lifetime: &Lifetime,
+    ) -> Result<AsItemsStateMachine> {
+        let mut statemachine = AsItemsStateMachine::new();
+        for variant in self.variants.iter() {
+            let submachine = variant.inner.make_as_item_iter_statemachine(
+                &ParentRef::Named(Path {
+                    leading_colon: None,
+                    segments: [
+                        PathSegment::from(target_ty_ident.clone()),
+                        variant.ident.clone().into(),
+                    ]
+                    .into_iter()
+                    .collect(),
+                }),
+                state_ty_ident,
+                &variant.ident.to_string(),
+                item_iter_ty_lifetime,
+            )?;
+
+            statemachine.merge(submachine.compile());
+        }
+
+        Ok(statemachine)
+    }
+}
+
+/// The definition of an enum.
+enum EnumInner {
+    /// The enum switches based on the XML name of the element, with the XML
+    /// namespace fixed.
+    NameSwitched(NameSwitchedEnum),
+
+    /// The enum consists of variants with entirely unrelated XML structures.
+    Dynamic(DynamicEnum),
+}
+
+impl EnumInner {
+    fn new<'x, I: IntoIterator<Item = &'x Variant>>(
+        meta: XmlCompoundMeta,
+        variant_iter: I,
+    ) -> Result<Self> {
+        // We destructure here so that we get informed when new fields are
+        // added and can handle them, either by processing them or raising
+        // an error if they are present.
+        let XmlCompoundMeta {
+            span: _,
+            qname: QNameRef { namespace, name },
+            exhaustive,
+            debug,
+            builder,
+            iterator,
+            transparent,
+        } = meta;
+
+        // These must've been cleared by the caller. Because these being set
+        // is a programming error (in xso-proc) and not a usage error, we
+        // assert here instead of using reject_key!.
+        assert!(builder.is_none());
+        assert!(iterator.is_none());
+        assert!(!debug.is_set());
+
+        reject_key!(name not on "enums" only on "their variants");
+        reject_key!(transparent flag not on "enums" only on "structs");
+
+        if let Some(namespace) = namespace {
+            Ok(Self::NameSwitched(NameSwitchedEnum::new(
+                namespace,
+                exhaustive,
+                variant_iter,
+            )?))
+        } else {
+            reject_key!(exhaustive flag not on "dynamic enums" only on "name-switched enums");
+            Ok(Self::Dynamic(DynamicEnum::new(variant_iter)?))
+        }
+    }
+
+    /// Build the deserialisation statemachine for the enum.
+    fn make_from_events_statemachine(
+        &self,
+        target_ty_ident: &Ident,
+        state_ty_ident: &Ident,
+    ) -> Result<FromEventsStateMachine> {
+        match self {
+            Self::NameSwitched(ref inner) => {
+                inner.make_from_events_statemachine(target_ty_ident, state_ty_ident)
+            }
+            Self::Dynamic(ref inner) => {
+                inner.make_from_events_statemachine(target_ty_ident, state_ty_ident)
+            }
+        }
+    }
+
+    /// Build the serialisation statemachine for the enum.
+    fn make_as_item_iter_statemachine(
+        &self,
+        target_ty_ident: &Ident,
+        state_ty_ident: &Ident,
+        item_iter_ty_lifetime: &Lifetime,
+    ) -> Result<AsItemsStateMachine> {
+        match self {
+            Self::NameSwitched(ref inner) => inner.make_as_item_iter_statemachine(
+                target_ty_ident,
+                state_ty_ident,
+                item_iter_ty_lifetime,
+            ),
+            Self::Dynamic(ref inner) => inner.make_as_item_iter_statemachine(
+                target_ty_ident,
+                state_ty_ident,
+                item_iter_ty_lifetime,
+            ),
+        }
+    }
+}
+
 /// Definition of an enum and how to parse it.
 pub(crate) struct EnumDef {
     /// Implementation of the enum itself
-    inner: NameSwitchedEnum,
+    inner: EnumInner,
 
     /// Name of the target type.
     target_ty_ident: Ident,
@@ -299,7 +480,7 @@ impl EnumDef {
         let debug = meta.debug.take().is_set();
 
         Ok(Self {
-            inner: NameSwitchedEnum::new(meta, variant_iter)?,
+            inner: EnumInner::new(meta, variant_iter)?,
             target_ty_ident: ident.clone(),
             builder_ty_ident,
             item_iter_ty_ident,
