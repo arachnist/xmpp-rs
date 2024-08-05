@@ -14,9 +14,10 @@
 //!
 //! This module exposes the [`Autojoin`][crate::bookmarks2::Autojoin] boolean flag, the [`Conference`][crate::bookmarks2::Conference] chatroom element, and the [BOOKMARKS2][crate::ns::BOOKMARKS2] XML namespace.
 
+use xso::{AsXml, FromXml};
+
 use crate::ns;
 use minidom::Element;
-use xso::error::{Error, FromElementError};
 
 generate_attribute!(
     /// Whether a conference bookmark should be joined automatically.
@@ -25,103 +26,44 @@ generate_attribute!(
     bool
 );
 
+/// Potential extensions in a conference.
+#[derive(FromXml, AsXml, Debug, Clone, Default)]
+#[xml(namespace = ns::BOOKMARKS2, name = "extensions")]
+pub struct Extensions {
+    /// Extension elements.
+    #[xml(element(n = ..))]
+    pub payloads: Vec<Element>,
+}
+
 /// A conference bookmark.
-#[derive(Debug, Clone, Default)]
+#[derive(FromXml, AsXml, Debug, Clone, Default)]
+#[xml(namespace = ns::BOOKMARKS2, name = "conference")]
 pub struct Conference {
     /// Whether a conference bookmark should be joined automatically.
+    #[xml(attribute(default))]
     pub autojoin: Autojoin,
 
     /// A user-defined name for this conference.
+    #[xml(attribute(default))]
     pub name: Option<String>,
 
     /// The nick the user will use to join this conference.
+    #[xml(extract(default, fields(text(type_ = String))))]
     pub nick: Option<String>,
 
     /// The password required to join this conference.
+    #[xml(extract(default, fields(text(type_ = String))))]
     pub password: Option<String>,
 
-    /// Extensions elements.
-    pub extensions: Vec<Element>,
+    /// Extension elements.
+    #[xml(child(default))]
+    pub extensions: Option<Extensions>,
 }
 
 impl Conference {
     /// Create a new conference.
     pub fn new() -> Conference {
         Conference::default()
-    }
-}
-
-impl TryFrom<Element> for Conference {
-    type Error = FromElementError;
-
-    fn try_from(root: Element) -> Result<Conference, FromElementError> {
-        check_self!(root, "conference", BOOKMARKS2, "Conference");
-        check_no_unknown_attributes!(root, "Conference", ["autojoin", "name"]);
-
-        let mut conference = Conference {
-            autojoin: get_attr!(root, "autojoin", Default),
-            name: get_attr!(root, "name", Option),
-            nick: None,
-            password: None,
-            extensions: Vec::new(),
-        };
-
-        for child in root.children() {
-            if child.is("nick", ns::BOOKMARKS2) {
-                if conference.nick.is_some() {
-                    return Err(Error::Other("Conference must not have more than one nick.").into());
-                }
-                check_no_children!(child, "nick");
-                check_no_attributes!(child, "nick");
-                conference.nick = Some(child.text());
-            } else if child.is("password", ns::BOOKMARKS2) {
-                if conference.password.is_some() {
-                    return Err(
-                        Error::Other("Conference must not have more than one password.").into(),
-                    );
-                }
-                check_no_children!(child, "password");
-                check_no_attributes!(child, "password");
-                conference.password = Some(child.text());
-            } else if child.is("extensions", ns::BOOKMARKS2) {
-                if !conference.extensions.is_empty() {
-                    return Err(Error::Other(
-                        "Conference must not have more than one extensions element.",
-                    )
-                    .into());
-                }
-                conference.extensions.extend(child.children().cloned());
-            } else {
-                return Err(Error::Other("Unknown element in bookmarks2 conference").into());
-            }
-        }
-
-        Ok(conference)
-    }
-}
-
-impl From<Conference> for Element {
-    fn from(conference: Conference) -> Element {
-        Element::builder("conference", ns::BOOKMARKS2)
-            .attr("autojoin", conference.autojoin)
-            .attr("name", conference.name)
-            .append_all(
-                conference
-                    .nick
-                    .map(|nick| Element::builder("nick", ns::BOOKMARKS2).append(nick)),
-            )
-            .append_all(
-                conference
-                    .password
-                    .map(|password| Element::builder("password", ns::BOOKMARKS2).append(password)),
-            )
-            .append_all(match conference.extensions {
-                empty if empty.is_empty() => None,
-                extensions => {
-                    Some(Element::builder("extensions", ns::BOOKMARKS2).append_all(extensions))
-                }
-            })
-            .build()
     }
 }
 
@@ -166,8 +108,9 @@ mod tests {
         assert_eq!(conference.name, Some(String::from("Test MUC")));
         assert_eq!(conference.clone().nick.unwrap(), "Coucou");
         assert_eq!(conference.clone().password.unwrap(), "secret");
-        assert_eq!(conference.clone().extensions.len(), 1);
-        assert!(conference.clone().extensions[0].is("test", "urn:xmpp:unknown"));
+        let payloads = conference.clone().extensions.unwrap().payloads;
+        assert_eq!(payloads.len(), 1);
+        assert!(payloads[0].is("test", "urn:xmpp:unknown"));
     }
 
     #[test]

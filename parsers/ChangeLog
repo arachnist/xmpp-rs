@@ -25,6 +25,9 @@ XXXX-YY-ZZ RELEASER <admin@example.com>
         change it again once any other specification allows e.g. presences or
         iqs.
       - Module `jingle_thumnails` renamed to `jingle_thumbnails`.
+      - The bookmarks2 Conference `extensions` child is now an
+        `Option<Extensions>` instead of a `Vec<Element>`, to distinguish
+        between it being absent or empty (!472).
     * New parsers/serialisers:
         - Stream Features (RFC 6120) (!400)
         - Extensible SASL Profile (XEP-0388)

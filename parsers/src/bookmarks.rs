@@ -20,7 +20,7 @@ use xso::{AsXml, FromXml};
 
 use jid::BareJid;
 
-pub use crate::bookmarks2::Autojoin;
+pub use crate::bookmarks2::{self, Autojoin};
 use crate::ns;
 
 /// A conference bookmark.
@@ -51,15 +51,15 @@ pub struct Conference {
 impl Conference {
     /// Turns a XEP-0048 Conference element into a XEP-0402 "Bookmarks2" Conference element, in a
     /// tuple with the room JID.
-    pub fn into_bookmarks2(self) -> (BareJid, crate::bookmarks2::Conference) {
+    pub fn into_bookmarks2(self) -> (BareJid, bookmarks2::Conference) {
         (
             self.jid,
-            crate::bookmarks2::Conference {
+            bookmarks2::Conference {
                 autojoin: self.autojoin,
                 name: self.name,
                 nick: self.nick,
                 password: self.password,
-                extensions: vec![],
+                extensions: None,
             },
         )
     }
