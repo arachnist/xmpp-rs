@@ -1,12 +1,14 @@
 use futures::{sink::SinkExt, Sink, Stream};
 use minidom::Element;
 use std::pin::Pin;
+#[cfg(feature = "starttls")]
 use std::str::FromStr;
 use std::task::{Context, Poll};
 use tokio_stream::StreamExt;
 use xmpp_parsers::{jid::Jid, ns, stream_features::StreamFeatures};
 
 use crate::connect::ServerConnector;
+#[cfg(feature = "starttls")]
 use crate::starttls::ServerConfig;
 use crate::xmpp_codec::Packet;
 use crate::xmpp_stream::{add_stanza_id, XMPPStream};
@@ -22,6 +24,7 @@ pub struct Client<C: ServerConnector> {
     stream: XMPPStream<C::Stream>,
 }
 
+#[cfg(feature = "starttls")]
 impl Client<ServerConfig> {
     /// Start a new XMPP client and wait for a usable session
     pub async fn new<P: Into<String>>(jid: &str, password: P) -> Result<Self, Error> {

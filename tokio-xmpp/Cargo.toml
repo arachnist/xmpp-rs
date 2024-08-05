@@ -41,7 +41,7 @@ tokio-xmpp = { path = ".", features = ["insecure-tcp"]}
 
 [features]
 default = ["starttls-rust"]
-starttls = ["hickory-resolver", "idna"]
+starttls = ["dns"]
 tls-rust = ["tokio-rustls", "webpki-roots"]
 tls-native = ["tokio-native-tls", "native-tls"]
 starttls-native = ["starttls", "tls-native"]
@@ -50,6 +50,8 @@ insecure-tcp = []
 syntax-highlighting = ["syntect"]
 # Enable serde support in jid crate
 serde = [ "xmpp-parsers/serde" ]
+# Required by starttls, and used by insecure-tcp by default
+dns = [ "hickory-resolver", "idna" ]
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(xmpprs_doc_build)'] }

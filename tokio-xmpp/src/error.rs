@@ -1,3 +1,7 @@
+#[cfg(feature = "dns")]
+use hickory_resolver::{
+    error::ResolveError as DnsResolveError, proto::error::ProtoError as DnsProtoError,
+};
 use sasl::client::MechanismError as SaslMechanismError;
 use std::error::Error as StdError;
 use std::fmt;
@@ -28,8 +32,18 @@ pub enum Error {
     Fmt(fmt::Error),
     /// Utf8 error
     Utf8(Utf8Error),
-    /// Error resolving DNS and/or establishing a connection, returned by a ServerConnector impl
+    /// Error specific to ServerConnector impl
     Connection(Box<dyn ServerConnectorError>),
+    /// DNS protocol error
+    #[cfg(feature = "dns")]
+    Dns(DnsProtoError),
+    /// DNS resolution error
+    #[cfg(feature = "dns")]
+    Resolve(DnsResolveError),
+    /// DNS label conversion error, no details available from module
+    /// `idna`
+    #[cfg(feature = "dns")]
+    Idna,
 }
 
 impl fmt::Display for Error {
@@ -44,6 +58,12 @@ impl fmt::Display for Error {
             Error::InvalidState => write!(fmt, "invalid state"),
             Error::Fmt(e) => write!(fmt, "Fmt error: {}", e),
             Error::Utf8(e) => write!(fmt, "Utf8 error: {}", e),
+            #[cfg(feature = "dns")]
+            Error::Dns(e) => write!(fmt, "{:?}", e),
+            #[cfg(feature = "dns")]
+            Error::Resolve(e) => write!(fmt, "{:?}", e),
+            #[cfg(feature = "dns")]
+            Error::Idna => write!(fmt, "IDNA error"),
         }
     }
 }
@@ -89,6 +109,27 @@ impl From<fmt::Error> for Error {
 impl From<Utf8Error> for Error {
     fn from(e: Utf8Error) -> Self {
         Error::Utf8(e)
+    }
+}
+
+#[cfg(feature = "dns")]
+impl From<idna::Errors> for Error {
+    fn from(_e: idna::Errors) -> Self {
+        Error::Idna
+    }
+}
+
+#[cfg(feature = "dns")]
+impl From<DnsResolveError> for Error {
+    fn from(e: DnsResolveError) -> Error {
+        Error::Resolve(e)
+    }
+}
+
+#[cfg(feature = "dns")]
+impl From<DnsProtoError> for Error {
+    fn from(e: DnsProtoError) -> Error {
+        Error::Dns(e)
     }
 }
 

@@ -27,16 +27,17 @@ use tokio::{
 };
 use xmpp_parsers::{jid::Jid, ns};
 
-use crate::error::ProtocolError;
-use crate::Error;
-use crate::{connect::ServerConnector, xmpp_codec::Packet, AsyncClient, SimpleClient};
-use crate::{connect::ServerConnectorError, xmpp_stream::XMPPStream};
+use crate::{
+    connect::{ServerConnector, ServerConnectorError, Tcp},
+    error::{Error, ProtocolError},
+    xmpp_codec::Packet,
+    xmpp_stream::XMPPStream,
+    AsyncClient, SimpleClient,
+};
 
 use self::error::Error as StartTlsError;
-use self::happy_eyeballs::{connect_to_host, connect_with_srv};
 
 pub mod error;
-mod happy_eyeballs;
 
 /// AsyncClient that connects over StartTls
 pub type StartTlsAsyncClient = AsyncClient<ServerConfig>;
@@ -64,9 +65,9 @@ impl ServerConnector for ServerConfig {
         // TCP connection
         let tcp_stream = match self {
             ServerConfig::UseSrv => {
-                connect_with_srv(jid.domain().as_str(), "_xmpp-client._tcp", 5222).await?
+                Tcp::resolve_with_srv(jid.domain().as_str(), "_xmpp-client._tcp", 5222).await?
             }
-            ServerConfig::Manual { host, port } => connect_to_host(host.as_str(), *port).await?,
+            ServerConfig::Manual { host, port } => Tcp::resolve(host.as_str(), *port).await?,
         };
 
         // Unencryped XMPPStream
