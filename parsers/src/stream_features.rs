@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use minidom::Element;
 use xso::{AsXml, FromXml};
 
 use crate::ns;
@@ -24,6 +25,13 @@ pub struct StreamFeatures {
     /// List of supported SASL mechanisms
     #[xml(child(default))]
     pub sasl_mechanisms: SaslMechanisms,
+
+    /// Other stream features advertised
+    ///
+    /// If some features you use end up here, you may want to contribute
+    /// a typed equivalent to the xmpp-parsers project!
+    #[xml(element(n = ..))]
+    pub others: Vec<Element>,
 }
 
 /// StartTLS is supported, and may be mandatory.
@@ -88,7 +96,7 @@ mod tests {
         assert_size!(Bind, 0);
         assert_size!(RequiredStartTls, 0);
         assert_size!(StartTls, 1);
-        assert_size!(StreamFeatures, 16);
+        assert_size!(StreamFeatures, 28);
     }
 
     #[cfg(target_pointer_width = "64")]
@@ -99,7 +107,7 @@ mod tests {
         assert_size!(Bind, 0);
         assert_size!(RequiredStartTls, 0);
         assert_size!(StartTls, 1);
-        assert_size!(StreamFeatures, 32);
+        assert_size!(StreamFeatures, 56);
     }
 
     #[test]
@@ -121,9 +129,6 @@ mod tests {
     }
 
     #[test]
-    // TODO: Unignore me when xso supports collections of unknown children, see
-    // https://gitlab.com/xmpp-rs/xmpp-rs/-/issues/136
-    #[ignore]
     fn test_deprecated_compression() {
         let elem: Element = "<stream:features xmlns:stream='http://etherx.jabber.org/streams'>
                                  <bind xmlns='urn:ietf:params:xml:ns:xmpp-bind'/>
@@ -140,6 +145,23 @@ mod tests {
         assert_eq!(features.can_bind(), true);
         assert_eq!(features.sasl_mechanisms.mechanisms.len(), 0);
         assert_eq!(features.can_starttls(), false);
+        assert_eq!(features.others.len(), 1);
+
+        let compression = &features.others[0];
+        assert!(compression.is("compression", "http://jabber.org/features/compress"));
+        let mut children = compression.children();
+
+        let child = children.next().expect("zlib not found");
+        assert_eq!(child.name(), "method");
+        let mut texts = child.texts();
+        assert_eq!(texts.next().unwrap(), "zlib");
+        assert_eq!(texts.next(), None);
+
+        let child = children.next().expect("lzw not found");
+        assert_eq!(child.name(), "method");
+        let mut texts = child.texts();
+        assert_eq!(texts.next().unwrap(), "lzw");
+        assert_eq!(texts.next(), None);
     }
 
     #[test]
