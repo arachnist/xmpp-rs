@@ -7,11 +7,11 @@ use tokio::task::JoinHandle;
 use xmpp_parsers::{jid::Jid, ns, stream_features::StreamFeatures};
 
 use super::connect::client_login;
+#[cfg(feature = "starttls")]
+use crate::connect::starttls::ServerConfig;
 use crate::connect::{AsyncReadAndWrite, ServerConnector};
 use crate::error::{Error, ProtocolError};
 use crate::event::Event;
-#[cfg(feature = "starttls")]
-use crate::starttls::ServerConfig;
 use crate::xmpp_codec::Packet;
 use crate::xmpp_stream::{add_stanza_id, XMPPStream};
 #[cfg(feature = "starttls")]

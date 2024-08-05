@@ -17,7 +17,9 @@ use xmpp_parsers::jid::Jid;
 use crate::xmpp_stream::XMPPStream;
 use crate::Error;
 
-#[cfg(feature="insecure-tcp")]
+#[cfg(feature = "starttls")]
+pub mod starttls;
+#[cfg(feature = "insecure-tcp")]
 pub mod tcp;
 
 /// trait returned wrapped in XMPPStream by ServerConnector

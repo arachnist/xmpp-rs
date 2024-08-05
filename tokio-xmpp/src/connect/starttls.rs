@@ -1,5 +1,14 @@
 //! `starttls::ServerConfig` provides a `ServerConnector` for starttls connections
 
+#[cfg(feature = "tls-native")]
+use native_tls::Error as TlsError;
+use std::error::Error as StdError;
+use std::fmt;
+#[cfg(all(feature = "tls-rust", not(feature = "tls-native")))]
+use tokio_rustls::rustls::pki_types::InvalidDnsNameError;
+#[cfg(all(feature = "tls-rust", not(feature = "tls-native")))]
+use tokio_rustls::rustls::Error as TlsError;
+
 use futures::{sink::SinkExt, stream::StreamExt};
 
 #[cfg(all(feature = "tls-rust", not(feature = "tls-native")))]
@@ -34,10 +43,6 @@ use crate::{
     xmpp_stream::XMPPStream,
     AsyncClient,
 };
-
-use self::error::Error as StartTlsError;
-
-pub mod error;
 
 /// AsyncClient that connects over StartTls
 pub type StartTlsAsyncClient = AsyncClient<ServerConfig>;
@@ -161,4 +166,41 @@ pub async fn starttls<S: AsyncRead + AsyncWrite + Unpin>(
     }
 
     get_tls_stream(xmpp_stream).await
+}
+
+/// StartTLS ServerConnector Error
+#[derive(Debug)]
+pub enum StartTlsError {
+    /// TLS error
+    Tls(TlsError),
+    #[cfg(all(feature = "tls-rust", not(feature = "tls-native")))]
+    /// DNS name parsing error
+    DnsNameError(InvalidDnsNameError),
+}
+
+impl ServerConnectorError for StartTlsError {}
+
+impl fmt::Display for StartTlsError {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::Tls(e) => write!(fmt, "TLS error: {}", e),
+            #[cfg(all(feature = "tls-rust", not(feature = "tls-native")))]
+            Self::DnsNameError(e) => write!(fmt, "DNS name error: {}", e),
+        }
+    }
+}
+
+impl StdError for StartTlsError {}
+
+impl From<TlsError> for StartTlsError {
+    fn from(e: TlsError) -> Self {
+        Self::Tls(e)
+    }
+}
+
+#[cfg(all(feature = "tls-rust", not(feature = "tls-native")))]
+impl From<InvalidDnsNameError> for StartTlsError {
+    fn from(e: InvalidDnsNameError) -> Self {
+        Self::DnsNameError(e)
+    }
 }

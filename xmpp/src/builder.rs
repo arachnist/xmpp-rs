@@ -52,12 +52,16 @@ pub struct ClientBuilder<'a, C: ServerConnector> {
 }
 
 #[cfg(any(feature = "starttls-rust", feature = "starttls-native"))]
-impl ClientBuilder<'_, tokio_xmpp::starttls::ServerConfig> {
+impl ClientBuilder<'_, tokio_xmpp::connect::starttls::ServerConfig> {
     pub fn new<'a>(
         jid: BareJid,
         password: &'a str,
-    ) -> ClientBuilder<'a, tokio_xmpp::starttls::ServerConfig> {
-        Self::new_with_connector(jid, password, tokio_xmpp::starttls::ServerConfig::UseSrv)
+    ) -> ClientBuilder<'a, tokio_xmpp::connect::starttls::ServerConfig> {
+        Self::new_with_connector(
+            jid,
+            password,
+            tokio_xmpp::connect::starttls::ServerConfig::UseSrv,
+        )
     }
 }
 

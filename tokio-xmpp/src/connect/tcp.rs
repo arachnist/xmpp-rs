@@ -42,4 +42,3 @@ impl Component<TcpServerConnector> {
         Self::new_with_connector(jid, password, TcpServerConnector::new(server)).await
     }
 }
-
