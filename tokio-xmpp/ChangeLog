@@ -13,6 +13,8 @@ XXXX-YY-ZZ RELEASER <admin@example.com>
         not the other way around (!421)
       - `AsyncClient::new` automatically reconnects by default (!436)
       - `AsyncClient::poll_next` properly closes stream with `Poll::Ready(None)` when disconnecting without auto reconnect (!436)
+      - remove `tokio_xmpp::SimpleClient` because it was not widely used, and not well documented ; if you need it,
+        please let us know and it will be reintegrated (!428)
 
 Version 4.0.0:
 2024-07-26 Maxime “pep” Buquet <pep@bouah.net>

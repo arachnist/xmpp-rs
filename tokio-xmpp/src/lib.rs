@@ -35,7 +35,6 @@ pub mod xmpp_stream;
 
 pub use client::{
     async_client::{Client as AsyncClient, Config as AsyncConfig},
-    simple_client::Client as SimpleClient,
 };
 mod component;
 pub use crate::component::Component;

@@ -32,7 +32,7 @@ use crate::{
     error::{Error, ProtocolError},
     xmpp_codec::Packet,
     xmpp_stream::XMPPStream,
-    AsyncClient, SimpleClient,
+    AsyncClient,
 };
 
 use self::error::Error as StartTlsError;
@@ -41,8 +41,6 @@ pub mod error;
 
 /// AsyncClient that connects over StartTls
 pub type StartTlsAsyncClient = AsyncClient<ServerConfig>;
-/// SimpleClient that connects over StartTls
-pub type StartTlsSimpleClient = SimpleClient<ServerConfig>;
 
 /// StartTLS XMPP server connection configuration
 #[derive(Clone, Debug)]
