@@ -17,6 +17,9 @@ use xmpp_parsers::jid::Jid;
 use crate::xmpp_stream::XMPPStream;
 use crate::Error;
 
+#[cfg(feature="insecure-tcp")]
+pub mod tcp;
+
 /// trait returned wrapped in XMPPStream by ServerConnector
 pub trait AsyncReadAndWrite: AsyncRead + AsyncWrite + Unpin + Send {}
 impl<T: AsyncRead + AsyncWrite + Unpin + Send> AsyncReadAndWrite for T {}

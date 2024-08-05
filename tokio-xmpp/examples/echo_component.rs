@@ -3,7 +3,7 @@ use minidom::Element;
 use std::env::args;
 use std::process::exit;
 use std::str::FromStr;
-use tokio_xmpp::tcp::TcpComponent as Component;
+use tokio_xmpp::connect::tcp::TcpComponent as Component;
 use xmpp_parsers::jid::Jid;
 use xmpp_parsers::message::{Body, Message, MessageType};
 use xmpp_parsers::presence::{Presence, Show as PresenceShow, Type as PresenceType};
