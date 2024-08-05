@@ -309,6 +309,41 @@ pub struct ElementFromEvents {
     nested: Option<Box<ElementFromEvents>>,
 }
 
+impl ElementFromEvents {
+    /// Construct a new builder from an element header.
+    ///
+    /// Unlike the [`FromXml::from_events`] implementation on
+    /// [`minidom::Element`], this is contractually infallible. Using this may
+    /// thus save you an `unwrap()` call.
+    pub fn new(qname: rxml::QName, attrs: rxml::AttrMap) -> Self {
+        let mut prefixes = SimpleNamespaces::new();
+        let mut builder = Element::builder(qname.1, qname.0);
+        for ((namespace, name), value) in attrs.into_iter() {
+            if namespace.is_none() {
+                builder = builder.attr(name, value);
+            } else {
+                let (is_new, prefix) = prefixes.declare_with_auto_prefix(namespace.clone());
+                let name = prefix.with_suffix(&name);
+                if is_new {
+                    builder = builder
+                        .prefix(
+                            Some(prefix.as_str().to_owned()),
+                            namespace.as_str().to_owned(),
+                        )
+                        .unwrap();
+                }
+                builder = builder.attr(name, value);
+            }
+        }
+
+        let element = builder.build();
+        Self {
+            inner: Some(element),
+            nested: None,
+        }
+    }
+}
+
 impl FromEventsBuilder for ElementFromEvents {
     type Output = minidom::Element;
 
@@ -356,31 +391,7 @@ impl FromXml for Element {
         qname: rxml::QName,
         attrs: rxml::AttrMap,
     ) -> Result<Self::Builder, FromEventsError> {
-        let mut prefixes = SimpleNamespaces::new();
-        let mut builder = Element::builder(qname.1, qname.0);
-        for ((namespace, name), value) in attrs.into_iter() {
-            if namespace.is_none() {
-                builder = builder.attr(name, value);
-            } else {
-                let (is_new, prefix) = prefixes.declare_with_auto_prefix(namespace.clone());
-                let name = prefix.with_suffix(&name);
-                if is_new {
-                    builder = builder
-                        .prefix(
-                            Some(prefix.as_str().to_owned()),
-                            namespace.as_str().to_owned(),
-                        )
-                        .unwrap();
-                }
-                builder = builder.attr(name, value);
-            }
-        }
-
-        let element = builder.build();
-        Ok(Self::Builder {
-            inner: Some(element),
-            nested: None,
-        })
+        Ok(Self::Builder::new(qname, attrs))
     }
 }
 

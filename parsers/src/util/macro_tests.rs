@@ -1551,3 +1551,22 @@ fn optional_attribute_optional_extract_double_option_roundtrip_absent_child() {
         "<parent xmlns='urn:example:ns1'/>",
     )
 }
+
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = NS1, name = "parent")]
+struct ElementCatchall {
+    #[xml(element(n = ..))]
+    children: Vec<::minidom::Element>,
+}
+
+#[test]
+fn element_catchall_roundtrip() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<ElementCatchall>(
+        "<parent xmlns='urn:example:ns1'><child><deeper/></child><child xmlns='urn:example:ns2'/><more-children/><yet-another-child/><child/></parent>",
+    )
+}

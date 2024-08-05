@@ -150,6 +150,7 @@ The following mapping types are defined:
 | --- | --- |
 | [`attribute`](#attribute-meta) | Map the field to an XML attribute on the struct's element |
 | [`child`](#child-meta) | Map the field to a child element |
+| [`element`](#element-meta) | Map the field to a child element as [`minidom::Element`] |
 | [`extract`](#extract-meta) | Map the field to contents of a child element of specified structure |
 | [`text`](#text-meta) | Map the field to the text content of the struct's element |
 
@@ -305,6 +306,63 @@ assert_eq!(parent, Parent {
         OtherChild { some_attr: "c2".to_owned() },
     ],
 });
+```
+
+#### `element` meta
+
+The `element` meta causes the field to be mapped to child elements, stored as
+a container containing [`minidom::Element`] instances.
+
+This meta is only available if `xso` is being built with the `"minidom"`
+feature.
+
+The following keys can be used inside the `#[xml(extract(..))]` meta:
+
+| Key | Value type | Description |
+| --- | --- | --- |
+| `n` | `..` | Must be set to the value `..`. |
+
+The `n` parameter will, in the future, support values other than `..`. In
+order to provide a non-breaking path into that future, it must be set to the
+value `..` right now, indicating that an arbitrary number of elements may be
+collected by this meta.
+
+The field's type must be a collection of `minidom::Element`. It must thus
+implement
+[`IntoIterator<Item = minidom::Element>`][`core::iter::IntoIterator`]. In
+addition, the field's type must implement
+[`Extend<minidom::Element>`][`core::iter::Extend`] to derive `FromXml` and the
+field's reference type must implement
+`IntoIterator<Item = &'_ minidom::Element>` to derive `AsXml`.
+
+Fields with the `element` meta are deserialised with the lowest priority.
+While other fields are processed in the order they are declared, `element`
+fields may capture arbitrary child elements, so they are considered as the
+last choice when no other field matched a given child element. In addition,
+it is not allowed to have more than one field in any given struct with the
+`#[xml(element)]` meta.
+
+##### Example
+
+```rust
+# #[cfg(feature = "minidom")]
+# {
+# use xso::FromXml;
+# use xso::exports::minidom;
+#[derive(FromXml, Debug, PartialEq)]
+#[xml(namespace = "urn:example", name = "parent")]
+struct Parent {
+    #[xml(element(n = ..))]
+    misc: Vec<minidom::Element>,
+}
+
+let parent: Parent = xso::from_bytes(b"<parent
+    xmlns='urn:example'
+><child-a/><child-b/><child-a/></parent>").unwrap();
+assert_eq!(parent.misc[0].name(), "child-a");
+assert_eq!(parent.misc[1].name(), "child-b");
+assert_eq!(parent.misc[2].name(), "child-a");
+# }
 ```
 
 #### `extract` meta

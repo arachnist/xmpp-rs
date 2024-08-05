@@ -20,6 +20,8 @@ Version NEXT:
       - Support for deriving FromXml and AsXml on enums.
       - Support for extracting data from child elements without intermediate
         structs.
+      - Support for collecting all unknown children in a single field as
+        collection of `minidom::Element`.
 
 Version 0.1.2:
 2024-07-26 Jonas Schäfer <jonas@zombofant.net>

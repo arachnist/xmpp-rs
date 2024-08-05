@@ -686,6 +686,17 @@ pub(crate) enum XmlFieldMeta {
         /// The `fields` nested meta.
         fields: Vec<XmlFieldMeta>,
     },
+
+    /// `#[xml(element)]`
+    Element {
+        /// The span of the `#[xml(element)]` meta from which this was parsed.
+        ///
+        /// This is useful for error messages.
+        span: Span,
+
+        /// The `n` flag.
+        amount: Option<AmountConstraint>,
+    },
 }
 
 impl XmlFieldMeta {
@@ -906,6 +917,26 @@ impl XmlFieldMeta {
         })
     }
 
+    /// Parse a `#[xml(element)]` meta.
+    fn element_from_meta(meta: ParseNestedMeta<'_>) -> Result<Self> {
+        let mut amount = None;
+        meta.parse_nested_meta(|meta| {
+            if meta.path.is_ident("n") {
+                if amount.is_some() {
+                    return Err(Error::new_spanned(meta.path, "duplicate `n` key"));
+                }
+                amount = Some(meta.value()?.parse()?);
+                Ok(())
+            } else {
+                Err(Error::new_spanned(meta.path, "unsupported key"))
+            }
+        })?;
+        Ok(Self::Element {
+            span: meta.path.span(),
+            amount,
+        })
+    }
+
     /// Parse [`Self`] from a nestd meta, switching on the identifier
     /// of that nested meta.
     fn parse_from_meta(meta: ParseNestedMeta<'_>) -> Result<Self> {
@@ -917,6 +948,8 @@ impl XmlFieldMeta {
             Self::child_from_meta(meta)
         } else if meta.path.is_ident("extract") {
             Self::extract_from_meta(meta)
+        } else if meta.path.is_ident("element") {
+            Self::element_from_meta(meta)
         } else {
             Err(Error::new_spanned(meta.path, "unsupported field meta"))
         }
@@ -998,6 +1031,7 @@ impl XmlFieldMeta {
             Self::Child { ref span, .. } => *span,
             Self::Text { ref span, .. } => *span,
             Self::Extract { ref span, .. } => *span,
+            Self::Element { ref span, .. } => *span,
         }
     }
 

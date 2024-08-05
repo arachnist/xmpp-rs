@@ -11,7 +11,7 @@ use quote::quote;
 use syn::{spanned::Spanned, *};
 
 use crate::error_message::ParentRef;
-use crate::field::{FieldBuilderPart, FieldDef, FieldIteratorPart, FieldTempInit};
+use crate::field::{FieldBuilderPart, FieldDef, FieldIteratorPart, FieldTempInit, NestedMatcher};
 use crate::meta::NamespaceRef;
 use crate::scope::{mangle_member, AsItemsScope, FromEventsScope};
 use crate::state::{AsItemsSubmachine, FromEventsSubmachine, State};
@@ -109,6 +109,7 @@ impl Compound {
         let mut builder_data_init = TokenStream::default();
         let mut output_cons = TokenStream::default();
         let mut child_matchers = TokenStream::default();
+        let mut fallback_child_matcher = None;
         let mut text_handler = None;
         let mut extra_defs = TokenStream::default();
         let is_tuple = !output_name.is_path();
@@ -219,18 +220,44 @@ impl Compound {
                         #builder_field_name: #init,
                     });
 
-                    child_matchers.extend(quote! {
-                        let (name, attrs) = match #matcher {
-                            ::core::result::Result::Err(::xso::error::FromEventsError::Mismatch { name, attrs }) => (name, attrs),
-                            ::core::result::Result::Err(::xso::error::FromEventsError::Invalid(e)) => return ::core::result::Result::Err(e),
-                            ::core::result::Result::Ok(#substate_data) => {
-                                return ::core::result::Result::Ok(::core::ops::ControlFlow::Break(Self::#state_name {
-                                    #builder_data_ident,
-                                    #substate_data,
-                                }))
+                    match matcher {
+                        NestedMatcher::Selective(matcher) => {
+                            child_matchers.extend(quote! {
+                                let (name, attrs) = match #matcher {
+                                    ::core::result::Result::Err(::xso::error::FromEventsError::Mismatch { name, attrs }) => (name, attrs),
+                                    ::core::result::Result::Err(::xso::error::FromEventsError::Invalid(e)) => return ::core::result::Result::Err(e),
+                                    ::core::result::Result::Ok(#substate_data) => {
+                                        return ::core::result::Result::Ok(::core::ops::ControlFlow::Break(Self::#state_name {
+                                            #builder_data_ident,
+                                            #substate_data,
+                                        }))
+                                    }
+                                };
+                            });
+                        }
+                        NestedMatcher::Fallback(matcher) => {
+                            if let Some((span, _)) = fallback_child_matcher.as_ref() {
+                                let mut err = Error::new(
+                                    field.span(),
+                                    "more than one field is attempting to consume all unmatched child elements"
+                                );
+                                err.combine(Error::new(
+                                    *span,
+                                    "the previous field collecting all unmatched child elements is here"
+                                ));
+                                return Err(err);
                             }
-                        };
-                    });
+
+                            let matcher = quote! {
+                                ::core::result::Result::Ok(::core::ops::ControlFlow::Break(Self::#state_name {
+                                    #builder_data_ident,
+                                    #substate_data: { #matcher },
+                                }))
+                            };
+
+                            fallback_child_matcher = Some((field.span(), matcher));
+                        }
+                    }
 
                     if is_tuple {
                         output_cons.extend(quote! {
@@ -278,6 +305,14 @@ impl Compound {
             }
         };
 
+        let child_fallback = match fallback_child_matcher {
+            Some((_, matcher)) => matcher,
+            None => quote! {
+                let _ = (name, attrs);
+                ::core::result::Result::Err(::xso::error::Error::Other(#unknown_child_err))
+            },
+        };
+
         states.push(State::new_with_builder(
             default_state_ident.clone(),
             builder_data_ident,
@@ -292,8 +327,7 @@ impl Compound {
                 }
                 ::xso::exports::rxml::Event::StartElement(_, name, attrs) => {
                     #child_matchers
-                    let _ = (name, attrs);
-                    ::core::result::Result::Err(::xso::error::Error::Other(#unknown_child_err))
+                    #child_fallback
                 }
                 ::xso::exports::rxml::Event::Text(_, #text) => {
                     #text_handler

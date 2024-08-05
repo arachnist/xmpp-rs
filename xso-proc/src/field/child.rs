@@ -23,7 +23,7 @@ use crate::types::{
     option_as_xml_ty, option_ty, ref_ty, ty_from_ident,
 };
 
-use super::{Field, FieldBuilderPart, FieldIteratorPart, FieldTempInit};
+use super::{Field, FieldBuilderPart, FieldIteratorPart, FieldTempInit, NestedMatcher};
 
 /// The field maps to a child
 pub(super) struct ChildField {
@@ -101,7 +101,7 @@ impl Field for ChildField {
                         init: quote! { ::core::option::Option::None },
                         ty: option_ty(ty.clone()),
                     },
-                    matcher: quote! {
+                    matcher: NestedMatcher::Selective(quote! {
                         match #matcher {
                             ::core::result::Result::Ok(v) => if #field_access.is_some() {
                                 ::core::result::Result::Err(::xso::error::FromEventsError::Invalid(::xso::error::Error::Other(#duplicate_msg)))
@@ -110,7 +110,7 @@ impl Field for ChildField {
                             },
                             ::core::result::Result::Err(e) => ::core::result::Result::Err(e),
                         }
-                    },
+                    }),
                     builder,
                     collect: quote! {
                         #field_access = ::core::option::Option::Some(#fetch);
@@ -132,7 +132,7 @@ impl Field for ChildField {
                         init: quote! { #ty_default() },
                         ty: ty.clone(),
                     },
-                    matcher,
+                    matcher: NestedMatcher::Selective(matcher),
                     builder,
                     collect: quote! {
                         #ty_extend(&mut #field_access, [#fetch]);

@@ -18,10 +18,14 @@ use crate::scope::{AsItemsScope, FromEventsScope};
 
 mod attribute;
 mod child;
+#[cfg(feature = "minidom")]
+mod element;
 mod text;
 
 use self::attribute::AttributeField;
 use self::child::{ChildField, ExtractDef};
+#[cfg(feature = "minidom")]
+use self::element::ElementField;
 use self::text::TextField;
 
 /// Code slices necessary for declaring and initializing a temporary variable
@@ -32,6 +36,33 @@ pub(crate) struct FieldTempInit {
 
     /// The initializer for the temporary variable.
     pub(crate) init: TokenStream,
+}
+
+/// Configure how a nested field builder selects child elements.
+pub(crate) enum NestedMatcher {
+    /// Matches a specific child element fallabily.
+    Selective(
+        /// Expression which evaluates to `Result<T, FromEventsError>`,
+        /// consuming `name: rxml::QName` and `attrs: rxml::AttrMap`.
+        ///
+        /// `T` must be the type specified in the
+        /// [`FieldBuilderPart::Nested::builder`]  field.
+        TokenStream,
+    ),
+
+    #[cfg_attr(not(feature = "minidom"), allow(dead_code))]
+    /// Matches any child element not matched by another matcher.
+    ///
+    /// Only a single field may use this variant, otherwise an error is
+    /// raised during execution of the proc macro.
+    Fallback(
+        /// Expression which evaluates to `T` (or `return`s an error),
+        /// consuming `name: rxml::QName` and `attrs: rxml::AttrMap`.
+        ///
+        /// `T` must be the type specified in the
+        /// [`FieldBuilderPart::Nested::builder`]  field.
+        TokenStream,
+    ),
 }
 
 /// Describe how a struct or enum variant's member is parsed from XML data.
@@ -73,12 +104,9 @@ pub(crate) enum FieldBuilderPart {
         /// parsing.
         value: FieldTempInit,
 
-        /// Expression which evaluates to `Result<T, FromEventsError>`,
-        /// consuming `name: rxml::QName` and `attrs: rxml::AttrMap`.
-        ///
-        /// `T` must be the type specified in the
-        /// [`Self::Nested::builder`]  field.
-        matcher: TokenStream,
+        /// Configure child matching behaviour for this field. See
+        /// [`NestedMatcher`] for options.
+        matcher: NestedMatcher,
 
         /// Type implementing `xso::FromEventsBuilder` which parses the child
         /// element.
@@ -343,6 +371,31 @@ fn new_field(
                 }),
             }))
         }
+
+        #[cfg(feature = "minidom")]
+        XmlFieldMeta::Element { span, amount } => {
+            match amount {
+                Some(AmountConstraint::Any(_)) => (),
+                Some(AmountConstraint::FixedSingle(span)) => {
+                    return Err(Error::new(
+                        span,
+                        "only `n = ..` is supported for #[xml(element)]` currently",
+                    ))
+                }
+                None => return Err(Error::new(span, "`n` must be set to `..` currently")),
+            }
+
+            Ok(Box::new(ElementField))
+        }
+
+        #[cfg(not(feature = "minidom"))]
+        XmlFieldMeta::Element { span, amount } => {
+            let _ = amount;
+            Err(Error::new(
+                span,
+                "#[xml(element)] requires xso to be built with the \"minidom\" feature.",
+            ))
+        }
     }
 }
 
@@ -351,6 +404,9 @@ fn new_field(
 /// See [`Compound`][`crate::compound::Compound`] for more information on
 /// compounds in general.
 pub(crate) struct FieldDef {
+    /// A span which refers to the field's definition.
+    span: Span,
+
     /// The member identifying the field.
     member: Member,
 
@@ -388,6 +444,7 @@ impl FieldDef {
         let ty = field.ty.clone();
 
         Ok(Self {
+            span: field_span,
             inner: new_field(meta, ident, &ty, container_namespace)?,
             member,
             ty,
@@ -406,6 +463,7 @@ impl FieldDef {
     ) -> Result<Self> {
         let span = meta.span();
         Ok(Self {
+            span,
             member: Member::Unnamed(Index { index, span }),
             ty: ty.clone(),
             inner: new_field(meta, None, ty, container_namespace)?,
@@ -453,5 +511,10 @@ impl FieldDef {
     /// Return true if this field's parsing consumes text data.
     pub(crate) fn is_text_field(&self) -> bool {
         self.inner.captures_text()
+    }
+
+    /// Return a span which points at the field's definition.'
+    pub(crate) fn span(&self) -> Span {
+        self.span
     }
 }

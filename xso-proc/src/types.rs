@@ -783,3 +783,36 @@ pub(crate) fn option_as_xml_ty(inner_ty: Type) -> Type {
         },
     })
 }
+
+/// Construct a [`syn::Type`] referring to `::xso::exports::minidom::Element`.
+#[cfg(feature = "minidom")]
+pub(crate) fn element_ty(span: Span) -> Type {
+    Type::Path(TypePath {
+        qself: None,
+        path: Path {
+            leading_colon: Some(syn::token::PathSep {
+                spans: [span, span],
+            }),
+            segments: [
+                PathSegment {
+                    ident: Ident::new("xso", span),
+                    arguments: PathArguments::None,
+                },
+                PathSegment {
+                    ident: Ident::new("exports", span),
+                    arguments: PathArguments::None,
+                },
+                PathSegment {
+                    ident: Ident::new("minidom", span),
+                    arguments: PathArguments::None,
+                },
+                PathSegment {
+                    ident: Ident::new("Element", span),
+                    arguments: PathArguments::None,
+                },
+            ]
+            .into_iter()
+            .collect(),
+        },
+    })
+}
