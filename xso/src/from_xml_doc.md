@@ -15,6 +15,20 @@ let foo: Foo = xso::from_bytes(b"<foo xmlns='urn:example'/>").unwrap();
 assert_eq!(foo, Foo);
 ```
 
+## Table of contents
+
+1. [Attributes](#attributes)
+2. [Struct meta](#struct-meta)
+3. [Enums](#enums)
+    1. [Name-switched enum meta](#name-switched-enum-meta)
+    2. [Dynamic enum meta](#dynamic-enum-meta)
+4. [Field meta](#field-meta)
+    1. [`attribute` meta](#attribute-meta)
+    2. [`child` meta](#child-meta)
+    3. [`element` meta](#element-meta)
+    4. [`extract` meta](#extract-meta)
+    5. [`text` meta](#text-meta)
+
 ## Attributes
 
 The derive macros need additional information, such as XML namespaces and
@@ -42,7 +56,7 @@ such:
 - flag: Has no value. The key's mere presence has relevance and it must not be
   followed by a `=` sign.
 
-### Struct meta
+## Struct meta
 
 The following keys are defined on structs:
 
@@ -81,7 +95,7 @@ implement [`FromXml`] in order to derive `FromXml` and [`AsXml`] in order to
 derive `AsXml`. The struct will be (de-)serialised exactly like the type of
 that single field. This allows a newtype-like pattern for XSO structs.
 
-### Enums
+## Enums
 
 Two different `enum` flavors are supported:
 
@@ -95,7 +109,7 @@ At the source-code level, they are distinguished by the meta keys which are
 present on the `enum`: The different variants have different sets of mandatory
 keys and can thus be uniquely identified.
 
-#### Name-switched enum meta
+### Name-switched enum meta
 
 Name-switched enums match a fixed XML namespace and then select the enum
 variant based on the XML element's name. Name-switched enums are declared by
@@ -127,7 +141,7 @@ Note that the *exhaustive* flag is orthogonal to the Rust attribute
 For details on `builder` and `iterator`, see the [Struct meta](#struct-meta)
 documentation above.
 
-##### Name-switched enum variant meta
+#### Name-switched enum variant meta
 
 | Key | Value type | Description |
 | --- | --- | --- |
@@ -137,7 +151,7 @@ Note that the `name` value must be a valid XML element name, without colons.
 The namespace prefix, if any, is assigned automatically at serialisation time
 and cannot be overridden.
 
-##### Example
+#### Example
 
 ```rust
 # use xso::FromXml;
@@ -163,7 +177,7 @@ let foo: Foo = xso::from_bytes(b"<b xmlns='urn:example' bar='hello'/>").unwrap()
 assert_eq!(foo, Foo::Variant2 { bar: "hello".to_string() });
 ```
 
-#### Dynamic enum meta
+### Dynamic enum meta
 
 Dynamic enums select their variants by attempting to match them in declaration
 order. Dynamic enums are declared by not setting the `namespace` key on an
@@ -179,7 +193,7 @@ The following keys are defined on dynamic enums:
 For details on `builder` and `iterator`, see the [Struct meta](#struct-meta)
 documentation above.
 
-##### Dynamic enum variant meta
+#### Dynamic enum variant meta
 
 Dynamic enum variants are completely independent of one another and thus use
 the same meta structure as structs. See [Struct meta](#struct-meta) for
@@ -188,7 +202,7 @@ details.
 The `builder`, `iterator` and `debug` keys cannot be used on dynmaic enum
 variants.
 
-##### Example
+#### Example
 
 ```rust
 # use xso::FromXml;
@@ -214,7 +228,7 @@ let foo: Foo = xso::from_bytes(b"<b xmlns='urn:example:ns2' bar='hello'/>").unwr
 assert_eq!(foo, Foo::Variant2 { bar: "hello".to_string() });
 ```
 
-### Field meta
+## Field meta
 
 For fields, the *meta* consists of a nested meta inside the `#[xml(..)]` meta,
 the identifier of which controls *how* the field is mapped to XML, while the
@@ -230,7 +244,7 @@ The following mapping types are defined:
 | [`extract`](#extract-meta) | Map the field to contents of a child element of specified structure |
 | [`text`](#text-meta) | Map the field to the text content of the struct's element |
 
-#### `attribute` meta
+### `attribute` meta
 
 The `attribute` meta causes the field to be mapped to an XML attribute of the
 same name. For `FromXml`, the field's type must implement [`FromXmlText`] and
@@ -265,7 +279,7 @@ If `type_` is specified and the `text` meta is used within an
 `#[xml(extract(fields(..)))]` meta, the specified type is used instead of the
 field type on which the `extract` is declared.
 
-##### Example
+#### Example
 
 ```rust
 # use xso::FromXml;
@@ -299,7 +313,7 @@ assert_eq!(foo, Foo {
 });
 ```
 
-#### `child` meta
+### `child` meta
 
 The `child` meta causes the field to be mapped to a child element of the
 element.
@@ -333,7 +347,7 @@ serialisation to mismatch the deserialisation (i.e. the struct is then not
 roundtrip-safe), because the deserialisation does not compare the value
 against `default` (but has special provisions to work with `Option<T>`).
 
-##### Example
+#### Example
 
 ```rust
 # use xso::FromXml;
@@ -384,7 +398,7 @@ assert_eq!(parent, Parent {
 });
 ```
 
-#### `element` meta
+### `element` meta
 
 The `element` meta causes the field to be mapped to child elements, stored as
 a container containing [`minidom::Element`] instances.
@@ -418,7 +432,7 @@ last choice when no other field matched a given child element. In addition,
 it is not allowed to have more than one field in any given struct with the
 `#[xml(element)]` meta.
 
-##### Example
+#### Example
 
 ```rust
 # #[cfg(feature = "minidom")]
@@ -441,7 +455,7 @@ assert_eq!(parent.misc[2].name(), "child-a");
 # }
 ```
 
-#### `extract` meta
+### `extract` meta
 
 The `extract` meta causes the field to be mapped to the *contents* of a child
 element.
@@ -517,7 +531,7 @@ and they may not support all configuration options which may in the future be
 added on structs (such as configuring handling of undeclared attributes) and
 they cannot be used for enumerations.
 
-##### Example
+#### Example
 
 ```rust
 # use xso::FromXml;
@@ -535,7 +549,7 @@ assert_eq!(foo, Foo {
 });
 ```
 
-#### `text` meta
+### `text` meta
 
 The `text` meta causes the field to be mapped to the text content of the
 element.
@@ -563,7 +577,7 @@ Only a single field per struct may be annotated with `#[xml(text)]` at a time,
 to avoid parsing ambiguities. This is also true if only `AsXml` is derived on
 a field, for consistency.
 
-##### Example without codec
+#### Example without codec
 
 ```rust
 # use xso::FromXml;
@@ -580,7 +594,7 @@ assert_eq!(foo, Foo {
 });
 ```
 
-##### Example with codec
+#### Example with codec
 
 ```rust
 # use xso::FromXml;
