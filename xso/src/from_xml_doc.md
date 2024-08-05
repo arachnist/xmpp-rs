@@ -50,6 +50,7 @@ The following keys are defined on structs:
 | --- | --- | --- |
 | `namespace` | *string literal* or *path* | The XML element namespace to match. If it is a *path*, it must point at a `&'static str`. |
 | `name` | *string literal* or *path* | The XML element name to match. If it is a *path*, it must point at a `&'static NcNameStr`. |
+| `transparent` | *flag* | If present, declares the struct as *transparent* struct (see below) |
 | `builder` | optional *ident* | The name to use for the generated builder type. |
 | `iterator` | optional *ident* | The name to use for the generated iterator type. |
 
@@ -73,6 +74,12 @@ identifiers passed to either of these keys is considered reserved.
 By default, the builder type uses the type's name suffixed with
 `FromXmlBuilder` and the iterator type uses the type's name suffixed with
 `AsXmlIterator`.
+
+If the struct is marked as `transparent`, it must not have a `namespace` or
+`name` set and it must have exactly one field. That field's type must
+implement [`FromXml`] in order to derive `FromXml` and [`AsXml`] in order to
+derive `AsXml`. The struct will be (de-)serialised exactly like the type of
+that single field. This allows a newtype-like pattern for XSO structs.
 
 ### Enum meta
 

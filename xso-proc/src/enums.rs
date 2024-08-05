@@ -44,6 +44,7 @@ impl NameVariant {
             debug,
             builder,
             iterator,
+            transparent,
         } = XmlCompoundMeta::parse_from_attributes(&decl.attrs)?;
 
         reject_key!(debug flag not on "enum variants" only on "enums and structs");
@@ -51,6 +52,7 @@ impl NameVariant {
         reject_key!(namespace not on "enum variants" only on "enums and structs");
         reject_key!(builder not on "enum variants" only on "enums and structs");
         reject_key!(iterator not on "enum variants" only on "enums and structs");
+        reject_key!(transparent flag not on "named enum variants" only on "structs");
 
         let Some(name) = name else {
             return Err(Error::new(meta_span, "`name` is required on enum variants"));
@@ -179,9 +181,11 @@ impl EnumDef {
             debug,
             builder,
             iterator,
+            transparent,
         } = meta;
 
         reject_key!(name not on "enums" only on "their variants");
+        reject_key!(transparent flag not on "enums" only on "structs");
 
         let Some(namespace) = namespace else {
             return Err(Error::new(meta_span, "`namespace` is required on enums"));

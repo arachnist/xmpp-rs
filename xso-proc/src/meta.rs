@@ -23,7 +23,7 @@ pub const XMLNS_XML: &str = "http://www.w3.org/XML/1998/namespace";
 pub const XMLNS_XMLNS: &str = "http://www.w3.org/2000/xmlns/";
 
 macro_rules! reject_key {
-    ($key:ident not on $not_allowed_on:literal only on $only_allowed_on:literal) => {
+    ($key:ident not on $not_allowed_on:literal $(only on $only_allowed_on:literal)?) => {
         if let Some($key) = $key {
             return Err(Error::new_spanned(
                 $key,
@@ -32,15 +32,17 @@ macro_rules! reject_key {
                     stringify!($key),
                     "` is not allowed on ",
                     $not_allowed_on,
-                    " (only on ",
-                    $only_allowed_on,
-                    ")"
+                    $(
+                        " (only on ",
+                        $only_allowed_on,
+                        ")",
+                    )?
                 ),
             ));
         }
     };
 
-    ($key:ident flag not on $not_allowed_on:literal only on $only_allowed_on:literal) => {
+    ($key:ident flag not on $not_allowed_on:literal $(only on $only_allowed_on:literal)?) => {
         if let Flag::Present($key) = $key {
             return Err(Error::new(
                 $key,
@@ -49,9 +51,11 @@ macro_rules! reject_key {
                     stringify!($key),
                     "` is not allowed on ",
                     $not_allowed_on,
-                    " (only on ",
-                    $only_allowed_on,
-                    ")"
+                    $(
+                        " (only on ",
+                        $only_allowed_on,
+                        ")",
+                    )?
                 ),
             ));
         }
@@ -252,6 +256,13 @@ impl Flag {
             Self::Present(_) => true,
         }
     }
+
+    /// Like `Option::take`, but for flags.
+    pub(crate) fn take(&mut self) -> Self {
+        let mut result = Flag::Absent;
+        core::mem::swap(&mut result, self);
+        result
+    }
 }
 
 impl<T: Spanned> From<T> for Flag {
@@ -340,6 +351,9 @@ pub(crate) struct XmlCompoundMeta {
 
     /// The exhaustive flag.
     pub(crate) exhaustive: Flag,
+
+    /// The transparent flag.
+    pub(crate) transparent: Flag,
 }
 
 impl XmlCompoundMeta {
@@ -353,6 +367,7 @@ impl XmlCompoundMeta {
         let mut iterator = None;
         let mut debug = Flag::Absent;
         let mut exhaustive = Flag::Absent;
+        let mut transparent = Flag::Absent;
 
         attr.parse_nested_meta(|meta| {
             if meta.path.is_ident("debug") {
@@ -379,6 +394,12 @@ impl XmlCompoundMeta {
                 }
                 exhaustive = (&meta.path).into();
                 Ok(())
+            } else if meta.path.is_ident("transparent") {
+                if transparent.is_set() {
+                    return Err(Error::new_spanned(meta.path, "duplicate `transparent` key"));
+                }
+                transparent = (&meta.path).into();
+                Ok(())
             } else {
                 match qname.parse_incremental_from_meta(meta)? {
                     None => Ok(()),
@@ -394,6 +415,7 @@ impl XmlCompoundMeta {
             builder,
             iterator,
             exhaustive,
+            transparent,
         })
     }
 

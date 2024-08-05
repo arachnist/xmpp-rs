@@ -22,6 +22,7 @@ Version NEXT:
         structs.
       - Support for collecting all unknown children in a single field as
         collection of `minidom::Element`.
+      - Support for "transparent" structs (newtype-like patterns for XSO).
 
 Version 0.1.2:
 2024-07-26 Jonas Schäfer <jonas@zombofant.net>

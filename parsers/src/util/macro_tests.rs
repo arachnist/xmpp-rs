@@ -1570,3 +1570,33 @@ fn element_catchall_roundtrip() {
         "<parent xmlns='urn:example:ns1'><child><deeper/></child><child xmlns='urn:example:ns2'/><more-children/><yet-another-child/><child/></parent>",
     )
 }
+
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(transparent)]
+struct TransparentStruct(RequiredAttribute);
+
+#[test]
+fn transparent_struct_roundtrip() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<TransparentStruct>("<attr xmlns='urn:example:ns1' foo='bar'/>");
+}
+
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(transparent)]
+struct TransparentStructNamed {
+    foo: RequiredAttribute,
+}
+
+#[test]
+fn transparent_struct_named_roundtrip() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<TransparentStructNamed>("<attr xmlns='urn:example:ns1' foo='bar'/>");
+}
