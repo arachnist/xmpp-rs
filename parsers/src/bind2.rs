@@ -9,7 +9,6 @@ use xso::{AsXml, FromXml};
 use crate::mam;
 use crate::ns;
 use minidom::Element;
-use xso::error::{Error, FromElementError};
 
 /// Represents the `<bind/>` element, as sent by the server in SASL 2 to advertise which features
 /// can be enabled during the binding step.
@@ -17,110 +16,39 @@ use xso::error::{Error, FromElementError};
 #[xml(namespace = ns::BIND2, name = "bind")]
 pub struct BindFeature {
     /// The features that can be enabled by the client.
-    #[xml(extract(name = "inline", fields(extract(n = .., name = "feature", fields(attribute(name = "var", type_ = String))))))]
+    #[xml(extract(default, name = "inline", fields(extract(n = .., name = "feature", fields(attribute(name = "var", type_ = String))))))]
     pub inline_features: Vec<String>,
 }
 
 /// Represents a `<bind/>` element, as sent by the client inline in the `<authenticate/>` SASL 2
 /// element, to perform the binding at the same time as the authentication.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(FromXml, AsXml, Debug, Clone, PartialEq)]
+#[xml(namespace = ns::BIND2, name = "bind")]
 pub struct BindQuery {
     /// Short text string that typically identifies the software the user is using, mostly useful
     /// for diagnostic purposes for users, operators and developers.  This tag may be visible to
     /// other entities on the XMPP network.
+    #[xml(extract(default, fields(text(type_ = String))))]
     pub tag: Option<String>,
 
     /// Features that the client requests to be automatically enabled for its new session.
+    #[xml(element(n = ..))]
     pub payloads: Vec<Element>,
-}
-
-impl TryFrom<Element> for BindQuery {
-    type Error = FromElementError;
-
-    fn try_from(root: Element) -> Result<BindQuery, Self::Error> {
-        check_self!(root, "bind", BIND2);
-        check_no_attributes!(root, "bind");
-
-        let mut tag = None;
-        let mut payloads = Vec::new();
-        for child in root.children() {
-            if child.is("tag", ns::BIND2) {
-                if tag.is_some() {
-                    return Err(
-                        Error::Other("Bind must not have more than one tag element.").into(),
-                    );
-                }
-                check_no_attributes!(child, "tag");
-                check_no_children!(child, "tag");
-                tag = Some(child.text());
-            } else {
-                payloads.push(child.clone());
-            }
-        }
-
-        Ok(BindQuery { tag, payloads })
-    }
-}
-
-impl From<BindQuery> for Element {
-    fn from(bind: BindQuery) -> Element {
-        Element::builder("bind", ns::BIND2)
-            .append_all(
-                bind.tag
-                    .map(|tag| Element::builder("tag", ns::BIND2).append(tag)),
-            )
-            .append_all(bind.payloads)
-            .build()
-    }
 }
 
 /// Represents a `<bound/>` element, which tells the client its resource is bound, alongside other
 /// requests.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(FromXml, AsXml, Debug, Clone, PartialEq)]
+#[xml(namespace = ns::BIND2, name = "bound")]
 pub struct Bound {
     /// Indicates which messages got missed by this particular device, start is the oldest message
     /// and end is the newest, before this connection.
+    #[xml(child(default))]
     pub mam_metadata: Option<mam::MetadataResponse>,
 
     /// Additional payloads which happened during the binding process.
+    #[xml(element(n = ..))]
     pub payloads: Vec<Element>,
-}
-
-impl TryFrom<Element> for Bound {
-    type Error = FromElementError;
-
-    fn try_from(root: Element) -> Result<Bound, Self::Error> {
-        check_self!(root, "bound", BIND2);
-        check_no_attributes!(root, "bound");
-
-        let mut mam_metadata = None;
-        let mut payloads = Vec::new();
-        for child in root.children() {
-            if child.is("metadata", ns::MAM) {
-                if mam_metadata.is_some() {
-                    return Err(
-                        Error::Other("Bind must not have more than one metadata element.").into(),
-                    );
-                }
-                mam_metadata = Some(mam::MetadataResponse::try_from(child.clone())?);
-            } else {
-                payloads.push(child.clone());
-            }
-        }
-
-        Ok(Bound {
-            mam_metadata,
-            payloads,
-        })
-    }
-}
-
-impl From<Bound> for Element {
-    fn from(bound: Bound) -> Element {
-        Element::builder("bound", ns::BIND2)
-            .append_all(bound.mam_metadata)
-            .build()
-    }
 }
 
 #[cfg(test)]
@@ -141,6 +69,14 @@ mod tests {
         assert_size!(BindFeature, 24);
         assert_size!(BindQuery, 48);
         assert_size!(Bound, 104);
+    }
+
+    #[test]
+    fn test_empty() {
+        let elem: Element = "<bind xmlns='urn:xmpp:bind:0'/>".parse().unwrap();
+        let bind = BindQuery::try_from(elem).unwrap();
+        assert_eq!(bind.tag, None);
+        assert_eq!(bind.payloads.len(), 0);
     }
 
     #[test]
