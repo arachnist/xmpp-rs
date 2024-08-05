@@ -140,8 +140,7 @@ impl NameVariant {
     }
 }
 
-/// Definition of an enum and how to parse it.
-pub(crate) struct EnumDef {
+struct NameSwitchedEnum {
     /// The XML namespace of the element to map the enum to.
     namespace: NamespaceRef,
 
@@ -150,24 +149,10 @@ pub(crate) struct EnumDef {
 
     /// Flag indicating whether the enum is exhaustive.
     exhaustive: bool,
-
-    /// Name of the target type.
-    target_ty_ident: Ident,
-
-    /// Name of the builder type.
-    builder_ty_ident: Ident,
-
-    /// Name of the iterator type.
-    item_iter_ty_ident: Ident,
-
-    /// Flag whether debug mode is enabled.
-    debug: bool,
 }
 
-impl EnumDef {
-    /// Create a new enum from its name, meta, and variants.
-    pub(crate) fn new<'x, I: IntoIterator<Item = &'x Variant>>(
-        ident: &Ident,
+impl NameSwitchedEnum {
+    fn new<'x, I: IntoIterator<Item = &'x Variant>>(
         meta: XmlCompoundMeta,
         variant_iter: I,
     ) -> Result<Self> {
@@ -183,6 +168,13 @@ impl EnumDef {
             iterator,
             transparent,
         } = meta;
+
+        // These must've been cleared by the caller. Because these being set
+        // is a programming error (in xso-proc) and not a usage error, we
+        // assert here instead of using reject_key!.
+        assert!(builder.is_none());
+        assert!(iterator.is_none());
+        assert!(!debug.is_set());
 
         reject_key!(name not on "enums" only on "their variants");
         reject_key!(transparent flag not on "enums" only on "structs");
@@ -208,44 +200,24 @@ impl EnumDef {
             variants.push(variant);
         }
 
-        let builder_ty_ident = match builder {
-            Some(v) => v,
-            None => quote::format_ident!("{}FromXmlBuilder", ident.to_string()),
-        };
-
-        let item_iter_ty_ident = match iterator {
-            Some(v) => v,
-            None => quote::format_ident!("{}AsXmlIterator", ident.to_string()),
-        };
-
         Ok(Self {
             namespace,
             variants,
             exhaustive: exhaustive.is_set(),
-            target_ty_ident: ident.clone(),
-            builder_ty_ident,
-            item_iter_ty_ident,
-            debug: debug.is_set(),
         })
     }
-}
 
-impl ItemDef for EnumDef {
-    fn make_from_events_builder(
+    fn make_from_events_statemachine(
         &self,
-        vis: &Visibility,
-        name_ident: &Ident,
-        attrs_ident: &Ident,
-    ) -> Result<FromXmlParts> {
+        target_ty_ident: &Ident,
+        state_ty_ident: &Ident,
+    ) -> Result<FromEventsStateMachine> {
         let xml_namespace = &self.namespace;
-        let target_ty_ident = &self.target_ty_ident;
-        let builder_ty_ident = &self.builder_ty_ident;
-        let state_ty_ident = quote::format_ident!("{}State", builder_ty_ident);
 
         let mut statemachine = FromEventsStateMachine::new();
         for variant in self.variants.iter() {
             statemachine
-                .merge(variant.make_from_events_statemachine(target_ty_ident, &state_ty_ident)?);
+                .merge(variant.make_from_events_statemachine(target_ty_ident, state_ty_ident)?);
         }
 
         statemachine.set_pre_init(quote! {
@@ -266,16 +238,100 @@ impl ItemDef for EnumDef {
             })
         }
 
-        let defs = statemachine.render(
-            vis,
+        Ok(statemachine)
+    }
+
+    fn make_as_item_iter_statemachine(
+        &self,
+        target_ty_ident: &Ident,
+        state_ty_ident: &Ident,
+        item_iter_ty_lifetime: &Lifetime,
+    ) -> Result<AsItemsStateMachine> {
+        let mut statemachine = AsItemsStateMachine::new();
+        for variant in self.variants.iter() {
+            statemachine.merge(variant.make_as_item_iter_statemachine(
+                &self.namespace,
+                target_ty_ident,
+                state_ty_ident,
+                item_iter_ty_lifetime,
+            )?);
+        }
+
+        Ok(statemachine)
+    }
+}
+
+/// Definition of an enum and how to parse it.
+pub(crate) struct EnumDef {
+    /// Implementation of the enum itself
+    inner: NameSwitchedEnum,
+
+    /// Name of the target type.
+    target_ty_ident: Ident,
+
+    /// Name of the builder type.
+    builder_ty_ident: Ident,
+
+    /// Name of the iterator type.
+    item_iter_ty_ident: Ident,
+
+    /// Flag whether debug mode is enabled.
+    debug: bool,
+}
+
+impl EnumDef {
+    /// Create a new enum from its name, meta, and variants.
+    pub(crate) fn new<'x, I: IntoIterator<Item = &'x Variant>>(
+        ident: &Ident,
+        mut meta: XmlCompoundMeta,
+        variant_iter: I,
+    ) -> Result<Self> {
+        let builder_ty_ident = match meta.builder.take() {
+            Some(v) => v,
+            None => quote::format_ident!("{}FromXmlBuilder", ident.to_string()),
+        };
+
+        let item_iter_ty_ident = match meta.iterator.take() {
+            Some(v) => v,
+            None => quote::format_ident!("{}AsXmlIterator", ident.to_string()),
+        };
+
+        let debug = meta.debug.take().is_set();
+
+        Ok(Self {
+            inner: NameSwitchedEnum::new(meta, variant_iter)?,
+            target_ty_ident: ident.clone(),
             builder_ty_ident,
-            &state_ty_ident,
-            &TypePath {
-                qself: None,
-                path: target_ty_ident.clone().into(),
-            }
-            .into(),
-        )?;
+            item_iter_ty_ident,
+            debug,
+        })
+    }
+}
+
+impl ItemDef for EnumDef {
+    fn make_from_events_builder(
+        &self,
+        vis: &Visibility,
+        name_ident: &Ident,
+        attrs_ident: &Ident,
+    ) -> Result<FromXmlParts> {
+        let target_ty_ident = &self.target_ty_ident;
+        let builder_ty_ident = &self.builder_ty_ident;
+        let state_ty_ident = quote::format_ident!("{}State", builder_ty_ident);
+
+        let defs = self
+            .inner
+            .make_from_events_statemachine(target_ty_ident, &state_ty_ident)?
+            .render(
+                vis,
+                builder_ty_ident,
+                &state_ty_ident,
+                &TypePath {
+                    qself: None,
+                    path: target_ty_ident.clone().into(),
+                }
+                .into(),
+            )?;
 
         Ok(FromXmlParts {
             defs,
@@ -318,26 +374,23 @@ impl ItemDef for EnumDef {
         });
         let state_ty_ident = quote::format_ident!("{}State", item_iter_ty_ident);
 
-        let mut statemachine = AsItemsStateMachine::new();
-        for variant in self.variants.iter() {
-            statemachine.merge(variant.make_as_item_iter_statemachine(
-                &self.namespace,
+        let defs = self
+            .inner
+            .make_as_item_iter_statemachine(
                 target_ty_ident,
                 &state_ty_ident,
                 &item_iter_ty_lifetime,
-            )?);
-        }
-
-        let defs = statemachine.render(
-            vis,
-            &ref_ty(
-                ty_from_ident(target_ty_ident.clone()).into(),
-                item_iter_ty_lifetime.clone(),
-            ),
-            &state_ty_ident,
-            &item_iter_ty_lifetime,
-            &item_iter_ty,
-        )?;
+            )?
+            .render(
+                vis,
+                &ref_ty(
+                    ty_from_ident(target_ty_ident.clone()).into(),
+                    item_iter_ty_lifetime.clone(),
+                ),
+                &state_ty_ident,
+                &item_iter_ty_lifetime,
+                &item_iter_ty,
+            )?;
 
         Ok(AsXmlParts {
             defs,
