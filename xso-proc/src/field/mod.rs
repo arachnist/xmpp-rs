@@ -427,20 +427,26 @@ impl FieldDef {
         index: u32,
         container_namespace: &NamespaceRef,
     ) -> Result<Self> {
-        let field_span = field.span();
-        let meta = XmlFieldMeta::parse_from_attributes(&field.attrs, &field_span)?;
-
         let (member, ident) = match field.ident.as_ref() {
             Some(v) => (Member::Named(v.clone()), Some(v)),
             None => (
                 Member::Unnamed(Index {
                     index,
-                    span: field_span,
+                    // We use the type's span here, because `field.span()`
+                    // will visually point at the `#[xml(..)]` meta, which is
+                    // not helpful when glancing at error messages referring
+                    // to the field itself.
+                    span: field.ty.span(),
                 }),
                 None,
             ),
         };
-
+        // This will either be the field's identifier's span (for named
+        // fields) or the field's type (for unnamed fields), which should give
+        // the user a good visual feedback about which field an error message
+        // is.
+        let field_span = member.span();
+        let meta = XmlFieldMeta::parse_from_attributes(&field.attrs, &field_span)?;
         let ty = field.ty.clone();
 
         Ok(Self {
