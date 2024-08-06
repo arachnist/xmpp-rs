@@ -10,6 +10,20 @@ use crate::iq::{IqResultPayload, IqSetPayload};
 use crate::ns;
 use jid::{FullJid, Jid};
 
+/// The bind feature exposed in stream:features.
+#[derive(FromXml, AsXml, Debug, Clone, PartialEq)]
+#[xml(namespace = ns::BIND, name = "bind")]
+pub struct BindFeature {
+    /// Present if bind is required.
+    #[xml(child(default))]
+    required: Option<Required>,
+}
+
+/// Notes that bind is required.
+#[derive(FromXml, AsXml, Debug, Clone, PartialEq)]
+#[xml(namespace = ns::BIND, name = "required")]
+pub struct Required;
+
 /// The request for resource binding, which is the process by which a client
 /// can obtain a full JID and start exchanging on the XMPP network.
 ///
@@ -68,6 +82,8 @@ mod tests {
     #[cfg(target_pointer_width = "32")]
     #[test]
     fn test_size() {
+        assert_size!(BindFeature, 1);
+        assert_size!(Required, 0);
         assert_size!(BindQuery, 12);
         assert_size!(BindResponse, 16);
     }
@@ -75,6 +91,8 @@ mod tests {
     #[cfg(target_pointer_width = "64")]
     #[test]
     fn test_size() {
+        assert_size!(BindFeature, 1);
+        assert_size!(Required, 0);
         assert_size!(BindQuery, 24);
         assert_size!(BindResponse, 32);
     }

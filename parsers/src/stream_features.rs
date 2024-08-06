@@ -7,6 +7,7 @@
 use minidom::Element;
 use xso::{AsXml, FromXml};
 
+use crate::bind::BindFeature;
 use crate::ns;
 
 /// Wraps `<stream:features/>`, usually the very first nonza of a
@@ -20,7 +21,7 @@ pub struct StreamFeatures {
 
     /// Bind is supported.
     #[xml(child(default))]
-    pub bind: Option<Bind>,
+    pub bind: Option<BindFeature>,
 
     /// List of supported SASL mechanisms
     #[xml(child(default))]
@@ -47,11 +48,6 @@ pub struct StartTls {
 #[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = ns::TLS, name = "required")]
 pub struct RequiredStartTls;
-
-/// Bind is supported.
-#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
-#[xml(namespace = ns::BIND, name = "bind")]
-pub struct Bind;
 
 /// List of supported SASL mechanisms
 #[derive(FromXml, AsXml, PartialEq, Debug, Clone, Default)]
@@ -93,7 +89,6 @@ mod tests {
     fn test_size() {
         assert_size!(SaslMechanism, 12);
         assert_size!(SaslMechanisms, 12);
-        assert_size!(Bind, 0);
         assert_size!(RequiredStartTls, 0);
         assert_size!(StartTls, 1);
         assert_size!(StreamFeatures, 28);
@@ -104,7 +99,6 @@ mod tests {
     fn test_size() {
         assert_size!(SaslMechanism, 24);
         assert_size!(SaslMechanisms, 24);
-        assert_size!(Bind, 0);
         assert_size!(RequiredStartTls, 0);
         assert_size!(StartTls, 1);
         assert_size!(StreamFeatures, 56);
