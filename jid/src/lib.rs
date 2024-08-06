@@ -91,7 +91,7 @@ fn length_check(len: usize, error_empty: Error, error_too_long: Error) -> Result
 ///
 /// This dynamic type on the other hand can be used in contexts where it is
 /// not known, at compile-time, whether a JID is full or bare.
-#[derive(Debug, Clone, Eq)]
+#[derive(Clone, Eq)]
 pub struct Jid {
     normalized: String,
     at: Option<NonZeroU16>,
@@ -531,15 +531,25 @@ impl Borrow<Jid> for BareJid {
     }
 }
 
+impl fmt::Debug for Jid {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        fmt.debug_tuple("Jid").field(&self.normalized).finish()
+    }
+}
+
 impl fmt::Debug for FullJid {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        fmt.debug_tuple("FullJid").field(&self.inner).finish()
+        fmt.debug_tuple("FullJid")
+            .field(&self.inner.normalized)
+            .finish()
     }
 }
 
 impl fmt::Debug for BareJid {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        fmt.debug_tuple("BareJid").field(&self.inner).finish()
+        fmt.debug_tuple("BareJid")
+            .field(&self.inner.normalized)
+            .finish()
     }
 }
 
