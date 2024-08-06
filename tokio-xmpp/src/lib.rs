@@ -1,4 +1,30 @@
-//! XMPP implementation with asynchronous I/O using Tokio.
+//! Low-level [XMPP](https://xmpp.org/) decentralized instant messaging & social networking implementation with asynchronous I/O using [tokio](https://tokio.rs/).
+//!
+//! For an easier, batteries-included experience, try the [xmpp crate](https://docs.rs/xmpp).
+//!
+//! # Getting started
+//!
+//! In most cases, you want to start with a [`Client`], that will connect to a server over TCP/IP with StartTLS encryption. Then, you can build an event loop by calling the client's `next` method repeatedly. You can find a more complete example in the [examples/echo_bot.rs](https://gitlab.com/xmpp-rs/xmpp-rs/-/blob/main/tokio-xmpp/examples/echo_bot.rs) file in the repository.
+//!
+//! # Features
+//!
+//! This library is not feature-complete yet. Here's a quick overview of the feature set.
+//!
+//! Supported implementations:
+//! - [x] Clients
+//! - [x] Components
+//! - [ ] Servers
+//!
+//! Supported transports:
+//! - [x] Plaintext TCP (IPv4/IPv6)
+//! - [x] StartTLS TCP (IPv4/IPv6 with [happy eyeballs](https://en.wikipedia.org/wiki/Happy_Eyeballs) support)
+//! - [x] Custom connectors via the [`connect::ServerConnector`] trait
+//! - [ ] Websockets
+//! - [ ] BOSH
+//!
+//! # More information
+//!
+//! You can find more information on our website [xmpp.rs](https://xmpp.rs/) or by joining our chatroom [chat@xmpp.rs](xmpp:chat@xmpp.rs?join).
 
 #![deny(unsafe_code, missing_docs, bare_trait_objects)]
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
@@ -31,6 +57,8 @@ mod component;
 pub use crate::component::Component;
 /// Detailed error types
 pub mod error;
+
+#[doc(inline)]
 /// Generic tokio_xmpp Error
 pub use crate::error::Error;
 
