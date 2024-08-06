@@ -28,7 +28,12 @@ pub async fn join_room<C: ServerConnector>(
         muc = muc.with_password(password);
     }
 
-    let nick = nick.unwrap_or_else(|| agent.default_nick.read().unwrap().clone());
+    let nick = if let Some(nick) = nick {
+        nick
+    } else {
+        agent.default_nick.read().await.clone()
+    };
+
     let room_jid = room.with_resource_str(&nick).unwrap();
     let mut presence = Presence::new(PresenceType::None).with_to(room_jid);
     presence.add_payload(muc);
