@@ -2,14 +2,17 @@
 
 use tokio::net::TcpStream;
 
-use crate::connect::DnsConfig;
-use crate::{connect::ServerConnector, proto::XmppStream, AsyncClient, Component, Error};
+use crate::{
+    connect::{DnsConfig, ServerConnector},
+    proto::XmppStream,
+    Client, Component, Error,
+};
 
 /// Component that connects over TCP
 pub type TcpComponent = Component<TcpServerConnector>;
 
 /// Client that connects over TCP
-pub type TcpClient = AsyncClient<TcpServerConnector>;
+pub type TcpClient = Client<TcpServerConnector>;
 
 /// Connect via insecure plaintext TCP to an XMPP server
 /// This should only be used over localhost or otherwise when you know what you are doing

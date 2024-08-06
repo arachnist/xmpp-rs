@@ -3,7 +3,7 @@ use minidom::Element;
 use std::env::args;
 use std::process::exit;
 use std::str::FromStr;
-use tokio_xmpp::AsyncClient as Client;
+use tokio_xmpp::Client;
 use xmpp_parsers::{
     disco::{DiscoInfoQuery, DiscoInfoResult},
     iq::{Iq, IqType},

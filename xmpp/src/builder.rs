@@ -15,7 +15,7 @@ use tokio_xmpp::{
         disco::{DiscoInfoResult, Feature, Identity},
         ns,
     },
-    AsyncClient as TokioXmppClient,
+    Client as TokioXmppClient,
 };
 
 use crate::{Agent, ClientFeature};

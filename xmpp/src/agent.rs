@@ -13,7 +13,7 @@ use tokio_xmpp::parsers::{disco::DiscoInfoResult, message::MessageType};
 pub use tokio_xmpp::{
     jid::{BareJid, FullJid, Jid},
     minidom::Element,
-    AsyncClient as TokioXmppClient,
+    Client as TokioXmppClient,
 };
 
 use crate::{event_loop, message, muc, upload, Error, Event, RoomNick};

@@ -5,7 +5,7 @@ use std::fs::{create_dir_all, File};
 use std::io::{self, Write};
 use std::process::exit;
 use std::str::FromStr;
-use tokio_xmpp::AsyncClient as Client;
+use tokio_xmpp::Client;
 use xmpp_parsers::{
     avatar::{Data as AvatarData, Metadata as AvatarMetadata},
     caps::{compute_disco, hash_caps, Caps},

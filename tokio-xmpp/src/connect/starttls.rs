@@ -40,11 +40,11 @@ use crate::{
     connect::{DnsConfig, ServerConnector, ServerConnectorError},
     error::{Error, ProtocolError},
     proto::{Packet, XmppStream},
-    AsyncClient, Component,
+    Client, Component,
 };
 
 /// Client that connects over StartTls
-pub type StartTlsClient = AsyncClient<StartTlsServerConnector>;
+pub type StartTlsClient = Client<StartTlsServerConnector>;
 /// Component that connects over StartTls
 pub type StartTlsComponent = Component<StartTlsServerConnector>;
 

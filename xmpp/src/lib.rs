@@ -43,7 +43,7 @@ mod tests {
     use super::jid::BareJid;
     use super::{ClientBuilder, ClientFeature, ClientType, Event};
     use std::str::FromStr;
-    use tokio_xmpp::AsyncClient as TokioXmppClient;
+    use tokio_xmpp::Client as TokioXmppClient;
 
     #[tokio::test]
     async fn test_simple() {
