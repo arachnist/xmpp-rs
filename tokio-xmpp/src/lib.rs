@@ -26,7 +26,7 @@ mod client;
 pub mod connect;
 pub mod proto;
 
-pub use client::async_client::{Client as AsyncClient, Config as AsyncConfig};
+pub use client::async_client::Client as AsyncClient;
 mod component;
 pub use crate::component::Component;
 /// Detailed error types

@@ -1,44 +1,37 @@
 //! `starttls::ServerConfig` provides a `ServerConnector` for starttls connections
 
-use std::sync::Arc;
-
 use tokio::net::TcpStream;
 
-use crate::{connect::ServerConnector, proto::XmppStream, Component, Error};
+use crate::connect::DnsConfig;
+use crate::{connect::ServerConnector, proto::XmppStream, AsyncClient, Component, Error};
 
 /// Component that connects over TCP
 pub type TcpComponent = Component<TcpServerConnector>;
+
+/// Client that connects over TCP
+pub type TcpClient = AsyncClient<TcpServerConnector>;
 
 /// Connect via insecure plaintext TCP to an XMPP server
 /// This should only be used over localhost or otherwise when you know what you are doing
 /// Probably mostly useful for Components
 #[derive(Debug, Clone)]
-pub struct TcpServerConnector(Arc<String>);
+pub struct TcpServerConnector(pub DnsConfig);
 
-impl TcpServerConnector {
-    /// Create a new connector with the given address
-    pub fn new(addr: String) -> Self {
-        Self(addr.into())
+impl From<DnsConfig> for TcpServerConnector {
+    fn from(dns_config: DnsConfig) -> TcpServerConnector {
+        Self(dns_config)
     }
 }
 
 impl ServerConnector for TcpServerConnector {
     type Stream = TcpStream;
+
     async fn connect(
         &self,
         jid: &xmpp_parsers::jid::Jid,
         ns: &str,
     ) -> Result<XmppStream<Self::Stream>, Error> {
-        let stream = TcpStream::connect(&*self.0)
-            .await
-            .map_err(|e| crate::Error::Io(e))?;
+        let stream = self.0.resolve().await?;
         Ok(XmppStream::start(stream, jid.clone(), ns.to_owned()).await?)
-    }
-}
-
-impl Component<TcpServerConnector> {
-    /// Start a new XMPP component
-    pub async fn new(jid: &str, password: &str, server: String) -> Result<Self, Error> {
-        Self::new_with_connector(jid, password, TcpServerConnector::new(server)).await
     }
 }

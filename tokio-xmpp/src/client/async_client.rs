@@ -14,10 +14,12 @@ use crate::{
     Event,
 };
 
+#[cfg(any(feature = "starttls", feature = "insecure-tcp"))]
+use crate::connect::DnsConfig;
 #[cfg(feature = "starttls")]
-use crate::connect::starttls::ServerConfig;
-#[cfg(feature = "starttls")]
-use crate::AsyncConfig;
+use crate::connect::StartTlsServerConnector;
+#[cfg(feature = "insecure-tcp")]
+use crate::connect::TcpServerConnector;
 
 /// XMPP client connection and state
 ///
@@ -26,21 +28,12 @@ use crate::AsyncConfig;
 /// This implements the `futures` crate's [`Stream`](#impl-Stream) and
 /// [`Sink`](#impl-Sink<Packet>) traits.
 pub struct Client<C: ServerConnector> {
-    config: Config<C>,
+    jid: Jid,
+    password: String,
+    connector: C,
     state: ClientState<C::Stream>,
     reconnect: bool,
     // TODO: tls_required=true
-}
-
-/// XMPP client configuration
-#[derive(Clone, Debug)]
-pub struct Config<C> {
-    /// jid of the account
-    pub jid: Jid,
-    /// password of the account
-    pub password: String,
-    /// server configuration for the account
-    pub server: C,
 }
 
 enum ClientState<S: AsyncReadAndWrite> {
@@ -51,34 +44,63 @@ enum ClientState<S: AsyncReadAndWrite> {
 }
 
 #[cfg(feature = "starttls")]
-impl Client<ServerConfig> {
+impl Client<StartTlsServerConnector> {
     /// Start a new XMPP client using StartTLS transport and autoreconnect
     ///
     /// Start polling the returned instance so that it will connect
     /// and yield events.
-    #[cfg(feature = "starttls")]
     pub fn new<J: Into<Jid>, P: Into<String>>(jid: J, password: P) -> Self {
-        let config = AsyncConfig {
-            jid: jid.into(),
-            password: password.into(),
-            server: ServerConfig::UseSrv,
-        };
-        let mut client = Self::new_with_config(config);
+        let jid = jid.into();
+        let mut client = Self::new_starttls(
+            jid.clone(),
+            password,
+            DnsConfig::srv(&jid.domain().to_string(), "_xmpp-client._tcp", 5222),
+        );
         client.set_reconnect(true);
         client
+    }
+
+    /// Start a new XMPP client with StartTLS transport and specific DNS config
+    pub fn new_starttls<J: Into<Jid>, P: Into<String>>(
+        jid: J,
+        password: P,
+        dns_config: DnsConfig,
+    ) -> Self {
+        Self::new_with_connector(jid, password, StartTlsServerConnector::from(dns_config))
+    }
+}
+
+#[cfg(feature = "insecure-tcp")]
+impl Client<TcpServerConnector> {
+    /// Start a new XMPP client with plaintext insecure connection and specific DNS config
+    pub fn new_plaintext<J: Into<Jid>, P: Into<String>>(
+        jid: J,
+        password: P,
+        dns_config: DnsConfig,
+    ) -> Self {
+        Self::new_with_connector(jid, password, TcpServerConnector::from(dns_config))
     }
 }
 
 impl<C: ServerConnector> Client<C> {
     /// Start a new client given that the JID is already parsed.
-    pub fn new_with_config(config: Config<C>) -> Self {
+    pub fn new_with_connector<J: Into<Jid>, P: Into<String>>(
+        jid: J,
+        password: P,
+        connector: C,
+    ) -> Self {
+        let jid = jid.into();
+        let password = password.into();
+
         let connect = tokio::spawn(client_login(
-            config.server.clone(),
-            config.jid.clone(),
-            config.password.clone(),
+            connector.clone(),
+            jid.clone(),
+            password.clone(),
         ));
         let client = Client {
-            config,
+            jid,
+            password,
+            connector,
             state: ClientState::Connecting(connect),
             reconnect: false,
         };
@@ -151,9 +173,9 @@ impl<C: ServerConnector> Stream for Client<C> {
             ClientState::Disconnected if self.reconnect => {
                 // TODO: add timeout
                 let connect = tokio::spawn(client_login(
-                    self.config.server.clone(),
-                    self.config.jid.clone(),
-                    self.config.password.clone(),
+                    self.connector.clone(),
+                    self.jid.clone(),
+                    self.password.clone(),
                 ));
                 self.state = ClientState::Connecting(connect);
                 self.poll_next(cx)

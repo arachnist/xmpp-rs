@@ -6,6 +6,7 @@ use sasl::client::MechanismError as SaslMechanismError;
 use std::error::Error as StdError;
 use std::fmt;
 use std::io::Error as IoError;
+use std::net::AddrParseError;
 use std::str::Utf8Error;
 
 use xmpp_parsers::sasl::DefinedCondition as SaslDefinedCondition;
@@ -44,6 +45,8 @@ pub enum Error {
     /// `idna`
     #[cfg(feature = "dns")]
     Idna,
+    /// Invalid IP/Port address
+    Addr(AddrParseError),
 }
 
 impl fmt::Display for Error {
@@ -64,6 +67,7 @@ impl fmt::Display for Error {
             Error::Resolve(e) => write!(fmt, "{:?}", e),
             #[cfg(feature = "dns")]
             Error::Idna => write!(fmt, "IDNA error"),
+            Error::Addr(e) => write!(fmt, "Wrong network address: {e}"),
         }
     }
 }
@@ -130,6 +134,12 @@ impl From<DnsResolveError> for Error {
 impl From<DnsProtoError> for Error {
     fn from(e: DnsProtoError) -> Error {
         Error::Dns(e)
+    }
+}
+
+impl From<AddrParseError> for Error {
+    fn from(e: AddrParseError) -> Error {
+        Error::Addr(e)
     }
 }
 

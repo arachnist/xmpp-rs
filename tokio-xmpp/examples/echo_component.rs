@@ -3,10 +3,11 @@ use minidom::Element;
 use std::env::args;
 use std::process::exit;
 use std::str::FromStr;
-use tokio_xmpp::connect::tcp::TcpComponent as Component;
 use xmpp_parsers::jid::Jid;
 use xmpp_parsers::message::{Body, Message, MessageType};
 use xmpp_parsers::presence::{Presence, Show as PresenceShow, Type as PresenceType};
+
+use tokio_xmpp::{connect::DnsConfig, Component};
 
 #[tokio::main]
 async fn main() {
@@ -19,15 +20,21 @@ async fn main() {
     }
     let jid = &args[1];
     let password = &args[2];
-    let server = args
-        .get(3)
-        .unwrap()
-        .parse()
-        .unwrap_or("127.0.0.1:5347".to_owned());
+
+    let server = if let Some(server) = args.get(3) {
+        DnsConfig::addr(server)
+    } else {
+        DnsConfig::no_srv("127.0.0.1", 5347)
+    };
 
     // Component instance
     println!("{} {} {}", jid, password, server);
-    let mut component = Component::new(jid, password, server).await.unwrap();
+
+    // If you don't need a custom server but default localhost:5347, you can use
+    // Component::new() directly
+    let mut component = Component::new_plaintext(jid, password, server)
+        .await
+        .unwrap();
 
     // Make the two interfaces for sending and receiving independent
     // of each other so we can move one into a closure.

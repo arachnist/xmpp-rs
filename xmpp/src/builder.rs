@@ -6,14 +6,16 @@
 
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tokio_xmpp::connect::ServerConnector;
+#[cfg(any(feature = "starttls-rust", feature = "starttls-native"))]
+use tokio_xmpp::connect::{DnsConfig, StartTlsServerConnector};
 use tokio_xmpp::{
+    connect::ServerConnector,
     jid::{BareJid, Jid},
     parsers::{
         disco::{DiscoInfoResult, Feature, Identity},
         ns,
     },
-    AsyncClient as TokioXmppClient, AsyncConfig,
+    AsyncClient as TokioXmppClient,
 };
 
 use crate::{Agent, ClientFeature};
@@ -52,15 +54,12 @@ pub struct ClientBuilder<'a, C: ServerConnector> {
 }
 
 #[cfg(any(feature = "starttls-rust", feature = "starttls-native"))]
-impl ClientBuilder<'_, tokio_xmpp::connect::starttls::ServerConfig> {
-    pub fn new<'a>(
-        jid: BareJid,
-        password: &'a str,
-    ) -> ClientBuilder<'a, tokio_xmpp::connect::starttls::ServerConfig> {
+impl ClientBuilder<'_, StartTlsServerConnector> {
+    pub fn new<'a>(jid: BareJid, password: &'a str) -> ClientBuilder<'a, StartTlsServerConnector> {
         Self::new_with_connector(
-            jid,
+            jid.clone(),
             password,
-            tokio_xmpp::connect::starttls::ServerConfig::UseSrv,
+            StartTlsServerConnector(DnsConfig::srv_default_client(jid.domain())),
         )
     }
 }
@@ -147,12 +146,8 @@ impl<C: ServerConnector> ClientBuilder<'_, C> {
             self.jid.clone().into()
         };
 
-        let config = AsyncConfig {
-            jid,
-            password: self.password.into(),
-            server: self.server_connector.clone(),
-        };
-        let mut client = TokioXmppClient::new_with_config(config);
+        let mut client =
+            TokioXmppClient::new_with_connector(jid, self.password, self.server_connector.clone());
         client.set_reconnect(true);
         self.build_impl(client)
     }

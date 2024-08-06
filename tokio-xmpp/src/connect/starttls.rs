@@ -37,40 +37,31 @@ use tokio::{
 use xmpp_parsers::{jid::Jid, ns};
 
 use crate::{
-    connect::{ServerConnector, ServerConnectorError, Tcp},
+    connect::{DnsConfig, ServerConnector, ServerConnectorError},
     error::{Error, ProtocolError},
     proto::{Packet, XmppStream},
-    AsyncClient,
+    AsyncClient, Component,
 };
 
-/// AsyncClient that connects over StartTls
-pub type StartTlsAsyncClient = AsyncClient<ServerConfig>;
+/// Client that connects over StartTls
+pub type StartTlsClient = AsyncClient<StartTlsServerConnector>;
+/// Component that connects over StartTls
+pub type StartTlsComponent = Component<StartTlsServerConnector>;
 
-/// StartTLS XMPP server connection configuration
-#[derive(Clone, Debug)]
-pub enum ServerConfig {
-    /// Use SRV record to find server host
-    UseSrv,
-    #[allow(unused)]
-    /// Manually define server host and port
-    Manual {
-        /// Server host name
-        host: String,
-        /// Server port
-        port: u16,
-    },
+/// Connect via TCP+StartTLS to an XMPP server
+#[derive(Debug, Clone)]
+pub struct StartTlsServerConnector(pub DnsConfig);
+
+impl From<DnsConfig> for StartTlsServerConnector {
+    fn from(dns_config: DnsConfig) -> StartTlsServerConnector {
+        Self(dns_config)
+    }
 }
 
-impl ServerConnector for ServerConfig {
+impl ServerConnector for StartTlsServerConnector {
     type Stream = TlsStream<TcpStream>;
     async fn connect(&self, jid: &Jid, ns: &str) -> Result<XmppStream<Self::Stream>, Error> {
-        // TCP connection
-        let tcp_stream = match self {
-            ServerConfig::UseSrv => {
-                Tcp::resolve_with_srv(jid.domain().as_str(), "_xmpp-client._tcp", 5222).await?
-            }
-            ServerConfig::Manual { host, port } => Tcp::resolve(host.as_str(), *port).await?,
-        };
+        let tcp_stream = self.0.resolve().await?;
 
         // Unencryped XmppStream
         let xmpp_stream = XmppStream::start(tcp_stream, jid.clone(), ns.to_owned()).await?;

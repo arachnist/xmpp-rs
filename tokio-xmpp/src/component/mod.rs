@@ -14,6 +14,13 @@ use crate::connect::ServerConnector;
 use crate::proto::{add_stanza_id, Packet, XmppStream};
 use crate::Error;
 
+#[cfg(any(feature = "starttls", feature = "insecure-tcp"))]
+use crate::connect::DnsConfig;
+#[cfg(feature = "starttls")]
+use crate::connect::StartTlsServerConnector;
+#[cfg(feature = "insecure-tcp")]
+use crate::connect::TcpServerConnector;
+
 mod auth;
 
 pub(crate) mod connect;
@@ -26,6 +33,35 @@ pub struct Component<C: ServerConnector> {
     /// The component's Jabber-Id
     pub jid: Jid,
     stream: XmppStream<C::Stream>,
+}
+
+#[cfg(feature = "insecure-tcp")]
+impl Component<TcpServerConnector> {
+    /// Start a new XMPP component over plaintext TCP to localhost:5347
+    pub async fn new(jid: &str, password: &str) -> Result<Self, Error> {
+        Self::new_plaintext(jid, password, DnsConfig::addr("127.0.0.1:5347")).await
+    }
+
+    /// Start a new XMPP component over plaintext TCP
+    pub async fn new_plaintext(
+        jid: &str,
+        password: &str,
+        dns_config: DnsConfig,
+    ) -> Result<Self, Error> {
+        Self::new_with_connector(jid, password, TcpServerConnector::from(dns_config)).await
+    }
+}
+
+#[cfg(feature = "starttls")]
+impl Component<StartTlsServerConnector> {
+    /// Start a new XMPP component over StartTLS
+    pub async fn new_starttls(
+        jid: &str,
+        password: &str,
+        dns_config: DnsConfig,
+    ) -> Result<Self, Error> {
+        Self::new_with_connector(jid, password, StartTlsServerConnector::from(dns_config)).await
+    }
 }
 
 impl<C: ServerConnector> Component<C> {
