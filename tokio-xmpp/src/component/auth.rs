@@ -3,11 +3,10 @@ use tokio::io::{AsyncRead, AsyncWrite};
 use xmpp_parsers::{component::Handshake, ns};
 
 use crate::error::{AuthError, Error};
-use crate::xmpp_codec::Packet;
-use crate::xmpp_stream::XMPPStream;
+use crate::proto::{Packet, XmppStream};
 
 pub async fn auth<S: AsyncRead + AsyncWrite + Unpin>(
-    stream: &mut XMPPStream<S>,
+    stream: &mut XmppStream<S>,
     password: String,
 ) -> Result<(), Error> {
     let nonza = Handshake::from_password_and_stream_id(&password, &stream.id);

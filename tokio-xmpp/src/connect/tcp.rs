@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use tokio::net::TcpStream;
 
-use crate::{connect::ServerConnector, xmpp_stream::XMPPStream, Component, Error};
+use crate::{connect::ServerConnector, proto::XmppStream, Component, Error};
 
 /// Component that connects over TCP
 pub type TcpComponent = Component<TcpServerConnector>;
@@ -28,11 +28,11 @@ impl ServerConnector for TcpServerConnector {
         &self,
         jid: &xmpp_parsers::jid::Jid,
         ns: &str,
-    ) -> Result<XMPPStream<Self::Stream>, Error> {
+    ) -> Result<XmppStream<Self::Stream>, Error> {
         let stream = TcpStream::connect(&*self.0)
             .await
             .map_err(|e| crate::Error::Io(e))?;
-        Ok(XMPPStream::start(stream, jid.clone(), ns.to_owned()).await?)
+        Ok(XmppStream::start(stream, jid.clone(), ns.to_owned()).await?)
     }
 }
 

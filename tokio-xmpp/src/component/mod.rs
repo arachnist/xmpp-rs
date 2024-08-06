@@ -10,11 +10,9 @@ use xmpp_parsers::{jid::Jid, ns};
 
 use self::connect::component_login;
 
-use super::xmpp_codec::Packet;
-use super::Error;
 use crate::connect::ServerConnector;
-use crate::xmpp_stream::add_stanza_id;
-use crate::xmpp_stream::XMPPStream;
+use crate::proto::{add_stanza_id, Packet, XmppStream};
+use crate::Error;
 
 mod auth;
 
@@ -22,12 +20,12 @@ pub(crate) mod connect;
 
 /// Component connection to an XMPP server
 ///
-/// This simplifies the `XMPPStream` to a `Stream`/`Sink` of `Element`
+/// This simplifies the `XmppStream` to a `Stream`/`Sink` of `Element`
 /// (stanzas). Connection handling however is up to the user.
 pub struct Component<C: ServerConnector> {
     /// The component's Jabber-Id
     pub jid: Jid,
-    stream: XMPPStream<C::Stream>,
+    stream: XmppStream<C::Stream>,
 }
 
 impl<C: ServerConnector> Component<C> {

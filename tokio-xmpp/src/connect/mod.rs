@@ -14,7 +14,7 @@ use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::TcpStream;
 use xmpp_parsers::jid::Jid;
 
-use crate::xmpp_stream::XMPPStream;
+use crate::proto::XmppStream;
 use crate::Error;
 
 #[cfg(feature = "starttls")]
@@ -22,7 +22,7 @@ pub mod starttls;
 #[cfg(feature = "insecure-tcp")]
 pub mod tcp;
 
-/// trait returned wrapped in XMPPStream by ServerConnector
+/// trait returned wrapped in XmppStream by ServerConnector
 pub trait AsyncReadAndWrite: AsyncRead + AsyncWrite + Unpin + Send {}
 impl<T: AsyncRead + AsyncWrite + Unpin + Send> AsyncReadAndWrite for T {}
 
@@ -38,7 +38,7 @@ pub trait ServerConnector: Clone + core::fmt::Debug + Send + Unpin + 'static {
         &self,
         jid: &Jid,
         ns: &str,
-    ) -> impl std::future::Future<Output = Result<XMPPStream<Self::Stream>, Error>> + Send;
+    ) -> impl std::future::Future<Output = Result<XmppStream<Self::Stream>, Error>> + Send;
 
     /// Return channel binding data if available
     /// do not fail if channel binding is simply unavailable, just return Ok(None)

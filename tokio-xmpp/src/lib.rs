@@ -20,14 +20,11 @@ compile_error!(
     "when starttls feature enabled one of tls-native and tls-rust features must be enabled."
 );
 
-mod stream_start;
-mod xmpp_codec;
-pub use crate::xmpp_codec::{Packet, XmppCodec};
 mod event;
 pub use event::Event;
 mod client;
 pub mod connect;
-pub mod xmpp_stream;
+pub mod proto;
 
 pub use client::async_client::{Client as AsyncClient, Config as AsyncConfig};
 mod component;

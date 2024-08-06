@@ -2,7 +2,7 @@ use futures::{SinkExt, StreamExt};
 use tokio::{self, io, net::TcpSocket};
 use tokio_util::codec::Framed;
 
-use tokio_xmpp::XmppCodec;
+use tokio_xmpp::proto::XmppCodec;
 
 #[tokio::main]
 async fn main() -> Result<(), io::Error> {

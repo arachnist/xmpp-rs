@@ -1,18 +1,21 @@
-//! `XMPPStream` provides encoding/decoding for XMPP
+//! `XmppStream` provides encoding/decoding for XMPP
 
-use futures::sink::Send;
-use futures::{sink::SinkExt, task::Poll, Sink, Stream};
+use futures::{
+    sink::{Send, SinkExt},
+    stream::StreamExt,
+    task::Poll,
+    Sink, Stream,
+};
 use minidom::Element;
 use rand::{thread_rng, Rng};
 use std::pin::Pin;
 use std::task::Context;
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio_util::codec::Framed;
-use xmpp_parsers::{jid::Jid, stream_features::StreamFeatures};
+use xmpp_parsers::{jid::Jid, ns, stream_features::StreamFeatures, Error as ParsersError};
 
-use crate::stream_start;
-use crate::xmpp_codec::{Packet, XmppCodec};
-use crate::Error;
+use crate::error::{Error, ProtocolError};
+use crate::proto::{Packet, XmppCodec};
 
 fn make_id() -> String {
     let id: u64 = thread_rng().gen();
@@ -36,7 +39,7 @@ pub(crate) fn add_stanza_id(mut stanza: Element, default_ns: &str) -> Element {
 /// and encode XMPP packets.
 ///
 /// Implements `Sink + Stream`
-pub struct XMPPStream<S: AsyncRead + AsyncWrite + Unpin> {
+pub struct XmppStream<S: AsyncRead + AsyncWrite + Unpin> {
     /// The local Jabber-Id
     pub jid: Jid,
     /// Codec instance
@@ -52,7 +55,7 @@ pub struct XMPPStream<S: AsyncRead + AsyncWrite + Unpin> {
     pub id: String,
 }
 
-impl<S: AsyncRead + AsyncWrite + Unpin> XMPPStream<S> {
+impl<S: AsyncRead + AsyncWrite + Unpin> XmppStream<S> {
     /// Constructor
     pub fn new(
         jid: Jid,
@@ -61,7 +64,7 @@ impl<S: AsyncRead + AsyncWrite + Unpin> XMPPStream<S> {
         id: String,
         stream_features: StreamFeatures,
     ) -> Self {
-        XMPPStream {
+        XmppStream {
             jid,
             stream,
             stream_features,
@@ -72,8 +75,62 @@ impl<S: AsyncRead + AsyncWrite + Unpin> XMPPStream<S> {
 
     /// Send a `<stream:stream>` start tag
     pub async fn start(stream: S, jid: Jid, ns: String) -> Result<Self, Error> {
-        let xmpp_stream = Framed::new(stream, XmppCodec::new());
-        stream_start::start(xmpp_stream, jid, ns).await
+        let mut stream = Framed::new(stream, XmppCodec::new());
+        let attrs = [
+            ("to".to_owned(), jid.domain().to_string()),
+            ("version".to_owned(), "1.0".to_owned()),
+            ("xmlns".to_owned(), ns.clone()),
+            ("xmlns:stream".to_owned(), ns::STREAM.to_owned()),
+        ]
+        .iter()
+        .cloned()
+        .collect();
+        stream.send(Packet::StreamStart(attrs)).await?;
+
+        let stream_attrs;
+        loop {
+            match stream.next().await {
+                Some(Ok(Packet::StreamStart(attrs))) => {
+                    stream_attrs = attrs;
+                    break;
+                }
+                Some(Ok(_)) => {}
+                Some(Err(e)) => return Err(e.into()),
+                None => return Err(Error::Disconnected),
+            }
+        }
+
+        let stream_ns = stream_attrs
+            .get("xmlns")
+            .ok_or(ProtocolError::NoStreamNamespace)?
+            .clone();
+        let stream_id = stream_attrs
+            .get("id")
+            .ok_or(ProtocolError::NoStreamId)?
+            .clone();
+        if stream_ns == "jabber:client" && stream_attrs.get("version").is_some() {
+            loop {
+                match stream.next().await {
+                    Some(Ok(Packet::Stanza(stanza))) => {
+                        let stream_features = StreamFeatures::try_from(stanza)
+                            .map_err(|e| Error::Protocol(ParsersError::from(e).into()))?;
+                        return Ok(XmppStream::new(jid, stream, ns, stream_id, stream_features));
+                    }
+                    Some(Ok(_)) => {}
+                    Some(Err(e)) => return Err(e.into()),
+                    None => return Err(Error::Disconnected),
+                }
+            }
+        } else {
+            // FIXME: huge hack, shouldn’t be an element!
+            return Ok(XmppStream::new(
+                jid,
+                stream,
+                ns,
+                stream_id.clone(),
+                StreamFeatures::default(),
+            ));
+        }
     }
 
     /// Unwraps the inner stream
@@ -88,7 +145,7 @@ impl<S: AsyncRead + AsyncWrite + Unpin> XMPPStream<S> {
     }
 }
 
-impl<S: AsyncRead + AsyncWrite + Unpin> XMPPStream<S> {
+impl<S: AsyncRead + AsyncWrite + Unpin> XmppStream<S> {
     /// Convenience method
     pub fn send_stanza<E: Into<Element>>(&mut self, e: E) -> Send<Self, Packet> {
         self.send(Packet::Stanza(e.into()))
@@ -96,7 +153,7 @@ impl<S: AsyncRead + AsyncWrite + Unpin> XMPPStream<S> {
 }
 
 /// Proxy to self.stream
-impl<S: AsyncRead + AsyncWrite + Unpin> Sink<Packet> for XMPPStream<S> {
+impl<S: AsyncRead + AsyncWrite + Unpin> Sink<Packet> for XmppStream<S> {
     type Error = crate::Error;
 
     fn poll_ready(self: Pin<&mut Self>, _ctx: &mut Context) -> Poll<Result<(), Self::Error>> {
@@ -125,7 +182,7 @@ impl<S: AsyncRead + AsyncWrite + Unpin> Sink<Packet> for XMPPStream<S> {
 }
 
 /// Proxy to self.stream
-impl<S: AsyncRead + AsyncWrite + Unpin> Stream for XMPPStream<S> {
+impl<S: AsyncRead + AsyncWrite + Unpin> Stream for XmppStream<S> {
     type Item = Result<Packet, crate::Error>;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Option<Self::Item>> {

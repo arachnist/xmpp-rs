@@ -6,14 +6,16 @@ use std::task::Context;
 use tokio::task::JoinHandle;
 use xmpp_parsers::{jid::Jid, ns, stream_features::StreamFeatures};
 
-use super::connect::client_login;
+use crate::{
+    client::connect::client_login,
+    connect::{AsyncReadAndWrite, ServerConnector},
+    error::{Error, ProtocolError},
+    proto::{add_stanza_id, Packet, XmppStream},
+    Event,
+};
+
 #[cfg(feature = "starttls")]
 use crate::connect::starttls::ServerConfig;
-use crate::connect::{AsyncReadAndWrite, ServerConnector};
-use crate::error::{Error, ProtocolError};
-use crate::event::Event;
-use crate::xmpp_codec::Packet;
-use crate::xmpp_stream::{add_stanza_id, XMPPStream};
 #[cfg(feature = "starttls")]
 use crate::AsyncConfig;
 
@@ -44,8 +46,8 @@ pub struct Config<C> {
 enum ClientState<S: AsyncReadAndWrite> {
     Invalid,
     Disconnected,
-    Connecting(JoinHandle<Result<XMPPStream<S>, Error>>),
-    Connected(XMPPStream<S>),
+    Connecting(JoinHandle<Result<XmppStream<S>, Error>>),
+    Connected(XmppStream<S>),
 }
 
 #[cfg(feature = "starttls")]
@@ -197,7 +199,7 @@ impl<C: ServerConnector> Stream for Client<C> {
                 //
                 // This needs to be a loop in order to ignore packets we don’t care about, or those
                 // we want to handle elsewhere.  Returning something isn’t correct in those two
-                // cases because it would signal to tokio that the XMPPStream is also done, while
+                // cases because it would signal to tokio that the XmppStream is also done, while
                 // there could be additional packets waiting for us.
                 //
                 // The proper solution is thus a loop which we exit once we have something to

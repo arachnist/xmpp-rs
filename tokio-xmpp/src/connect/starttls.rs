@@ -39,8 +39,7 @@ use xmpp_parsers::{jid::Jid, ns};
 use crate::{
     connect::{ServerConnector, ServerConnectorError, Tcp},
     error::{Error, ProtocolError},
-    xmpp_codec::Packet,
-    xmpp_stream::XMPPStream,
+    proto::{Packet, XmppStream},
     AsyncClient,
 };
 
@@ -64,7 +63,7 @@ pub enum ServerConfig {
 
 impl ServerConnector for ServerConfig {
     type Stream = TlsStream<TcpStream>;
-    async fn connect(&self, jid: &Jid, ns: &str) -> Result<XMPPStream<Self::Stream>, Error> {
+    async fn connect(&self, jid: &Jid, ns: &str) -> Result<XmppStream<Self::Stream>, Error> {
         // TCP connection
         let tcp_stream = match self {
             ServerConfig::UseSrv => {
@@ -73,14 +72,14 @@ impl ServerConnector for ServerConfig {
             ServerConfig::Manual { host, port } => Tcp::resolve(host.as_str(), *port).await?,
         };
 
-        // Unencryped XMPPStream
-        let xmpp_stream = XMPPStream::start(tcp_stream, jid.clone(), ns.to_owned()).await?;
+        // Unencryped XmppStream
+        let xmpp_stream = XmppStream::start(tcp_stream, jid.clone(), ns.to_owned()).await?;
 
         if xmpp_stream.stream_features.can_starttls() {
             // TlsStream
             let tls_stream = starttls(xmpp_stream).await?;
-            // Encrypted XMPPStream
-            Ok(XMPPStream::start(tls_stream, jid.clone(), ns.to_owned()).await?)
+            // Encrypted XmppStream
+            Ok(XmppStream::start(tls_stream, jid.clone(), ns.to_owned()).await?)
         } else {
             return Err(crate::Error::Protocol(ProtocolError::NoTls).into());
         }
@@ -114,7 +113,7 @@ impl ServerConnector for ServerConfig {
 
 #[cfg(feature = "tls-native")]
 async fn get_tls_stream<S: AsyncRead + AsyncWrite + Unpin>(
-    xmpp_stream: XMPPStream<S>,
+    xmpp_stream: XmppStream<S>,
 ) -> Result<TlsStream<S>, Error> {
     let domain = xmpp_stream.jid.domain().to_owned();
     let stream = xmpp_stream.into_inner();
@@ -127,7 +126,7 @@ async fn get_tls_stream<S: AsyncRead + AsyncWrite + Unpin>(
 
 #[cfg(all(feature = "tls-rust", not(feature = "tls-native")))]
 async fn get_tls_stream<S: AsyncRead + AsyncWrite + Unpin>(
-    xmpp_stream: XMPPStream<S>,
+    xmpp_stream: XmppStream<S>,
 ) -> Result<TlsStream<S>, Error> {
     let domain = xmpp_stream.jid.domain().to_string();
     let domain = ServerName::try_from(domain).map_err(|e| StartTlsError::DnsNameError(e))?;
@@ -145,10 +144,10 @@ async fn get_tls_stream<S: AsyncRead + AsyncWrite + Unpin>(
     Ok(tls_stream)
 }
 
-/// Performs `<starttls/>` on an XMPPStream and returns a binary
+/// Performs `<starttls/>` on an XmppStream and returns a binary
 /// TlsStream.
 pub async fn starttls<S: AsyncRead + AsyncWrite + Unpin>(
-    mut xmpp_stream: XMPPStream<S>,
+    mut xmpp_stream: XmppStream<S>,
 ) -> Result<TlsStream<S>, Error> {
     let nonza = Element::builder("starttls", ns::TLS).build();
     let packet = Packet::Stanza(nonza);

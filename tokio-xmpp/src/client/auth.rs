@@ -9,11 +9,10 @@ use tokio::io::{AsyncRead, AsyncWrite};
 use xmpp_parsers::sasl::{Auth, Challenge, Failure, Mechanism as XMPPMechanism, Response, Success};
 
 use crate::error::{AuthError, Error, ProtocolError};
-use crate::xmpp_codec::Packet;
-use crate::xmpp_stream::XMPPStream;
+use crate::proto::{Packet, XmppStream};
 
 pub async fn auth<S: AsyncRead + AsyncWrite + Unpin>(
-    mut stream: XMPPStream<S>,
+    mut stream: XmppStream<S>,
     creds: Credentials,
 ) -> Result<S, Error> {
     let local_mechs: Vec<Box<dyn Fn() -> Box<dyn Mechanism + Send + Sync> + Send>> = vec![

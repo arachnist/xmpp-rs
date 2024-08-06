@@ -4,14 +4,13 @@ use xmpp_parsers::bind::{BindQuery, BindResponse};
 use xmpp_parsers::iq::{Iq, IqType};
 
 use crate::error::{Error, ProtocolError};
-use crate::xmpp_codec::Packet;
-use crate::xmpp_stream::XMPPStream;
+use crate::proto::{Packet, XmppStream};
 
 const BIND_REQ_ID: &str = "resource-bind";
 
 pub async fn bind<S: AsyncRead + AsyncWrite + Unpin>(
-    mut stream: XMPPStream<S>,
-) -> Result<XMPPStream<S>, Error> {
+    mut stream: XmppStream<S>,
+) -> Result<XmppStream<S>, Error> {
     if stream.stream_features.can_bind() {
         let resource = stream
             .jid
