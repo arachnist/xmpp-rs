@@ -50,6 +50,7 @@ mod event;
 pub use event::Event;
 pub mod connect;
 pub mod proto;
+pub mod xmlstream;
 
 mod client;
 pub use client::Client;

@@ -23,10 +23,12 @@ rustls-native-certs = { version = "0.7", optional = true }
 rxml = { version = "0.12.0", features = ["compact_str"] }
 rand = "0.8"
 syntect = { version = "5", optional = true }
+pin-project-lite = { version = "0.2" }
 # same repository dependencies
 sasl = { version = "0.5", path = "../sasl" }
 xmpp-parsers = { version = "0.21", path = "../parsers" }
 minidom = { version = "0.16", path = "../minidom" }
+xso = { version = "0.1", path = "../xso" }
 
 # these are only needed for starttls ServerConnector support
 hickory-resolver = { version = "0.24", optional = true}
