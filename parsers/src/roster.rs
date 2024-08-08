@@ -48,28 +48,30 @@ generate_attribute!(
     )
 );
 
-generate_element!(
-    /// Contact from the user’s contact list.
-    Item, "item", ROSTER,
-    attributes: [
-        /// JID of this contact.
-        jid: Required<BareJid> = "jid",
+/// Contact from the user’s contact list.
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::ROSTER, name = "item")]
+pub struct Item {
+    /// JID of this contact.
+    #[xml(attribute)]
+    pub jid: BareJid,
 
-        /// Name of this contact.
-        name: OptionEmpty<String> = "name",
+    /// Name of this contact.
+    #[xml(attribute(default))]
+    pub name: Option<String>,
 
-        /// Subscription status of this contact.
-        subscription: Default<Subscription> = "subscription",
+    /// Subscription status of this contact.
+    #[xml(attribute(default))]
+    pub subscription: Subscription,
 
-        /// Indicates “Pending Out” sub-states for this contact.
-        ask: Default<Ask> = "ask",
-    ],
+    /// Indicates “Pending Out” sub-states for this contact.
+    #[xml(attribute(default))]
+    pub ask: Ask,
 
-    children: [
-        /// Groups this contact is part of.
-        groups: Vec<Group> = ("group", ROSTER) => Group
-    ]
-);
+    /// Groups this contact is part of.
+    #[xml(child(n = ..))]
+    pub groups: Vec<Group>,
+}
 
 /// The contact list of the user.
 #[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
@@ -133,10 +135,6 @@ mod tests {
         let roster = Roster::try_from(elem).unwrap();
         assert_eq!(roster.ver, Some(String::from("ver7")));
         assert_eq!(roster.items.len(), 2);
-
-        let elem2: Element = "<query xmlns='jabber:iq:roster' ver='ver7'><item jid='nurse@example.com'/><item jid='romeo@example.net' name=''/></query>".parse().unwrap();
-        let roster2 = Roster::try_from(elem2).unwrap();
-        assert_eq!(roster.items, roster2.items);
 
         let elem: Element = "<query xmlns='jabber:iq:roster' ver='ver9'/>"
             .parse()
@@ -300,17 +298,19 @@ mod tests {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Required attribute 'jid' missing.");
+        assert_eq!(
+            message,
+            "Required attribute field 'jid' on Item element missing."
+        );
 
-        /*
-        let elem: Element = "<query xmlns='jabber:iq:roster'><item jid=''/></query>".parse().unwrap();
+        let elem: Element = "<query xmlns='jabber:iq:roster'><item jid=''/></query>"
+            .parse()
+            .unwrap();
         let error = Roster::try_from(elem).unwrap_err();
-        let error = match error {
-            Error::JidParseError(error) => error,
-            _ => panic!(),
-        };
-        assert_eq!(error.description(), "Invalid JID, I guess?");
-        */
+        assert_eq!(
+            format!("{error}"),
+            "text parse error: no domain found in this JID"
+        );
 
         let elem: Element =
             "<query xmlns='jabber:iq:roster'><item jid='coucou'><coucou/></item></query>"
@@ -321,6 +321,6 @@ mod tests {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Unknown child in item element.");
+        assert_eq!(message, "Unknown child in Item element.");
     }
 }

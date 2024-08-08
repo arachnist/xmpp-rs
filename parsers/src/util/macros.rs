@@ -195,6 +195,24 @@ macro_rules! generate_attribute {
                 $elem::None
             }
         }
+        impl ::xso::FromXmlText for $elem {
+            fn from_xml_text(s: String) -> Result<$elem, xso::error::Error> {
+                s.parse().map_err(xso::error::Error::text_parse_error)
+            }
+        }
+        impl ::xso::AsXmlText for $elem {
+            fn as_xml_text(&self) -> Result<::std::borrow::Cow<'_, str>, xso::error::Error> {
+                Ok(::std::borrow::Cow::Borrowed($value))
+            }
+
+            #[allow(unreachable_patterns)]
+            fn as_optional_xml_text(&self) -> Result<Option<std::borrow::Cow<'_, str>>, xso::error::Error> {
+                Ok(Some(std::borrow::Cow::Borrowed(match self {
+                    $elem::$symbol => $value,
+                    $elem::None => return Ok(None),
+                })))
+            }
+        }
     );
     ($(#[$meta:meta])* $elem:ident, $name:tt, bool) => (
         $(#[$meta])*
