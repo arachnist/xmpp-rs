@@ -85,13 +85,8 @@ impl<C: ServerConnector> Agent<C> {
         muc::private_message::send_room_private_message(self, room, recipient, lang, text).await
     }
 
-    /// Wait for new events.
-    ///
-    /// # Returns
-    ///
-    /// - `Some(events)` if there are new events; multiple may be returned at once.
-    /// - `None` if the underlying stream is closed.
-    pub async fn wait_for_events(&mut self) -> Option<Vec<Event>> {
+    /// Wait for new events, or Error::Disconnected when connection is closed and will not reconnect.
+    pub async fn wait_for_events(&mut self) -> Vec<Event> {
         event_loop::wait_for_events(self).await
     }
 

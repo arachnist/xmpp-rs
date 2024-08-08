@@ -2,6 +2,9 @@ Version NEXT
 XXXX-YY-ZZ [ RELEASER <admin@localhost> ]
     * Fixes:
       - Use tokio::sync::RwLock not std::sync::RwLock (!432)
+      - Agent::wait_for_events now return Vec<Event> and sets inner tokio_xmpp Client
+        auto-reconnect to true... It is still aware of Event::Disconnected but should
+        no longer have weird hanging state or panic (!436)
 
 Version 0.6.0:
 2024-07-27 [ Maxime “pep” Buquet <pep@bouah.net> ]

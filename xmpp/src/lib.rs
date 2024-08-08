@@ -63,7 +63,8 @@ mod tests {
 
         let mut agent = client_builder.build_impl(client);
 
-        while let Some(events) = agent.wait_for_events().await {
+        loop {
+            let events = agent.wait_for_events().await;
             assert!(match events[0] {
                 Event::Disconnected(_) => true,
                 _ => false,

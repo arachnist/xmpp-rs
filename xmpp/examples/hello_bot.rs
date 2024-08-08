@@ -33,8 +33,8 @@ async fn main() -> Result<(), Option<()>> {
         .enable_feature(ClientFeature::JoinRooms)
         .build();
 
-    while let Some(events) = client.wait_for_events().await {
-        for event in events {
+    loop {
+        for event in client.wait_for_events().await {
             match event {
                 Event::Online => {
                     println!("Online.");
@@ -95,6 +95,4 @@ async fn main() -> Result<(), Option<()>> {
             }
         }
     }
-
-    Ok(())
 }

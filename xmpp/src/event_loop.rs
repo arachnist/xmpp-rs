@@ -15,13 +15,8 @@ use tokio_xmpp::{
 
 use crate::{iq, message, presence, Agent, Event};
 
-/// Wait for new events.
-///
-/// # Returns
-///
-/// - `Some(events)` if there are new events; multiple may be returned at once.
-/// - `None` if the underlying stream is closed.
-pub async fn wait_for_events<C: ServerConnector>(agent: &mut Agent<C>) -> Option<Vec<Event>> {
+/// Wait for new events, or Error::Disconnected when stream is closed and will not reconnect.
+pub async fn wait_for_events<C: ServerConnector>(agent: &mut Agent<C>) -> Vec<Event> {
     if let Some(event) = agent.client.next().await {
         let mut events = Vec::new();
 
@@ -72,8 +67,11 @@ pub async fn wait_for_events<C: ServerConnector>(agent: &mut Agent<C>) -> Option
             }
         }
 
-        Some(events)
+        events
     } else {
-        None
+        // Stream was closed and not opening again because TokioXmppClient reconnect is false
+        // However we set reconnect true in agent builder so this should never happen and indicates
+        // logic error in tokio_xmpp::AsyncClient::poll_next
+        panic!("xmpp::Agent should never receive None event (stream closed, no reconnect)");
     }
 }

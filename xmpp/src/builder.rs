@@ -148,7 +148,8 @@ impl<C: ServerConnector> ClientBuilder<'_, C> {
             password: self.password.into(),
             server: self.server_connector.clone(),
         };
-        let client = TokioXmppClient::new_with_config(config);
+        let mut client = TokioXmppClient::new_with_config(config);
+        client.set_reconnect(true);
         self.build_impl(client)
     }
 
