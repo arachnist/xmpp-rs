@@ -25,20 +25,28 @@ pub struct Cert {
     pub data: Vec<u8>,
 }
 
-generate_element!(
-    /// For the client to upload an X.509 certificate.
-    Append, "append", SASL_CERT,
-    children: [
-        /// The name of this certificate.
-        name: Required<Name> = ("name", SASL_CERT) => Name,
+/// Temporary zero-sized struct for when the no-cert-management element is present.
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::SASL_CERT, name = "no-cert-management")]
+pub struct NoCertManagement;
 
-        /// The X.509 certificate to set.
-        cert: Required<Cert> = ("x509cert", SASL_CERT) => Cert,
+/// For the client to upload an X.509 certificate.
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::SASL_CERT, name = "append")]
+pub struct Append {
+    /// The name of this certificate.
+    #[xml(child)]
+    pub name: Name,
 
-        /// This client is forbidden from managing certificates.
-        no_cert_management: Present<_> = ("no-cert-management", SASL_CERT) => bool
-    ]
-);
+    /// The X.509 certificate to set.
+    #[xml(child)]
+    pub cert: Cert,
+
+    /// This client is forbidden from managing certificates.
+    // TODO: replace with `#[xml(flag)]` once we have it.
+    #[xml(child(default))]
+    pub no_cert_management: Option<NoCertManagement>,
+}
 
 impl IqSetPayload for Append {}
 
@@ -65,23 +73,27 @@ pub struct Users {
     pub resources: Vec<Resource>,
 }
 
-generate_element!(
-    /// An X.509 certificate being set for this user.
-    Item, "item", SASL_CERT,
-    children: [
-        /// The name of this certificate.
-        name: Required<Name> = ("name", SASL_CERT) => Name,
+/// An X.509 certificate being set for this user.
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::SASL_CERT, name = "item")]
+pub struct Item {
+    /// The name of this certificate.
+    #[xml(child)]
+    pub name: Name,
 
-        /// The X.509 certificate to set.
-        cert: Required<Cert> = ("x509cert", SASL_CERT) => Cert,
+    /// The X.509 certificate to set.
+    #[xml(child)]
+    pub cert: Cert,
 
-        /// This client is forbidden from managing certificates.
-        no_cert_management: Present<_> = ("no-cert-management", SASL_CERT) => bool,
+    /// This client is forbidden from managing certificates.
+    #[xml(child(default))]
+    // TODO: replace with `#[xml(flag)]` once we have it.
+    pub no_cert_management: Option<NoCertManagement>,
 
-        /// List of resources currently using this certificate.
-        users: Option<Users> = ("users", SASL_CERT) => Users
-    ]
-);
+    /// List of resources currently using this certificate.
+    #[xml(child(default))]
+    pub users: Option<Users>,
+}
 
 /// Server answers with the current list of X.509 certificates.
 #[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
@@ -126,6 +138,7 @@ mod tests {
     #[cfg(target_pointer_width = "32")]
     #[test]
     fn test_size() {
+        assert_size!(NoCertManagement, 0);
         assert_size!(Append, 28);
         assert_size!(Disable, 12);
         assert_size!(Revoke, 12);
@@ -140,6 +153,7 @@ mod tests {
     #[cfg(target_pointer_width = "64")]
     #[test]
     fn test_size() {
+        assert_size!(NoCertManagement, 0);
         assert_size!(Append, 56);
         assert_size!(Disable, 24);
         assert_size!(Revoke, 24);
@@ -211,7 +225,7 @@ mod tests {
             cert: Cert {
                 data: b"\0\0\0".to_vec(),
             },
-            no_cert_management: false,
+            no_cert_management: None,
         };
         let elem: Element = append.into();
         assert!(elem.is("append", ns::SASL_CERT));
@@ -237,7 +251,7 @@ mod tests {
             cert: Cert {
                 data: b"\0\0\0".to_vec(),
             },
-            no_cert_management: false,
+            no_cert_management: None,
             users: None,
         };
 
@@ -256,7 +270,7 @@ mod tests {
             cert: Cert {
                 data: b"\0\0\0".to_vec(),
             },
-            no_cert_management: false,
+            no_cert_management: None,
         };
 
         let serialized: Element = append.into();

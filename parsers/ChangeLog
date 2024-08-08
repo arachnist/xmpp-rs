@@ -15,6 +15,10 @@ XXXX-YY-ZZ RELEASER <admin@example.com>
         then included in `Action`.  Also `Action::Erase::num` is now a wrapper
         type around u32, which lets us implement a custom Default on it.
         (!416)
+      - The cert_management module is now using `Option` instead of `bool` to
+        check whether a child element is present or not, as this is currently
+        implemented in xso.  We might revert that change if we implement flag
+        metas in xso before the next release.
     * New parsers/serialisers:
         - Stream Features (RFC 6120) (!400)
         - Extensible SASL Profile (XEP-0388)
