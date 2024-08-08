@@ -11,6 +11,8 @@ XXXX-YY-ZZ RELEASER <admin@example.com>
         where Connection variant contains any error type that implements connect::ServerConnectorError (!421)
       - `starttls::Error` no longer has `TokioXMPP` variant ; only tokio_xmpp::Error can contain starttls::Error,
         not the other way around (!421)
+      - `AsyncClient::new` automatically reconnects by default (!436)
+      - `AsyncClient::poll_next` properly closes stream with `Poll::Ready(None)` when disconnecting without auto reconnect (!436)
 
 Version 4.0.0:
 2024-07-26 Maxime “pep” Buquet <pep@bouah.net>

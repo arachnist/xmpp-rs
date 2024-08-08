@@ -47,7 +47,7 @@ enum ClientState<S: AsyncReadAndWrite> {
 }
 
 impl Client<ServerConfig> {
-    /// Start a new XMPP client using StartTLS transport
+    /// Start a new XMPP client using StartTLS transport and autoreconnect
     ///
     /// Start polling the returned instance so that it will connect
     /// and yield events.
@@ -58,7 +58,9 @@ impl Client<ServerConfig> {
             password: password.into(),
             server: ServerConfig::UseSrv,
         };
-        Self::new_with_config(config)
+        let mut client = Self::new_with_config(config);
+        client.set_reconnect(true);
+        client
     }
 }
 
@@ -153,7 +155,7 @@ impl<C: ServerConnector> Stream for Client<C> {
             }
             ClientState::Disconnected => {
                 self.state = ClientState::Disconnected;
-                Poll::Pending
+                Poll::Ready(None)
             }
             ClientState::Connecting(mut connect) => match Pin::new(&mut connect).poll(cx) {
                 Poll::Ready(Ok(Ok(stream))) => {
