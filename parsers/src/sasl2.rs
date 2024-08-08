@@ -6,7 +6,9 @@
 
 use xso::{text::Base64, AsXml, FromXml};
 
+use crate::bind2;
 use crate::ns;
+use crate::sm::StreamManagement;
 use jid::Jid;
 use minidom::Element;
 
@@ -19,7 +21,24 @@ pub struct Authentication {
     pub mechanisms: Vec<String>,
 
     /// Additional auth information provided by server
-    #[xml(extract(default, name = "inline", fields(element(n = ..))))]
+    #[xml(child(default))]
+    pub inline: Option<InlineFeatures>,
+}
+
+/// Additional auth information provided by server
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::SASL2, name = "inline")]
+pub struct InlineFeatures {
+    /// Bind 2 inline feature
+    #[xml(child(default))]
+    pub bind2: Option<bind2::BindFeature>,
+
+    /// Stream management inline feature
+    #[xml(child(default))]
+    pub sm: Option<StreamManagement>,
+
+    /// Additional inline features
+    #[xml(element(n = ..))]
     pub payloads: Vec<Element>,
 }
 
@@ -172,7 +191,8 @@ mod tests {
     #[cfg(target_pointer_width = "32")]
     #[test]
     fn test_size() {
-        assert_size!(Authentication, 24);
+        assert_size!(Authentication, 40);
+        assert_size!(InlineFeatures, 28);
         assert_size!(Abort, 24);
         assert_size!(UserAgent, 40);
         assert_size!(Authenticate, 76);
@@ -180,7 +200,7 @@ mod tests {
         assert_size!(Response, 12);
         assert_size!(Success, 40);
         assert_size!(Failure, 24);
-        assert_size!(Continue, 24);
+        assert_size!(Continue, 36);
         assert_size!(Next, 24);
         assert_size!(TaskData, 12);
     }
@@ -188,7 +208,8 @@ mod tests {
     #[cfg(target_pointer_width = "64")]
     #[test]
     fn test_size() {
-        assert_size!(Authentication, 48);
+        assert_size!(Authentication, 80);
+        assert_size!(InlineFeatures, 56);
         assert_size!(Abort, 48);
         assert_size!(UserAgent, 64);
         assert_size!(Authenticate, 136);
@@ -208,7 +229,7 @@ mod tests {
             .unwrap();
         let auth = Authentication::try_from(elem).unwrap();
         assert_eq!(auth.mechanisms.len(), 1);
-        assert_eq!(auth.payloads.len(), 0);
+        assert_eq!(auth.inline, None);
 
         let elem: Element = "<challenge xmlns='urn:xmpp:sasl:2'>AAAA</challenge>"
             .parse()
@@ -245,10 +266,10 @@ mod tests {
         assert_eq!(mech.next().unwrap(), "SCRAM-SHA-1-PLUS");
         assert_eq!(mech.next(), None);
 
-        assert_eq!(auth.payloads.len(), 2);
-        let mut payloads = auth.payloads.into_iter();
-        let _sm = crate::sm::StreamManagement::try_from(payloads.next().unwrap()).unwrap();
-        let _bind = crate::bind2::BindFeature::try_from(payloads.next().unwrap()).unwrap();
+        let inline = auth.inline.unwrap();
+        assert_eq!(inline.bind2.unwrap().inline_features.len(), 0);
+        assert_eq!(inline.sm.unwrap(), StreamManagement);
+        assert_eq!(inline.payloads.len(), 0);
     }
 
     // XEP-0388 Example 3
