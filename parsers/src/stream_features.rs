@@ -58,18 +58,9 @@ pub struct RequiredStartTls;
 #[derive(FromXml, AsXml, PartialEq, Debug, Clone, Default)]
 #[xml(namespace = ns::SASL, name = "mechanisms")]
 pub struct SaslMechanisms {
-    /// List of information elements describing this avatar.
-    #[xml(child(n = ..))]
-    pub mechanisms: Vec<SaslMechanism>,
-}
-
-/// The name of a SASL mechanism.
-#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
-#[xml(namespace = ns::SASL, name = "mechanism")]
-pub struct SaslMechanism {
-    /// The stringy name of the mechanism.
-    #[xml(text)]
-    pub mechanism: String,
+    /// List of information elements describing this SASL mechanism.
+    #[xml(extract(n = .., name = "mechanism", fields(text(type_ = String))))]
+    pub mechanisms: Vec<String>,
 }
 
 impl StreamFeatures {
@@ -92,7 +83,6 @@ mod tests {
     #[cfg(target_pointer_width = "32")]
     #[test]
     fn test_size() {
-        assert_size!(SaslMechanism, 12);
         assert_size!(SaslMechanisms, 12);
         assert_size!(RequiredStartTls, 0);
         assert_size!(StartTls, 1);
@@ -102,11 +92,29 @@ mod tests {
     #[cfg(target_pointer_width = "64")]
     #[test]
     fn test_size() {
-        assert_size!(SaslMechanism, 24);
         assert_size!(SaslMechanisms, 24);
         assert_size!(RequiredStartTls, 0);
         assert_size!(StartTls, 1);
         assert_size!(StreamFeatures, 64);
+    }
+
+    #[test]
+    fn test_sasl_mechanisms() {
+        let elem: Element = "<stream:features xmlns:stream='http://etherx.jabber.org/streams'>
+            <mechanisms xmlns='urn:ietf:params:xml:ns:xmpp-sasl'>
+                <mechanism>PLAIN</mechanism>
+                <mechanism>SCRAM-SHA-1</mechanism>
+                <mechanism>SCRAM-SHA-1-PLUS</mechanism>
+            </mechanisms>
+        </stream:features>"
+            .parse()
+            .unwrap();
+
+        let features = StreamFeatures::try_from(elem).unwrap();
+        assert_eq!(
+            features.sasl_mechanisms.mechanisms,
+            ["PLAIN", "SCRAM-SHA-1", "SCRAM-SHA-1-PLUS"]
+        );
     }
 
     #[test]

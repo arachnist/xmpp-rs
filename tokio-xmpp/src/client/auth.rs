@@ -28,7 +28,7 @@ pub async fn auth<S: AsyncRead + AsyncWrite + Unpin>(
         .sasl_mechanisms
         .mechanisms
         .iter()
-        .map(|item| item.mechanism.clone())
+        .cloned()
         .collect();
 
     for local_mech in local_mechs {
