@@ -46,25 +46,28 @@ impl Feature {
     }
 }
 
-generate_element!(
-    /// Structure representing an `<identity xmlns='http://jabber.org/protocol/disco#info'/>` element.
-    Identity, "identity", DISCO_INFO,
-    attributes: [
-        /// Category of this identity.
-        // TODO: use an enum here.
-        category: RequiredNonEmpty<String> = "category",
+/// Structure representing an `<identity xmlns='http://jabber.org/protocol/disco#info'/>` element.
+#[derive(FromXml, AsXml, Debug, Clone, PartialEq, Eq, Hash)]
+#[xml(namespace = ns::DISCO_INFO, name = "identity")]
+pub struct Identity {
+    /// Category of this identity.
+    // TODO: use an enum here.
+    #[xml(attribute)]
+    pub category: String,
 
-        /// Type of this identity.
-        // TODO: use an enum here.
-        type_: RequiredNonEmpty<String> = "type",
+    /// Type of this identity.
+    // TODO: use an enum here.
+    #[xml(attribute = "type")]
+    pub type_: String,
 
-        /// Lang of the name of this identity.
-        lang: Option<String> = "xml:lang",
+    /// Lang of the name of this identity.
+    #[xml(attribute(default, name = "xml:lang"))]
+    pub lang: Option<String>,
 
-        /// Name of this identity.
-        name: Option<String> = "name",
-    ]
-);
+    /// Name of this identity.
+    #[xml(attribute(default))]
+    pub name: Option<String>,
+}
 
 impl Identity {
     /// Create a new `<identity/>`.
@@ -342,10 +345,13 @@ mod tests {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Required attribute 'category' missing.");
+        assert_eq!(
+            message,
+            "Required attribute field 'category' on Identity element missing."
+        );
 
         let elem: Element =
-            "<query xmlns='http://jabber.org/protocol/disco#info'><identity category=''/></query>"
+            "<query xmlns='http://jabber.org/protocol/disco#info'><identity type='coucou'/></query>"
                 .parse()
                 .unwrap();
         let error = DiscoInfoResult::try_from(elem).unwrap_err();
@@ -353,7 +359,10 @@ mod tests {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Required attribute 'category' must not be empty.");
+        assert_eq!(
+            message,
+            "Required attribute field 'category' on Identity element missing."
+        );
 
         let elem: Element = "<query xmlns='http://jabber.org/protocol/disco#info'><identity category='coucou'/></query>".parse().unwrap();
         let error = DiscoInfoResult::try_from(elem).unwrap_err();
@@ -361,15 +370,10 @@ mod tests {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Required attribute 'type' missing.");
-
-        let elem: Element = "<query xmlns='http://jabber.org/protocol/disco#info'><identity category='coucou' type=''/></query>".parse().unwrap();
-        let error = DiscoInfoResult::try_from(elem).unwrap_err();
-        let message = match error {
-            FromElementError::Invalid(Error::Other(string)) => string,
-            _ => panic!(),
-        };
-        assert_eq!(message, "Required attribute 'type' must not be empty.");
+        assert_eq!(
+            message,
+            "Required attribute field 'type_' on Identity element missing."
+        );
     }
 
     #[test]
