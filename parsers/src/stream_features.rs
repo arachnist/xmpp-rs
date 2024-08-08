@@ -9,6 +9,8 @@ use xso::{AsXml, FromXml};
 
 use crate::bind::BindFeature;
 use crate::ns;
+use crate::sasl2::Authentication;
+use crate::sasl_cb::SaslChannelBinding;
 use crate::stream_limits::Limits;
 
 /// Wraps `<stream:features/>`, usually the very first nonza of a
@@ -31,6 +33,14 @@ pub struct StreamFeatures {
     /// Limits advertised by the server.
     #[xml(child(default))]
     pub limits: Option<Limits>,
+
+    /// Extensible SASL Profile, a newer authentication method than the one from the RFC.
+    #[xml(child(default))]
+    pub sasl2: Option<Authentication>,
+
+    /// SASL Channel-Binding Type Capability.
+    #[xml(child(default))]
+    pub sasl_cb: Option<SaslChannelBinding>,
 
     /// Other stream features advertised
     ///
@@ -86,7 +96,7 @@ mod tests {
         assert_size!(SaslMechanisms, 12);
         assert_size!(RequiredStartTls, 0);
         assert_size!(StartTls, 1);
-        assert_size!(StreamFeatures, 40);
+        assert_size!(StreamFeatures, 92);
     }
 
     #[cfg(target_pointer_width = "64")]
@@ -95,7 +105,7 @@ mod tests {
         assert_size!(SaslMechanisms, 24);
         assert_size!(RequiredStartTls, 0);
         assert_size!(StartTls, 1);
-        assert_size!(StreamFeatures, 64);
+        assert_size!(StreamFeatures, 168);
     }
 
     #[test]
