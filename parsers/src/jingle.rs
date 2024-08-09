@@ -4,6 +4,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use xso::{AsXml, FromXml};
+
 use crate::iq::IqSetPayload;
 use crate::jingle_grouping::Group;
 use crate::jingle_ibb::Transport as IbbTransport;
@@ -170,12 +172,16 @@ generate_id!(
 );
 
 /// Enum wrapping all of the various supported descriptions of a Content.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(AsXml, Debug, Clone, PartialEq)]
+#[xml()]
 pub enum Description {
     /// Jingle RTP Sessions (XEP-0167) description.
+    #[xml(transparent)]
     Rtp(RtpDescription),
 
     /// To be used for any description that isn’t known at compile-time.
+    // TODO: replace with `#[xml(element, name = ..)]` once we have it.
+    #[xml(transparent)]
     Unknown(Element),
 }
 
@@ -185,9 +191,25 @@ impl TryFrom<Element> for Description {
     fn try_from(elem: Element) -> Result<Description, Error> {
         Ok(if elem.is("description", ns::JINGLE_RTP) {
             Description::Rtp(RtpDescription::try_from(elem)?)
-        } else {
+        } else if elem.name() == "description" {
             Description::Unknown(elem)
+        } else {
+            return Err(Error::Other("Invalid description."));
         })
+    }
+}
+
+impl ::xso::FromXml for Description {
+    type Builder = ::xso::minidom_compat::FromEventsViaElement<Description>;
+
+    fn from_events(
+        qname: ::xso::exports::rxml::QName,
+        attrs: ::xso::exports::rxml::AttrMap,
+    ) -> Result<Self::Builder, ::xso::error::FromEventsError> {
+        if qname.1 != "description" {
+            return Err(::xso::error::FromEventsError::Mismatch { name: qname, attrs });
+        }
+        Self::Builder::new(qname, attrs)
     }
 }
 
@@ -197,28 +219,25 @@ impl From<RtpDescription> for Description {
     }
 }
 
-impl From<Description> for Element {
-    fn from(desc: Description) -> Element {
-        match desc {
-            Description::Rtp(desc) => desc.into(),
-            Description::Unknown(elem) => elem,
-        }
-    }
-}
-
 /// Enum wrapping all of the various supported transports of a Content.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(AsXml, Debug, Clone, PartialEq)]
+#[xml()]
 pub enum Transport {
     /// Jingle ICE-UDP Bytestreams (XEP-0176) transport.
+    #[xml(transparent)]
     IceUdp(IceUdpTransport),
 
     /// Jingle In-Band Bytestreams (XEP-0261) transport.
+    #[xml(transparent)]
     Ibb(IbbTransport),
 
     /// Jingle SOCKS5 Bytestreams (XEP-0260) transport.
+    #[xml(transparent)]
     Socks5(Socks5Transport),
 
     /// To be used for any transport that isn’t known at compile-time.
+    // TODO: replace with `#[xml(element, name = ..)]` once we have it.
+    #[xml(transparent)]
     Unknown(Element),
 }
 
@@ -232,9 +251,25 @@ impl TryFrom<Element> for Transport {
             Transport::Ibb(IbbTransport::try_from(elem)?)
         } else if elem.is("transport", ns::JINGLE_S5B) {
             Transport::Socks5(Socks5Transport::try_from(elem)?)
-        } else {
+        } else if elem.name() == "transport" {
             Transport::Unknown(elem)
+        } else {
+            return Err(Error::Other("Invalid transport."));
         })
+    }
+}
+
+impl ::xso::FromXml for Transport {
+    type Builder = ::xso::minidom_compat::FromEventsViaElement<Transport>;
+
+    fn from_events(
+        qname: ::xso::exports::rxml::QName,
+        attrs: ::xso::exports::rxml::AttrMap,
+    ) -> Result<Self::Builder, ::xso::error::FromEventsError> {
+        if qname.1 != "transport" {
+            return Err(::xso::error::FromEventsError::Mismatch { name: qname, attrs });
+        }
+        Self::Builder::new(qname, attrs)
     }
 }
 
@@ -256,45 +291,44 @@ impl From<Socks5Transport> for Transport {
     }
 }
 
-impl From<Transport> for Element {
-    fn from(transport: Transport) -> Element {
-        match transport {
-            Transport::IceUdp(transport) => transport.into(),
-            Transport::Ibb(transport) => transport.into(),
-            Transport::Socks5(transport) => transport.into(),
-            Transport::Unknown(elem) => elem,
-        }
-    }
+/// A security element inside a Jingle content, stubbed for now.
+#[derive(FromXml, AsXml, Debug, Clone, PartialEq)]
+#[xml(namespace = ns::JINGLE, name = "security")]
+pub struct Security;
+
+/// Describes a session’s content, there can be multiple content in one
+/// session.
+#[derive(FromXml, AsXml, Debug, Clone, PartialEq)]
+#[xml(namespace = ns::JINGLE, name = "content")]
+pub struct Content {
+    /// Who created this content.
+    #[xml(attribute)]
+    pub creator: Creator,
+
+    /// How the content definition is to be interpreted by the recipient.
+    #[xml(attribute(default))]
+    pub disposition: Disposition,
+
+    /// A per-session unique identifier for this content.
+    #[xml(attribute)]
+    pub name: ContentId,
+
+    /// Who can send data for this content.
+    #[xml(attribute(default))]
+    pub senders: Senders,
+
+    /// What to send.
+    #[xml(child(default))]
+    pub description: Option<Description>,
+
+    /// How to send it.
+    #[xml(child(default))]
+    pub transport: Option<Transport>,
+
+    /// With which security.
+    #[xml(child(default))]
+    pub security: Option<Security>,
 }
-
-generate_element!(
-    /// Describes a session’s content, there can be multiple content in one
-    /// session.
-    Content, "content", JINGLE,
-    attributes: [
-        /// Who created this content.
-        creator: Required<Creator> = "creator",
-
-        /// How the content definition is to be interpreted by the recipient.
-        disposition: Default<Disposition> = "disposition",
-
-        /// A per-session unique identifier for this content.
-        name: Required<ContentId> = "name",
-
-        /// Who can send data for this content.
-        senders: Default<Senders> = "senders",
-    ],
-    children: [
-        /// What to send.
-        description: Option<Description> = ("description", *) => Description,
-
-        /// How to send it.
-        transport: Option<Transport> = ("transport", *) => Transport,
-
-        /// With which security.
-        security: Option<Element> = ("security", JINGLE) => Element
-    ]
-);
 
 impl Content {
     /// Create a new content.
@@ -335,7 +369,7 @@ impl Content {
     }
 
     /// Set the security of this content.
-    pub fn with_security(mut self, security: Element) -> Content {
+    pub fn with_security(mut self, security: Security) -> Content {
         self.security = Some(security);
         self
     }
@@ -532,36 +566,67 @@ impl From<ReasonElement> for Element {
     }
 }
 
+impl ::xso::FromXml for ReasonElement {
+    type Builder = ::xso::minidom_compat::FromEventsViaElement<ReasonElement>;
+
+    fn from_events(
+        qname: ::xso::exports::rxml::QName,
+        attrs: ::xso::exports::rxml::AttrMap,
+    ) -> Result<Self::Builder, ::xso::error::FromEventsError> {
+        if qname.0 != crate::ns::JINGLE || qname.1 != "reason" {
+            return Err(::xso::error::FromEventsError::Mismatch { name: qname, attrs });
+        }
+        Self::Builder::new(qname, attrs)
+    }
+}
+
+impl ::xso::AsXml for ReasonElement {
+    type ItemIter<'x> = ::xso::minidom_compat::AsItemsViaElement<'x>;
+
+    fn as_xml_iter(&self) -> Result<Self::ItemIter<'_>, ::xso::error::Error> {
+        ::xso::minidom_compat::AsItemsViaElement::new(self.clone())
+    }
+}
+
 generate_id!(
     /// Unique identifier for a session between two JIDs.
     SessionId
 );
 
 /// The main Jingle container, to be included in an iq stanza.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(FromXml, AsXml, Debug, Clone, PartialEq)]
+#[xml(namespace = ns::JINGLE, name = "jingle")]
 pub struct Jingle {
     /// The action to execute on both ends.
+    #[xml(attribute)]
     pub action: Action,
 
     /// Who the initiator is.
+    #[xml(attribute(default))]
     pub initiator: Option<Jid>,
 
     /// Who the responder is.
+    #[xml(attribute(default))]
     pub responder: Option<Jid>,
 
     /// Unique session identifier between two entities.
+    #[xml(attribute)]
     pub sid: SessionId,
 
     /// A list of contents to be negotiated in this session.
+    #[xml(child(n = ..))]
     pub contents: Vec<Content>,
 
     /// An optional reason.
+    #[xml(child(default))]
     pub reason: Option<ReasonElement>,
 
     /// An optional grouping.
+    #[xml(child(default))]
     pub group: Option<Group>,
 
     /// Payloads to be included.
+    #[xml(child(n = ..))]
     pub other: Vec<Element>,
 }
 
@@ -613,63 +678,6 @@ impl Jingle {
     }
 }
 
-impl TryFrom<Element> for Jingle {
-    type Error = FromElementError;
-
-    fn try_from(root: Element) -> Result<Jingle, FromElementError> {
-        check_self!(root, "jingle", JINGLE, "Jingle");
-        check_no_unknown_attributes!(root, "Jingle", ["action", "initiator", "responder", "sid"]);
-
-        let mut jingle = Jingle {
-            action: get_attr!(root, "action", Required),
-            initiator: get_attr!(root, "initiator", Option),
-            responder: get_attr!(root, "responder", Option),
-            sid: get_attr!(root, "sid", Required),
-            contents: vec![],
-            reason: None,
-            group: None,
-            other: vec![],
-        };
-
-        for child in root.children().cloned() {
-            if child.is("content", ns::JINGLE) {
-                let content = Content::try_from(child)?;
-                jingle.contents.push(content);
-            } else if child.is("reason", ns::JINGLE) {
-                if jingle.reason.is_some() {
-                    return Err(Error::Other("Jingle must not have more than one reason.").into());
-                }
-                let reason = ReasonElement::try_from(child)?;
-                jingle.reason = Some(reason);
-            } else if child.is("group", ns::JINGLE_GROUPING) {
-                if jingle.group.is_some() {
-                    return Err(Error::Other("Jingle must not have more than one grouping.").into());
-                }
-                let group = Group::try_from(child)?;
-                jingle.group = Some(group);
-            } else {
-                jingle.other.push(child);
-            }
-        }
-
-        Ok(jingle)
-    }
-}
-
-impl From<Jingle> for Element {
-    fn from(jingle: Jingle) -> Element {
-        Element::builder("jingle", ns::JINGLE)
-            .attr("action", jingle.action)
-            .attr("initiator", jingle.initiator)
-            .attr("responder", jingle.responder)
-            .attr("sid", jingle.sid)
-            .append_all(jingle.contents)
-            .append_all(jingle.reason.map(Element::from))
-            .append_all(jingle.group.map(Element::from))
-            .build()
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -682,7 +690,7 @@ mod tests {
         assert_size!(Senders, 1);
         assert_size!(Disposition, 1);
         assert_size!(ContentId, 12);
-        assert_size!(Content, 216);
+        assert_size!(Content, 156);
         assert_size!(Reason, 1);
         assert_size!(ReasonElement, 16);
         assert_size!(SessionId, 12);
@@ -697,7 +705,7 @@ mod tests {
         assert_size!(Senders, 1);
         assert_size!(Disposition, 1);
         assert_size!(ContentId, 24);
-        assert_size!(Content, 432);
+        assert_size!(Content, 312);
         assert_size!(Reason, 1);
         assert_size!(ReasonElement, 32);
         assert_size!(SessionId, 24);
@@ -723,7 +731,10 @@ mod tests {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Required attribute 'action' missing.");
+        assert_eq!(
+            message,
+            "Required attribute field 'action' on Jingle element missing."
+        );
 
         let elem: Element = "<jingle xmlns='urn:xmpp:jingle:1' action='session-info'/>"
             .parse()
@@ -733,7 +744,10 @@ mod tests {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Required attribute 'sid' missing.");
+        assert_eq!(
+            message,
+            "Required attribute field 'sid' on Jingle element missing."
+        );
 
         let elem: Element = "<jingle xmlns='urn:xmpp:jingle:1' action='coucou' sid='coucou'/>"
             .parse()
@@ -772,7 +786,10 @@ mod tests {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Required attribute 'creator' missing.");
+        assert_eq!(
+            message,
+            "Required attribute field 'creator' on Content element missing."
+        );
 
         let elem: Element = "<jingle xmlns='urn:xmpp:jingle:1' action='session-initiate' sid='coucou'><content creator='initiator'/></jingle>".parse().unwrap();
         let error = Jingle::try_from(elem).unwrap_err();
@@ -780,7 +797,10 @@ mod tests {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Required attribute 'name' missing.");
+        assert_eq!(
+            message,
+            "Required attribute field 'name' on Content element missing."
+        );
 
         let elem: Element = "<jingle xmlns='urn:xmpp:jingle:1' action='session-initiate' sid='coucou'><content creator='coucou' name='coucou'/></jingle>".parse().unwrap();
         let error = Jingle::try_from(elem).unwrap_err();
@@ -863,7 +883,10 @@ mod tests {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Jingle must not have more than one reason.");
+        assert_eq!(
+            message,
+            "Jingle element must not have more than one child in field 'reason'."
+        );
 
         let elem: Element = "<jingle xmlns='urn:xmpp:jingle:1' action='session-initiate' sid='coucou'><reason><decline/><text/><text/></reason></jingle>".parse().unwrap();
         let error = Jingle::try_from(elem).unwrap_err();

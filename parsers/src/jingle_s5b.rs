@@ -284,6 +284,28 @@ impl From<Transport> for Element {
     }
 }
 
+impl ::xso::FromXml for Transport {
+    type Builder = ::xso::minidom_compat::FromEventsViaElement<Transport>;
+
+    fn from_events(
+        qname: ::xso::exports::rxml::QName,
+        attrs: ::xso::exports::rxml::AttrMap,
+    ) -> Result<Self::Builder, ::xso::error::FromEventsError> {
+        if qname.0 != crate::ns::JINGLE_S5B || qname.1 != "transport" {
+            return Err(::xso::error::FromEventsError::Mismatch { name: qname, attrs });
+        }
+        Self::Builder::new(qname, attrs)
+    }
+}
+
+impl ::xso::AsXml for Transport {
+    type ItemIter<'x> = ::xso::minidom_compat::AsItemsViaElement<'x>;
+
+    fn as_xml_iter(&self) -> Result<Self::ItemIter<'_>, ::xso::error::Error> {
+        ::xso::minidom_compat::AsItemsViaElement::new(self.clone())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
