@@ -517,8 +517,9 @@ serialisation to mismatch the deserialisation, too (i.e. the struct is then
 not roundtrip-safe), because the deserialisation does not compare the value
 against `default` (but has special provisions to work with `Option<T>`).
 
-**Note:** Currently, only a single field can be extracted. This restriction
-will be lifted in the future.
+If more than one single field is contained in `fields`, the fields will be
+extracted as a tuple in the order they are given in the meta. In addition, it
+is required to explicitly specify each extracted field's type in that case.
 
 Using `extract` instead of `child` combined with a specific struct declaration
 comes with trade-offs. On the one hand, using `extract` gives you flexibility

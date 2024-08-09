@@ -9,7 +9,7 @@
 //! In particular, it provides both `#[xml(extract)]` and `#[xml(child)]`
 //! implementations in a single type.
 
-use proc_macro2::TokenStream;
+use proc_macro2::{Span, TokenStream};
 use quote::quote;
 use syn::*;
 
@@ -47,14 +47,14 @@ impl Field for ChildField {
         member: &Member,
         ty: &Type,
     ) -> Result<FieldBuilderPart> {
-        let element_ty = match self.amount {
-            AmountConstraint::FixedSingle(_) => ty.clone(),
-            AmountConstraint::Any(_) => into_iterator_item_ty(ty.clone()),
+        let (element_ty, is_container) = match self.amount {
+            AmountConstraint::FixedSingle(_) => (ty.clone(), false),
+            AmountConstraint::Any(_) => (into_iterator_item_ty(ty.clone()), true),
         };
 
         let (extra_defs, matcher, fetch, builder) = match self.extract {
             Some(ref extract) => {
-                extract.make_from_xml_builder_parts(scope, container_name, member)?
+                extract.make_from_xml_builder_parts(scope, container_name, member, is_container)?
             }
             None => {
                 let FromEventsScope {
@@ -153,19 +153,23 @@ impl Field for ChildField {
     ) -> Result<FieldIteratorPart> {
         let AsItemsScope { ref lifetime, .. } = scope;
 
-        let item_ty = match self.amount {
-            AmountConstraint::FixedSingle(_) => ty.clone(),
+        let (item_ty, is_container) = match self.amount {
+            AmountConstraint::FixedSingle(_) => (ty.clone(), false),
             AmountConstraint::Any(_) => {
                 // This should give us the type of element stored in the
                 // collection.
-                into_iterator_item_ty(ty.clone())
+                (into_iterator_item_ty(ty.clone()), true)
             }
         };
 
         let (extra_defs, init, iter_ty) = match self.extract {
-            Some(ref extract) => {
-                extract.make_as_item_iter_parts(scope, container_name, bound_name, member)?
-            }
+            Some(ref extract) => extract.make_as_item_iter_parts(
+                scope,
+                container_name,
+                bound_name,
+                member,
+                is_container,
+            )?,
             None => {
                 let as_xml_iter = as_xml_iter_fn(item_ty.clone());
                 let item_iter = item_iter_ty(item_ty.clone(), lifetime.clone());
@@ -266,6 +270,7 @@ impl ExtractDef {
         scope: &FromEventsScope,
         container_name: &ParentRef,
         member: &Member,
+        collecting_into_container: bool,
     ) -> Result<(TokenStream, TokenStream, TokenStream, Type)> {
         let FromEventsScope {
             ref substate_result,
@@ -298,9 +303,22 @@ impl ExtractDef {
 
         let matcher = quote! { #state_ty_ident::new(name, attrs).map(|x| #from_xml_builder_ty_ident(::core::option::Option::Some(x))) };
 
-        Ok((
-            extra_defs,
-            matcher,
+        let fetch = if self.parts.field_count() == 1 {
+            // If we extract only a single field, we automatically unwrap the
+            // tuple, because that behaviour is more obvious to users.
+            quote! { #substate_result.0 }
+        } else {
+            // If we extract more than one field, we pass the value down as
+            // the tuple that it is.
+            quote! { #substate_result }
+        };
+
+        let fetch = if collecting_into_container {
+            // This is for symmetry with the AsXml implementation part. Please
+            // see there for why we cannot do option magic in the collection
+            // case.
+            fetch
+        } else {
             // This little ".into()" here goes a long way. It relies on one of
             // the most underrated trait implementations in the standard
             // library: `impl From<T> for Option<T>`, which creates a
@@ -319,9 +337,12 @@ impl ExtractDef {
             // the type constraint imposed by the place the value is *used*,
             // which is strictly bound by the field's type (so there is, in
             // fact, no ambiguity). So this works all kinds of magic.
-            quote! { #substate_result.0.into() },
-            from_xml_builder_ty,
-        ))
+            quote! {
+                #fetch.into()
+            }
+        };
+
+        Ok((extra_defs, matcher, fetch, from_xml_builder_ty))
     }
 
     /// Construct
@@ -334,6 +355,7 @@ impl ExtractDef {
         container_name: &ParentRef,
         bound_name: &Ident,
         member: &Member,
+        iterating_container: bool,
     ) -> Result<(TokenStream, TokenStream, Type)> {
         let AsItemsScope { ref lifetime, .. } = scope;
 
@@ -353,6 +375,31 @@ impl ExtractDef {
                 gt_token: token::Gt::default(),
             });
         let item_iter_ty = item_iter_ty.into();
+        let tuple_ty = self.parts.to_ref_tuple_ty(lifetime);
+
+        let (repack, inner_ty) = match self.parts.single_ty() {
+            Some(single_ty) => (
+                quote! { #bound_name, },
+                ref_ty(single_ty.clone(), lifetime.clone()),
+            ),
+            None => {
+                let mut repack_tuple = TokenStream::default();
+                // The cast here is sound, because the constructor of Compound
+                // already asserts that there are less than 2^32 fields (with
+                // what I think is a great error message, go check it out).
+                for i in 0..(tuple_ty.elems.len() as u32) {
+                    let index = Index {
+                        index: i,
+                        span: Span::call_site(),
+                    };
+                    repack_tuple.extend(quote! {
+                        &#bound_name.#index,
+                    })
+                }
+                let ref_tuple_ty = ref_ty(self.parts.to_tuple_ty().into(), lifetime.clone());
+                (repack_tuple, ref_tuple_ty)
+            }
+        };
 
         let extra_defs = self
             .parts
@@ -374,26 +421,45 @@ impl ExtractDef {
             .compile()
             .render(
                 &Visibility::Inherited,
-                &self.parts.to_ref_tuple_ty(lifetime).into(),
+                &tuple_ty.into(),
                 &state_ty_ident,
                 lifetime,
                 &item_iter_ty,
             )?;
 
-        let item_iter_ty = option_as_xml_ty(item_iter_ty);
-        Ok((
-            extra_defs,
+        let (make_iter, item_iter_ty) = if iterating_container {
+            // When we are iterating a container, the container's iterator's
+            // item type may either be `&(A, B, ...)` or `(&A, &B, ...)`.
+            // Unfortunately, to be able to handle both, we need to omit the
+            // magic Option cast, because we cannot specify the type of the
+            // argument of the `.map(...)` closure and rust is not able to
+            // infer that type because the repacking is too opaque.
+            //
+            // However, this is not much of a loss, because it doesn't really
+            // make sense to have the option cast there, anyway: optional
+            // elements in a container would be weird.
+            (
+                quote! {
+                    #item_iter_ty_ident::new((#repack))?
+                },
+                item_iter_ty,
+            )
+        } else {
             // Again we exploit the extreme usefulness of the
             // `impl From<T> for Option<T>`. We already wrote extensively
             // about that in [`make_from_xml_builder_parts`] implementation
             // corresponding to this code above, and we will not repeat it
             // here.
-            quote! {
-                ::xso::asxml::OptionAsXml::new(::core::option::Option::from(#bound_name).map(|#bound_name| {
-                    #item_iter_ty_ident::new((#bound_name,))
-                }).transpose()?)
-            },
-            item_iter_ty,
-        ))
+            (
+                quote! {
+                    ::xso::asxml::OptionAsXml::new(::core::option::Option::from(#bound_name).map(|#bound_name: #inner_ty| {
+                        #item_iter_ty_ident::new((#repack))
+                    }).transpose()?)
+                },
+                option_as_xml_ty(item_iter_ty),
+            )
+        };
+
+        Ok((extra_defs, make_iter, item_iter_ty))
     }
 }

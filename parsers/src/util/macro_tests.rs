@@ -1672,3 +1672,110 @@ fn fallible_parse_positive_err() {
         other => panic!("unexpected result: {:?}", other),
     }
 }
+
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = NS1, name = "parent")]
+struct ExtractTupleToCollection {
+    #[xml(extract(n = .., namespace = NS1, name = "text", fields(
+        attribute(name = "xml:lang", type_ = ::core::option::Option<String>, default),
+        text(type_ = String),
+    )))]
+    contents: Vec<(::core::option::Option<String>, String)>,
+}
+
+#[test]
+fn extract_tuple_to_collection_roundtrip() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<ExtractTupleToCollection>(
+        "<parent xmlns='urn:example:ns1'><text>hello world</text><text xml:lang='de'>hallo welt</text></parent>",
+    );
+}
+
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = NS1, name = "parent")]
+struct ExtractTuple {
+    #[xml(extract(namespace = NS1, name = "text", fields(
+        attribute(name = "xml:lang", type_ = ::core::option::Option<String>, default),
+        text(type_ = String),
+    )))]
+    contents: (::core::option::Option<String>, String),
+}
+
+#[test]
+fn extract_tuple_roundtrip() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<ExtractTuple>(
+        "<parent xmlns='urn:example:ns1'><text xml:lang='de'>hallo welt</text></parent>",
+    );
+}
+
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = NS1, name = "parent")]
+struct ExtractOptionalTuple {
+    #[xml(extract(namespace = NS1, name = "text", default, fields(
+        attribute(name = "xml:lang", type_ = ::core::option::Option<String>, default),
+        text(type_ = String),
+    )))]
+    contents: ::core::option::Option<(::core::option::Option<String>, String)>,
+}
+
+#[test]
+fn extract_optional_tuple_roundtrip_present() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<ExtractOptionalTuple>(
+        "<parent xmlns='urn:example:ns1'><text xml:lang='de'>hallo welt</text></parent>",
+    );
+    // Cannot test without text body here right now due to a limitation in the
+    // `#[xml(text)]` serialiser: It will create an empty text node in the
+    // minidom output, which will then fail the comparison.
+    roundtrip_full::<ExtractOptionalTuple>(
+        "<parent xmlns='urn:example:ns1'><text xml:lang='de'>x</text></parent>",
+    );
+    roundtrip_full::<ExtractOptionalTuple>(
+        "<parent xmlns='urn:example:ns1'><text xml:lang=''>x</text></parent>",
+    );
+}
+
+#[test]
+fn extract_optional_tuple_roundtrip_absent() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<ExtractOptionalTuple>("<parent xmlns='urn:example:ns1'/>");
+}
+
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = NS1, name = "parent")]
+struct ExtractTupleToMap {
+    #[xml(extract(n = .., namespace = NS1, name = "text", fields(
+        attribute(name = "xml:lang", type_ = ::core::option::Option<String>, default),
+        text(type_ = String),
+    )))]
+    contents: std::collections::BTreeMap<::core::option::Option<String>, String>,
+}
+
+#[test]
+fn extract_tuple_to_map_roundtrip() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<ExtractTupleToMap>(
+        "<parent xmlns='urn:example:ns1'><text>hello world</text><text xml:lang='de'>hallo welt</text></parent>",
+    );
+}

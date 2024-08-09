@@ -323,43 +323,50 @@ fn new_field(
             let xml_namespace = namespace.unwrap_or_else(|| container_namespace.clone());
             let xml_name = default_name(span, name, field_ident)?;
 
-            let mut field = {
-                let mut fields = fields.into_iter();
-                let Some(field) = fields.next() else {
-                    return Err(Error::new(
-                        span,
-                        "`#[xml(extract(..))]` must contain one `fields(..)` nested meta which contains at least one field meta."
-                    ));
+            let amount = amount.unwrap_or(AmountConstraint::FixedSingle(Span::call_site()));
+            match amount {
+                AmountConstraint::Any(ref amount) => {
+                    if let Flag::Present(default_) = default_ {
+                        let mut err = Error::new(
+                            default_,
+                            "default cannot be set when collecting into a collection",
+                        );
+                        err.combine(Error::new(
+                            *amount,
+                            "`n` was set to a non-1 value here, which enables connection logic",
+                        ));
+                        return Err(err);
+                    }
+                }
+                AmountConstraint::FixedSingle(_) => (),
+            }
+
+            let mut field_defs = Vec::new();
+            let allow_inference =
+                matches!(amount, AmountConstraint::FixedSingle(_)) && fields.len() == 1;
+            for (i, mut field) in fields.into_iter().enumerate() {
+                let field_ty = match field.take_type() {
+                    Some(v) => v,
+                    None => {
+                        if allow_inference {
+                            field_ty.clone()
+                        } else {
+                            return Err(Error::new(
+                            field.span(),
+                            "extracted field must specify a type explicitly when extracting into a collection or when extracting more than one field."
+                        ));
+                        }
+                    }
                 };
 
-                if let Some(field) = fields.next() {
-                    return Err(Error::new(
-                        field.span(),
-                        "more than one extracted piece of data is currently not supported",
-                    ));
-                }
-
-                field
-            };
-
-            let amount = amount.unwrap_or(AmountConstraint::FixedSingle(Span::call_site()));
-            let field_ty = match field.take_type() {
-                Some(v) => v,
-                None => match amount {
-                    // Only allow inferrence for single values: inferrence
-                    // for collections will always be wrong.
-                    AmountConstraint::FixedSingle(_) => field_ty.clone(),
-                    _ => {
-                        return Err(Error::new(
-                            field.span(),
-                            "extracted field must specify a type explicitly when extracting into a collection."
-                        ));
-                    }
-                },
-            };
-            let parts = Compound::from_field_defs(
-                [FieldDef::from_extract(field, 0, &field_ty, &xml_namespace)].into_iter(),
-            )?;
+                field_defs.push(FieldDef::from_extract(
+                    field,
+                    i as u32,
+                    &field_ty,
+                    &xml_namespace,
+                ));
+            }
+            let parts = Compound::from_field_defs(field_defs)?;
 
             Ok(Box::new(ChildField {
                 default_,

@@ -552,6 +552,17 @@ impl Compound {
         })
     }
 
+    /// Return a reference to this compound's only field's type.
+    ///
+    /// If the compound does not have exactly one field, this function returns
+    /// None.
+    pub(crate) fn single_ty(&self) -> Option<&Type> {
+        if self.fields.len() > 1 {
+            return None;
+        }
+        self.fields.get(0).map(|x| x.ty())
+    }
+
     /// Construct a tuple type with this compound's field's types in the same
     /// order as they appear in the compound.
     pub(crate) fn to_tuple_ty(&self) -> TypeTuple {
@@ -573,5 +584,10 @@ impl Compound {
                 .map(|x| ref_ty(x.ty().clone(), lifetime.clone()))
                 .collect(),
         }
+    }
+
+    /// Return the number of fields in this compound.
+    pub(crate) fn field_count(&self) -> usize {
+        self.fields.len()
     }
 }
