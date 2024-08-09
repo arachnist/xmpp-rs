@@ -21,6 +21,9 @@ use of this library in parsing XML streams like specified in RFC 6120.
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+use std::io;
+
 pub mod asxml;
 pub mod error;
 pub mod fromxml;
@@ -310,9 +313,7 @@ pub fn transform<T: FromXml, F: AsXml>(from: F) -> Result<T, self::error::Error>
             return Ok(v);
         }
     }
-    Err(self::error::Error::XmlError(
-        rxml::error::XmlError::InvalidEof("during transform"),
-    ))
+    Err(self::error::Error::XmlError(rxml::Error::InvalidEof(None)))
 }
 
 /// Attempt to convert a [`minidom::Element`] into a type implementing
@@ -366,16 +367,13 @@ pub fn try_from_element<T: FromXml>(
     unreachable!("minidom::Element did not produce enough events to complete element")
 }
 
-fn map_nonio_error<T>(r: Result<T, rxml::Error>) -> Result<T, self::error::Error> {
+fn map_nonio_error<T>(r: Result<T, io::Error>) -> Result<T, self::error::Error> {
     match r {
         Ok(v) => Ok(v),
-        Err(rxml::Error::IO(_)) => unreachable!(),
-        Err(rxml::Error::Xml(e)) => Err(e.into()),
-        Err(rxml::Error::InvalidUtf8Byte(_)) => Err(self::error::Error::Other("invalid utf-8")),
-        Err(rxml::Error::InvalidChar(_)) => {
-            Err(self::error::Error::Other("non-character encountered"))
-        }
-        Err(rxml::Error::RestrictedXml(_)) => Err(self::error::Error::Other("restricted xml")),
+        Err(e) => match e.downcast::<rxml::Error>() {
+            Ok(e) => Err(e.into()),
+            Err(_) => unreachable!("I/O error cannot be caused by &[]"),
+        },
     }
 }
 
@@ -393,9 +391,9 @@ fn read_start_event<I: std::io::BufRead>(
             }
         }
     }
-    Err(self::error::Error::XmlError(
-        rxml::error::XmlError::InvalidEof("before start of element"),
-    ))
+    Err(self::error::Error::XmlError(rxml::Error::InvalidEof(Some(
+        rxml::error::ErrorContext::DocumentBegin,
+    ))))
 }
 
 /// Attempt to parse a type implementing [`FromXml`] from a byte buffer
@@ -415,9 +413,7 @@ pub fn from_bytes<T: FromXml>(mut buf: &[u8]) -> Result<T, self::error::Error> {
             return Ok(v);
         }
     }
-    Err(self::error::Error::XmlError(
-        rxml::error::XmlError::InvalidEof("while parsing FromXml impl"),
-    ))
+    Err(self::error::Error::XmlError(rxml::Error::InvalidEof(None)))
 }
 
 /// Return true if the string contains exclusively XML whitespace.

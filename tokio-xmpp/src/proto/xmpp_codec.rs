@@ -99,8 +99,10 @@ impl Decoder for XmppCodec {
             let token = match self.driver.parse_buf(buf, false) {
                 Ok(Some(token)) => token,
                 Ok(None) => break,
-                Err(rxml::Error::IO(e)) if e.kind() == std::io::ErrorKind::WouldBlock => break,
-                Err(e) => return Err(minidom::Error::from(e).into()),
+                Err(rxml::error::EndOrError::NeedMoreData) => break,
+                Err(rxml::error::EndOrError::Error(e)) => {
+                    return Err(minidom::Error::from(e).into())
+                }
             };
 
             let had_stream_root = self.stanza_builder.depth() > 0;

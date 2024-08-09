@@ -11,7 +11,7 @@ This module contains the error types used throughout the `xso` crate.
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 use core::fmt;
 
-use rxml::error::XmlError;
+use rxml::Error as XmlError;
 
 /// Opaque string error.
 ///
@@ -100,8 +100,8 @@ impl std::error::Error for Error {
     }
 }
 
-impl From<rxml::error::XmlError> for Error {
-    fn from(other: rxml::error::XmlError) -> Error {
+impl From<rxml::Error> for Error {
+    fn from(other: rxml::Error) -> Error {
         Error::XmlError(other)
     }
 }

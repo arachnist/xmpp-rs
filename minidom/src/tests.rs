@@ -431,16 +431,12 @@ fn fail_comments() {
 #[test]
 fn xml_error() {
     match "<a xmlns='ns1'></b>".parse::<Element>() {
-        Err(crate::error::Error::XmlError(rxml::Error::Xml(
-            rxml::error::XmlError::ElementMismatch,
-        ))) => (),
+        Err(crate::error::Error::XmlError(rxml::Error::ElementMismatch)) => (),
         err => panic!("No or wrong error: {:?}", err),
     }
 
     match "<a xmlns='ns1'></".parse::<Element>() {
-        Err(crate::error::Error::XmlError(rxml::Error::Xml(
-            rxml::error::XmlError::InvalidEof(_),
-        ))) => (),
+        Err(crate::error::Error::XmlError(rxml::Error::InvalidEof(_))) => (),
         err => panic!("No or wrong error: {:?}", err),
     }
 }

@@ -19,10 +19,9 @@ use crate::node::Node;
 use crate::prefixes::{Namespace, Prefix, Prefixes};
 use crate::tree_builder::TreeBuilder;
 
-use std::collections::{btree_map, BTreeMap};
-use std::io::{BufRead, Write};
-
 use std::borrow::Cow;
+use std::collections::{btree_map, BTreeMap};
+use std::io::{self, BufRead, Write};
 use std::str;
 
 use rxml::writer::{Encoder, Item, TrackNamespace};
@@ -36,7 +35,7 @@ fn encode_and_write<W: Write, T: rxml::writer::TrackNamespace>(
     item: Item<'_>,
     enc: &mut Encoder<T>,
     mut w: W,
-) -> rxml::Result<()> {
+) -> io::Result<()> {
     let mut buf = rxml::bytes::BytesMut::new();
     enc.encode_into_bytes(item, &mut buf)
         .expect("encoder driven incorrectly");
@@ -61,7 +60,7 @@ impl<W: Write> CustomItemWriter<W, rxml::writer::SimpleNamespaces> {
 }
 
 impl<W: Write, T: rxml::writer::TrackNamespace> CustomItemWriter<W, T> {
-    pub(crate) fn write(&mut self, item: Item<'_>) -> rxml::Result<()> {
+    pub(crate) fn write(&mut self, item: Item<'_>) -> io::Result<()> {
         encode_and_write(item, &mut self.encoder, &mut self.writer)
     }
 }

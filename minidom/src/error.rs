@@ -11,6 +11,8 @@
 
 //! Provides an error type for this crate.
 
+use std::io;
+
 use std::error::Error as StdError;
 
 /// Our main error type.
@@ -18,6 +20,14 @@ use std::error::Error as StdError;
 pub enum Error {
     /// Error from rxml parsing or writing
     XmlError(rxml::Error),
+
+    /// I/O error from accessing the source or destination.
+    ///
+    /// Even though the [`rxml`] crate emits its errors through
+    /// [`std::io::Error`] when using it with [`BufRead`][`std::io::BufRead`],
+    /// any rxml errors will still be reported through the
+    /// [`XmlError`][`Self::XmlError`] variant.
+    Io(io::Error),
 
     /// An error which is returned when the end of the document was reached prematurely.
     EndOfDocument,
@@ -37,6 +47,7 @@ impl StdError for Error {
     fn cause(&self) -> Option<&dyn StdError> {
         match self {
             Error::XmlError(e) => Some(e),
+            Error::Io(e) => Some(e),
             Error::EndOfDocument => None,
             Error::InvalidPrefix => None,
             Error::MissingNamespace => None,
@@ -45,10 +56,20 @@ impl StdError for Error {
     }
 }
 
+impl From<io::Error> for Error {
+    fn from(other: io::Error) -> Self {
+        match other.downcast::<rxml::Error>() {
+            Ok(e) => Self::XmlError(e),
+            Err(e) => Self::Io(e),
+        }
+    }
+}
+
 impl std::fmt::Display for Error {
     fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
             Error::XmlError(e) => write!(fmt, "XML error: {}", e),
+            Error::Io(e) => write!(fmt, "I/O error: {}", e),
             Error::EndOfDocument => {
                 write!(fmt, "the end of the document has been reached prematurely")
             }
@@ -65,15 +86,9 @@ impl From<rxml::Error> for Error {
     }
 }
 
-impl From<rxml::error::XmlError> for Error {
-    fn from(err: rxml::error::XmlError) -> Error {
-        Error::XmlError(err.into())
-    }
-}
-
 impl From<rxml::strings::Error> for Error {
     fn from(err: rxml::strings::Error) -> Error {
-        rxml::error::XmlError::from(err).into()
+        rxml::error::Error::from(err).into()
     }
 }
 
