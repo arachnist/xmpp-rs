@@ -279,7 +279,7 @@ impl Compound {
             None => quote! {
                 // note: u8::is_ascii_whitespace includes U+000C, which is not
                 // part of XML's white space definition.'
-                if #text.as_bytes().iter().any(|b| *b != b' ' && *b != b'\t' && *b != b'\r' && *b != b'\n') {
+                if !::xso::is_xml_whitespace(#text.as_bytes()) {
                     ::core::result::Result::Err(::xso::error::Error::Other("Unexpected text content".into()))
                 } else {
                     ::core::result::Result::Ok(::core::ops::ControlFlow::Break(

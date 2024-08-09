@@ -419,3 +419,13 @@ pub fn from_bytes<T: FromXml>(mut buf: &[u8]) -> Result<T, self::error::Error> {
         rxml::error::XmlError::InvalidEof("while parsing FromXml impl"),
     ))
 }
+
+/// Return true if the string contains exclusively XML whitespace.
+///
+/// XML whitespace is defined as U+0020 (space), U+0009 (tab), U+000a
+/// (newline) and U+000d (carriage return).
+pub fn is_xml_whitespace<T: AsRef<[u8]>>(s: T) -> bool {
+    s.as_ref()
+        .iter()
+        .all(|b| *b == b' ' || *b == b'\t' || *b == b'\r' || *b == b'\n')
+}
