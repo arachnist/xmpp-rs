@@ -370,6 +370,28 @@ impl From<Presence> for Element {
     }
 }
 
+impl ::xso::FromXml for Presence {
+    type Builder = ::xso::minidom_compat::FromEventsViaElement<Presence>;
+
+    fn from_events(
+        qname: ::xso::exports::rxml::QName,
+        attrs: ::xso::exports::rxml::AttrMap,
+    ) -> Result<Self::Builder, ::xso::error::FromEventsError> {
+        if qname.0 != crate::ns::DEFAULT_NS || qname.1 != "presence" {
+            return Err(::xso::error::FromEventsError::Mismatch { name: qname, attrs });
+        }
+        Self::Builder::new(qname, attrs)
+    }
+}
+
+impl ::xso::AsXml for Presence {
+    type ItemIter<'x> = ::xso::minidom_compat::AsItemsViaElement<'x>;
+
+    fn as_xml_iter(&self) -> Result<Self::ItemIter<'_>, ::xso::error::Error> {
+        ::xso::minidom_compat::AsItemsViaElement::new(self.clone())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
