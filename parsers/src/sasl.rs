@@ -4,14 +4,9 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use xso::{
-    error::{Error, FromElementError},
-    text::Base64,
-    AsXml, FromXml,
-};
+use xso::{text::Base64, AsXml, FromXml};
 
 use crate::ns;
-use minidom::Element;
 use std::collections::BTreeMap;
 
 generate_attribute!(
@@ -99,7 +94,7 @@ pub struct Success {
 
 /// List of possible failure conditions for SASL.
 #[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
-#[xml(namespace = ns::SASL, exhaustive)]
+#[xml(namespace = ns::SASL)]
 pub enum DefinedCondition {
     /// The client aborted the authentication with
     /// [abort](struct.Abort.html).
@@ -153,81 +148,26 @@ pub enum DefinedCondition {
 type Lang = String;
 
 /// Sent by the server on SASL failure.
-#[derive(Debug, Clone)]
+#[derive(FromXml, AsXml, Debug, Clone)]
+#[xml(namespace = ns::SASL, name = "failure")]
 pub struct Failure {
     /// One of the allowed defined-conditions for SASL.
+    #[xml(child)]
     pub defined_condition: DefinedCondition,
 
     /// A human-readable explanation for the failure.
+    #[xml(extract(n = .., name = "text", fields(
+        attribute(type_ = String, name = "xml:lang"),
+        text(type_ = String),
+    )))]
     pub texts: BTreeMap<Lang, String>,
-}
-
-impl TryFrom<Element> for Failure {
-    type Error = FromElementError;
-
-    fn try_from(root: Element) -> Result<Failure, FromElementError> {
-        check_self!(root, "failure", SASL);
-        check_no_attributes!(root, "failure");
-
-        let mut defined_condition = None;
-        let mut texts = BTreeMap::new();
-
-        for child in root.children() {
-            if child.is("text", ns::SASL) {
-                check_no_unknown_attributes!(child, "text", ["xml:lang"]);
-                check_no_children!(child, "text");
-                let lang = get_attr!(child, "xml:lang", Default);
-                if texts.insert(lang, child.text()).is_some() {
-                    return Err(Error::Other(
-                        "Text element present twice for the same xml:lang in failure element.",
-                    )
-                    .into());
-                }
-            } else if child.has_ns(ns::SASL) {
-                if defined_condition.is_some() {
-                    return Err(Error::Other(
-                        "Failure must not have more than one defined-condition.",
-                    )
-                    .into());
-                }
-                check_no_attributes!(child, "defined-condition");
-                check_no_children!(child, "defined-condition");
-                let condition = match DefinedCondition::try_from(child.clone()) {
-                    Ok(condition) => condition,
-                    // TODO: do we really want to eat this error?
-                    Err(_) => DefinedCondition::NotAuthorized,
-                };
-                defined_condition = Some(condition);
-            } else {
-                return Err(Error::Other("Unknown element in Failure.").into());
-            }
-        }
-        let defined_condition =
-            defined_condition.ok_or(Error::Other("Failure must have a defined-condition."))?;
-
-        Ok(Failure {
-            defined_condition,
-            texts,
-        })
-    }
-}
-
-impl From<Failure> for Element {
-    fn from(failure: Failure) -> Element {
-        Element::builder("failure", ns::SASL)
-            .append(failure.defined_condition)
-            .append_all(failure.texts.into_iter().map(|(lang, text)| {
-                Element::builder("text", ns::SASL)
-                    .attr("xml:lang", lang)
-                    .append(text)
-            }))
-            .build()
-    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use minidom::Element;
 
     #[cfg(target_pointer_width = "32")]
     #[test]
