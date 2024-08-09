@@ -58,6 +58,7 @@ impl MessagePayload for Sent {}
 #[cfg(test)]
 mod tests {
     use super::*;
+    use jid::Jid;
     use minidom::Element;
 
     #[cfg(target_pointer_width = "32")]
@@ -104,7 +105,14 @@ mod tests {
             .parse()
             .unwrap();
         let received = Received::try_from(elem).unwrap();
-        assert!(received.forwarded.stanza.is_some());
+        assert_eq!(
+            received.forwarded.message.to.unwrap(),
+            Jid::new("juliet@capulet.example/balcony").unwrap()
+        );
+        assert_eq!(
+            received.forwarded.message.from.unwrap(),
+            Jid::new("romeo@montague.example/home").unwrap()
+        );
 
         let elem: Element = "<sent xmlns='urn:xmpp:carbons:2'>
   <forwarded xmlns='urn:xmpp:forward:0'>
@@ -116,7 +124,14 @@ mod tests {
             .parse()
             .unwrap();
         let sent = Sent::try_from(elem).unwrap();
-        assert!(sent.forwarded.stanza.is_some());
+        assert_eq!(
+            sent.forwarded.message.to.unwrap(),
+            Jid::new("juliet@capulet.example/balcony").unwrap()
+        );
+        assert_eq!(
+            sent.forwarded.message.from.unwrap(),
+            Jid::new("romeo@montague.example/home").unwrap()
+        );
     }
 
     #[test]

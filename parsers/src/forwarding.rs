@@ -4,24 +4,29 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use xso::{AsXml, FromXml};
+
 use crate::delay::Delay;
 use crate::message::Message;
+use crate::ns;
 
-generate_element!(
-    /// Contains a forwarded stanza, either standalone or part of another
-    /// extension (such as carbons).
-    Forwarded, "forwarded", FORWARD,
-    children: [
-        /// When the stanza originally got sent.
-        delay: Option<Delay> = ("delay", DELAY) => Delay,
+/// Contains a forwarded stanza, either standalone or part of another
+/// extension (such as carbons).
+#[derive(FromXml, AsXml, Debug, Clone, PartialEq)]
+#[xml(namespace = ns::FORWARD, name = "forwarded")]
+pub struct Forwarded {
+    /// When the stanza originally got sent.
+    #[xml(child(default))]
+    pub delay: Option<Delay>,
 
-        // XXX: really?  Option?
-        /// The stanza being forwarded.
-        stanza: Option<Message> = ("message", DEFAULT_NS) => Message
-
-        // TODO: also handle the two other stanza possibilities.
-    ]
-);
+    /// The stanza being forwarded.
+    // The schema says that we should allow either a Message, Presence or Iq, in either
+    // jabber:client or jabber:server, but in the wild so far we’ve only seen Message being
+    // transmitted, so let’s hardcode that for now.  The schema also makes it optional, but so far
+    // it’s always present (or this wrapper is useless).
+    #[xml(child)]
+    pub message: Message,
+}
 
 #[cfg(test)]
 mod tests {
@@ -43,7 +48,10 @@ mod tests {
 
     #[test]
     fn test_simple() {
-        let elem: Element = "<forwarded xmlns='urn:xmpp:forward:0'/>".parse().unwrap();
+        let elem: Element =
+            "<forwarded xmlns='urn:xmpp:forward:0'><message xmlns='jabber:client'/></forwarded>"
+                .parse()
+                .unwrap();
         Forwarded::try_from(elem).unwrap();
     }
 
@@ -57,15 +65,15 @@ mod tests {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Unknown child in forwarded element.");
+        assert_eq!(message, "Unknown child in Forwarded element.");
     }
 
     #[test]
     fn test_serialise() {
-        let elem: Element = "<forwarded xmlns='urn:xmpp:forward:0'/>".parse().unwrap();
+        let elem: Element = "<forwarded xmlns='urn:xmpp:forward:0'><message xmlns='jabber:client' type='chat'/></forwarded>".parse().unwrap();
         let forwarded = Forwarded {
             delay: None,
-            stanza: None,
+            message: Message::new(None),
         };
         let elem2 = forwarded.into();
         assert_eq!(elem, elem2);
@@ -90,7 +98,7 @@ mod tests {
 
         let forwarded = Forwarded {
             delay: Some(delay),
-            stanza: Some(message),
+            message,
         };
 
         let serialized: Element = forwarded.into();
@@ -109,7 +117,7 @@ mod tests {
         };
         assert_eq!(
             message,
-            "Element forwarded must not have more than one delay child."
+            "Forwarded element must not have more than one child in field 'delay'."
         );
     }
 
@@ -125,7 +133,7 @@ mod tests {
         };
         assert_eq!(
             message,
-            "Element forwarded must not have more than one message child."
+            "Forwarded element must not have more than one child in field 'message'."
         );
     }
 }
