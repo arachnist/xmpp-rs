@@ -11,6 +11,7 @@ use crate::bind::BindFeature;
 use crate::ns;
 use crate::sasl2::Authentication;
 use crate::sasl_cb::SaslChannelBinding;
+use crate::starttls::StartTls;
 use crate::stream_limits::Limits;
 
 /// Wraps `<stream:features/>`, usually the very first nonza of a
@@ -50,20 +51,6 @@ pub struct StreamFeatures {
     pub others: Vec<Element>,
 }
 
-/// StartTLS is supported, and may be mandatory.
-#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
-#[xml(namespace = ns::TLS, name = "starttls")]
-pub struct StartTls {
-    /// Marker for mandatory StartTLS.
-    #[xml(child(default))]
-    pub required: Option<RequiredStartTls>,
-}
-
-/// Marker for mandatory StartTLS.
-#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
-#[xml(namespace = ns::TLS, name = "required")]
-pub struct RequiredStartTls;
-
 /// List of supported SASL mechanisms
 #[derive(FromXml, AsXml, PartialEq, Debug, Clone, Default)]
 #[xml(namespace = ns::SASL, name = "mechanisms")]
@@ -94,8 +81,6 @@ mod tests {
     #[test]
     fn test_size() {
         assert_size!(SaslMechanisms, 12);
-        assert_size!(RequiredStartTls, 0);
-        assert_size!(StartTls, 1);
         assert_size!(StreamFeatures, 92);
     }
 
@@ -103,8 +88,6 @@ mod tests {
     #[test]
     fn test_size() {
         assert_size!(SaslMechanisms, 24);
-        assert_size!(RequiredStartTls, 0);
-        assert_size!(StartTls, 1);
         assert_size!(StreamFeatures, 168);
     }
 
