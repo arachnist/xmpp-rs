@@ -40,13 +40,11 @@ use crate::{
     connect::{DnsConfig, ServerConnector, ServerConnectorError},
     error::{Error, ProtocolError},
     proto::{Packet, XmppStream},
-    Client, Component,
+    Client,
 };
 
 /// Client that connects over StartTls
 pub type StartTlsClient = Client<StartTlsServerConnector>;
-/// Component that connects over StartTls
-pub type StartTlsComponent = Component<StartTlsServerConnector>;
 
 /// Connect via TCP+StartTLS to an XMPP server
 #[derive(Debug, Clone)]

@@ -16,8 +16,6 @@ use crate::Error;
 
 #[cfg(any(feature = "starttls", feature = "insecure-tcp"))]
 use crate::connect::DnsConfig;
-#[cfg(feature = "starttls")]
-use crate::connect::StartTlsServerConnector;
 #[cfg(feature = "insecure-tcp")]
 use crate::connect::TcpServerConnector;
 
@@ -52,20 +50,11 @@ impl Component<TcpServerConnector> {
     }
 }
 
-#[cfg(feature = "starttls")]
-impl Component<StartTlsServerConnector> {
-    /// Start a new XMPP component over StartTLS
-    pub async fn new_starttls(
-        jid: &str,
-        password: &str,
-        dns_config: DnsConfig,
-    ) -> Result<Self, Error> {
-        Self::new_with_connector(jid, password, StartTlsServerConnector::from(dns_config)).await
-    }
-}
-
 impl<C: ServerConnector> Component<C> {
-    /// Start a new XMPP component
+    /// Start a new XMPP component.
+    ///
+    /// Unfortunately [`StartTlsConnector`] is not supported yet. The tracking issue is
+    /// [#143](https://gitlab.com/xmpp-rs/xmpp-rs/-/issues/143).
     pub async fn new_with_connector(
         jid: &str,
         password: &str,

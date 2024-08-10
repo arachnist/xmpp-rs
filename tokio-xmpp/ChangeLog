@@ -19,10 +19,12 @@ XXXX-YY-ZZ RELEASER <admin@example.com>
       - `XmppCodec` was moved to proto module and is now published as `tokio_xmpp::proto::XmppCodec` (!428)
       - `Component::new` and `Client::new only require jid/password argument (!428)
       - `ServerConfig` and `Client::new_with_config` have been removed (!428)
-      - `Component` and `Client` now have `new_plaintext`, `new_starttls` and `new_with_connector` methods with same signature (!428)
+      - ``Client` now has `new_plaintext`, `new_starttls` and `new_with_connector` method (!428)
         `new_plaintext` and `new_starttls` take a DnsConfig struct for SRV/DNS resolution strategy, while `new_with_connector` takes
         anything that implements ServerConnector
+      - `Component` now has `new_plaintext` and `new_with_connector` constructors, just like `Client` but without StartTLS (!428)
       - `tokio_xmpp::AsyncClient` has been renamed `tokio_xmpp::Client` (!428)
+      - `Component` is now gated behind `insecure-tcp` feature flag
 
 Version 4.0.0:
 2024-07-26 Maxime “pep” Buquet <pep@bouah.net>
