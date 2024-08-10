@@ -1,9 +1,8 @@
 use futures::stream::StreamExt;
-use minidom::Element;
 use std::env::args;
 use std::process::exit;
 use std::str::FromStr;
-use tokio_xmpp::Client;
+use tokio_xmpp::{Client, Stanza};
 use xmpp_parsers::{
     disco::{DiscoInfoQuery, DiscoInfoResult},
     iq::{Iq, IqType},
@@ -41,24 +40,21 @@ async fn main() {
                 let target_jid: Jid = target.clone().parse().unwrap();
                 let iq = make_disco_iq(target_jid);
                 println!("Sending disco#info request to {}", target.clone());
-                println!(">> {}", String::from(&iq));
-                client.send_stanza(iq).await.unwrap();
-            } else if let Some(stanza) = event.into_stanza() {
-                if stanza.is("iq", "jabber:client") {
-                    let iq = Iq::try_from(stanza).unwrap();
-                    if let IqType::Result(Some(payload)) = iq.payload {
-                        if payload.is("query", ns::DISCO_INFO) {
-                            if let Ok(disco_info) = DiscoInfoResult::try_from(payload) {
-                                for ext in disco_info.extensions {
-                                    if let Ok(server_info) = ServerInfo::try_from(ext) {
-                                        print_server_info(server_info);
-                                    }
+                println!(">> {:?}", iq);
+                client.send_stanza(iq.into()).await.unwrap();
+            } else if let Some(Stanza::Iq(iq)) = event.into_stanza() {
+                if let IqType::Result(Some(payload)) = iq.payload {
+                    if payload.is("query", ns::DISCO_INFO) {
+                        if let Ok(disco_info) = DiscoInfoResult::try_from(payload) {
+                            for ext in disco_info.extensions {
+                                if let Ok(server_info) = ServerInfo::try_from(ext) {
+                                    print_server_info(server_info);
                                 }
                             }
                         }
-                        wait_for_stream_end = true;
-                        client.send_end().await.unwrap();
                     }
+                    wait_for_stream_end = true;
+                    client.send_end().await.unwrap();
                 }
             }
         } else {
@@ -67,11 +63,10 @@ async fn main() {
     }
 }
 
-fn make_disco_iq(target: Jid) -> Element {
+fn make_disco_iq(target: Jid) -> Iq {
     Iq::from_get("disco", DiscoInfoQuery { node: None })
         .with_id(String::from("contact"))
         .with_to(target)
-        .into()
 }
 
 fn convert_field(field: Vec<String>) -> String {

@@ -1,6 +1,103 @@
-use super::Error;
-use minidom::Element;
-use xmpp_parsers::jid::Jid;
+use rand::{thread_rng, Rng};
+use xmpp_parsers::{iq::Iq, jid::Jid, message::Message, presence::Presence};
+
+use crate::xmlstream::XmppStreamElement;
+use crate::Error;
+
+fn make_id() -> String {
+    let id: u64 = thread_rng().gen();
+    format!("{}", id)
+}
+
+/// A stanza sent/received over the stream.
+#[derive(Debug)]
+pub enum Stanza {
+    /// IQ stanza
+    Iq(Iq),
+
+    /// Message stanza
+    Message(Message),
+
+    /// Presence stanza
+    Presence(Presence),
+}
+
+impl Stanza {
+    /// Assign a random ID to the stanza, if no ID has been assigned yet.
+    pub fn ensure_id(&mut self) -> &str {
+        match self {
+            Self::Iq(iq) => {
+                if iq.id.len() == 0 {
+                    iq.id = make_id();
+                }
+                &iq.id
+            }
+            Self::Message(message) => message.id.get_or_insert_with(make_id),
+            Self::Presence(presence) => presence.id.get_or_insert_with(make_id),
+        }
+    }
+}
+
+impl From<Iq> for Stanza {
+    fn from(other: Iq) -> Self {
+        Self::Iq(other)
+    }
+}
+
+impl From<Presence> for Stanza {
+    fn from(other: Presence) -> Self {
+        Self::Presence(other)
+    }
+}
+
+impl From<Message> for Stanza {
+    fn from(other: Message) -> Self {
+        Self::Message(other)
+    }
+}
+
+impl TryFrom<Stanza> for Message {
+    type Error = Stanza;
+
+    fn try_from(other: Stanza) -> Result<Self, Self::Error> {
+        match other {
+            Stanza::Message(st) => Ok(st),
+            other => Err(other),
+        }
+    }
+}
+
+impl TryFrom<Stanza> for Presence {
+    type Error = Stanza;
+
+    fn try_from(other: Stanza) -> Result<Self, Self::Error> {
+        match other {
+            Stanza::Presence(st) => Ok(st),
+            other => Err(other),
+        }
+    }
+}
+
+impl TryFrom<Stanza> for Iq {
+    type Error = Stanza;
+
+    fn try_from(other: Stanza) -> Result<Self, Self::Error> {
+        match other {
+            Stanza::Iq(st) => Ok(st),
+            other => Err(other),
+        }
+    }
+}
+
+impl From<Stanza> for XmppStreamElement {
+    fn from(other: Stanza) -> Self {
+        match other {
+            Stanza::Iq(st) => Self::Iq(st),
+            Stanza::Message(st) => Self::Message(st),
+            Stanza::Presence(st) => Self::Presence(st),
+        }
+    }
+}
 
 /// High-level event on the Stream implemented by Client and Component
 #[derive(Debug)]
@@ -21,7 +118,7 @@ pub enum Event {
     /// Stream end
     Disconnected(Error),
     /// Received stanza/nonza
-    Stanza(Element),
+    Stanza(Stanza),
 }
 
 impl Event {
@@ -41,16 +138,8 @@ impl Event {
         }
     }
 
-    /// `Stanza` event?
-    pub fn is_stanza(&self, name: &str) -> bool {
-        match *self {
-            Event::Stanza(ref stanza) => stanza.name() == name,
-            _ => false,
-        }
-    }
-
     /// If this is a `Stanza` event, get its data
-    pub fn as_stanza(&self) -> Option<&Element> {
+    pub fn as_stanza(&self) -> Option<&Stanza> {
         match *self {
             Event::Stanza(ref stanza) => Some(stanza),
             _ => None,
@@ -58,7 +147,7 @@ impl Event {
     }
 
     /// If this is a `Stanza` event, unwrap into its data
-    pub fn into_stanza(self) -> Option<Element> {
+    pub fn into_stanza(self) -> Option<Stanza> {
         match self {
             Event::Stanza(stanza) => Some(stanza),
             _ => None,

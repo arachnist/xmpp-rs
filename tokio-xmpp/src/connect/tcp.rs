@@ -1,10 +1,12 @@
 //! `starttls::ServerConfig` provides a `ServerConnector` for starttls connections
 
-use tokio::net::TcpStream;
+use std::borrow::Cow;
+
+use tokio::{io::BufStream, net::TcpStream};
 
 use crate::{
     connect::{DnsConfig, ServerConnector},
-    proto::XmppStream,
+    xmlstream::{initiate_stream, PendingFeaturesRecv, StreamHeader},
     Client, Component, Error,
 };
 
@@ -27,14 +29,23 @@ impl From<DnsConfig> for TcpServerConnector {
 }
 
 impl ServerConnector for TcpServerConnector {
-    type Stream = TcpStream;
+    type Stream = BufStream<TcpStream>;
 
     async fn connect(
         &self,
         jid: &xmpp_parsers::jid::Jid,
-        ns: &str,
-    ) -> Result<XmppStream<Self::Stream>, Error> {
-        let stream = self.0.resolve().await?;
-        Ok(XmppStream::start(stream, jid.clone(), ns.to_owned()).await?)
+        ns: &'static str,
+    ) -> Result<PendingFeaturesRecv<Self::Stream>, Error> {
+        let stream = BufStream::new(self.0.resolve().await?);
+        Ok(initiate_stream(
+            stream,
+            ns,
+            StreamHeader {
+                to: Some(Cow::Borrowed(jid.domain().as_str())),
+                from: None,
+                id: None,
+            },
+        )
+        .await?)
     }
 }

@@ -2,15 +2,12 @@
 //! XMPP server under a JID consisting of just a domain name. They are
 //! allowed to use any user and resource identifiers in their stanzas.
 use futures::sink::SinkExt;
-use minidom::Element;
 use std::str::FromStr;
-use xmpp_parsers::{jid::Jid, ns};
+use xmpp_parsers::jid::Jid;
 
 use crate::{
-    component::login::component_login,
-    connect::ServerConnector,
-    proto::{add_stanza_id, XmppStream},
-    Error,
+    component::login::component_login, connect::ServerConnector, xmlstream::XmppStream, Error,
+    Stanza,
 };
 
 #[cfg(any(feature = "starttls", feature = "insecure-tcp"))]
@@ -33,8 +30,9 @@ pub struct Component<C: ServerConnector> {
 
 impl<C: ServerConnector> Component<C> {
     /// Send stanza
-    pub async fn send_stanza(&mut self, stanza: Element) -> Result<(), Error> {
-        self.send(add_stanza_id(stanza, ns::COMPONENT_ACCEPT)).await
+    pub async fn send_stanza(&mut self, mut stanza: Stanza) -> Result<(), Error> {
+        stanza.ensure_id();
+        self.send(stanza).await
     }
 
     /// End connection

@@ -47,9 +47,8 @@ compile_error!(
 );
 
 mod event;
-pub use event::Event;
+pub use event::{Event, Stanza};
 pub mod connect;
-pub mod proto;
 pub mod xmlstream;
 
 mod client;

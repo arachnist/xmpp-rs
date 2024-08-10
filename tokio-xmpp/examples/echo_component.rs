@@ -1,5 +1,4 @@
 use futures::stream::StreamExt;
-use minidom::Element;
 use std::env::args;
 use std::process::exit;
 use std::str::FromStr;
@@ -45,7 +44,7 @@ async fn main() {
         Jid::from_str("test@component.linkmauve.fr/coucou").unwrap(),
         Jid::from_str("linkmauve@linkmauve.fr").unwrap(),
     );
-    component.send_stanza(presence).await.unwrap();
+    component.send_stanza(presence.into()).await.unwrap();
 
     // Main loop, processes events
     loop {
@@ -56,7 +55,7 @@ async fn main() {
                     (Some(from), Some(body)) => {
                         if message.type_ != MessageType::Error {
                             let reply = make_reply(from, &body.0);
-                            component.send_stanza(reply).await.unwrap();
+                            component.send_stanza(reply.into()).await.unwrap();
                         }
                     }
                     _ => (),
@@ -69,7 +68,7 @@ async fn main() {
 }
 
 // Construct a <presence/>
-fn make_presence(from: Jid, to: Jid) -> Element {
+fn make_presence(from: Jid, to: Jid) -> Presence {
     let mut presence = Presence::new(PresenceType::None);
     presence.from = Some(from);
     presence.to = Some(to);
@@ -77,12 +76,12 @@ fn make_presence(from: Jid, to: Jid) -> Element {
     presence
         .statuses
         .insert(String::from("en"), String::from("Echoing messages."));
-    presence.into()
+    presence
 }
 
 // Construct a chat <message/>
-fn make_reply(to: Jid, body: &str) -> Element {
+fn make_reply(to: Jid, body: &str) -> Message {
     let mut message = Message::new(Some(to));
     message.bodies.insert(String::new(), Body(body.to_owned()));
-    message.into()
+    message
 }

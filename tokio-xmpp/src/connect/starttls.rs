@@ -2,8 +2,10 @@
 
 #[cfg(feature = "tls-native")]
 use native_tls::Error as TlsError;
+use std::borrow::Cow;
 use std::error::Error as StdError;
 use std::fmt;
+use std::io;
 #[cfg(all(feature = "tls-rust", not(feature = "tls-native")))]
 use tokio_rustls::rustls::pki_types::InvalidDnsNameError;
 #[cfg(all(feature = "tls-rust", not(feature = "tls-native")))]
@@ -28,18 +30,23 @@ use {
     tokio_native_tls::{TlsConnector, TlsStream},
 };
 
-use minidom::Element;
 use sasl::common::ChannelBinding;
 use tokio::{
-    io::{AsyncRead, AsyncWrite},
+    io::{AsyncRead, AsyncWrite, BufStream},
     net::TcpStream,
 };
-use xmpp_parsers::{jid::Jid, ns};
+use xmpp_parsers::{
+    jid::Jid,
+    starttls::{self, Request},
+};
 
 use crate::{
     connect::{DnsConfig, ServerConnector, ServerConnectorError},
     error::{Error, ProtocolError},
-    proto::{Packet, XmppStream},
+    xmlstream::{
+        initiate_stream, PendingFeaturesRecv, ReadError, StreamHeader, XmppStream,
+        XmppStreamElement,
+    },
     Client,
 };
 
@@ -57,20 +64,44 @@ impl From<DnsConfig> for StartTlsServerConnector {
 }
 
 impl ServerConnector for StartTlsServerConnector {
-    type Stream = TlsStream<TcpStream>;
-    async fn connect(&self, jid: &Jid, ns: &str) -> Result<XmppStream<Self::Stream>, Error> {
-        let tcp_stream = self.0.resolve().await?;
+    type Stream = BufStream<TlsStream<TcpStream>>;
+
+    async fn connect(
+        &self,
+        jid: &Jid,
+        ns: &'static str,
+    ) -> Result<PendingFeaturesRecv<Self::Stream>, Error> {
+        let tcp_stream = tokio::io::BufStream::new(self.0.resolve().await?);
 
         // Unencryped XmppStream
-        let xmpp_stream = XmppStream::start(tcp_stream, jid.clone(), ns.to_owned()).await?;
+        let xmpp_stream = initiate_stream(
+            tcp_stream,
+            ns,
+            StreamHeader {
+                to: Some(Cow::Borrowed(jid.domain().as_str())),
+                from: None,
+                id: None,
+            },
+        )
+        .await?;
+        let (features, xmpp_stream) = xmpp_stream.recv_features().await?;
 
-        if xmpp_stream.stream_features.can_starttls() {
+        if features.can_starttls() {
             // TlsStream
-            let tls_stream = starttls(xmpp_stream).await?;
+            let tls_stream = starttls(xmpp_stream, jid.domain().as_str()).await?;
             // Encrypted XmppStream
-            Ok(XmppStream::start(tls_stream, jid.clone(), ns.to_owned()).await?)
+            Ok(initiate_stream(
+                tokio::io::BufStream::new(tls_stream),
+                ns,
+                StreamHeader {
+                    to: Some(Cow::Borrowed(jid.domain().as_str())),
+                    from: None,
+                    id: None,
+                },
+            )
+            .await?)
         } else {
-            return Err(crate::Error::Protocol(ProtocolError::NoTls).into());
+            Err(crate::Error::Protocol(ProtocolError::NoTls).into())
         }
     }
 
@@ -84,7 +115,7 @@ impl ServerConnector for StartTlsServerConnector {
         }
         #[cfg(all(feature = "tls-rust", not(feature = "tls-native")))]
         {
-            let (_, connection) = stream.get_ref();
+            let (_, connection) = stream.get_ref().get_ref();
             Ok(match connection.protocol_version() {
                 // TODO: Add support for TLS 1.2 and earlier.
                 Some(tokio_rustls::rustls::ProtocolVersion::TLSv1_3) => {
@@ -102,10 +133,11 @@ impl ServerConnector for StartTlsServerConnector {
 
 #[cfg(feature = "tls-native")]
 async fn get_tls_stream<S: AsyncRead + AsyncWrite + Unpin>(
-    xmpp_stream: XmppStream<S>,
+    xmpp_stream: XmppStream<BufStream<S>>,
+    domain: &str,
 ) -> Result<TlsStream<S>, Error> {
-    let domain = xmpp_stream.jid.domain().to_owned();
-    let stream = xmpp_stream.into_inner();
+    let domain = domain.to_owned();
+    let stream = xmpp_stream.into_inner().into_inner();
     let tls_stream = TlsConnector::from(NativeTlsConnector::builder().build().unwrap())
         .connect(&domain, stream)
         .await
@@ -115,11 +147,11 @@ async fn get_tls_stream<S: AsyncRead + AsyncWrite + Unpin>(
 
 #[cfg(all(feature = "tls-rust", not(feature = "tls-native")))]
 async fn get_tls_stream<S: AsyncRead + AsyncWrite + Unpin>(
-    xmpp_stream: XmppStream<S>,
+    xmpp_stream: XmppStream<BufStream<S>>,
+    domain: &str,
 ) -> Result<TlsStream<S>, Error> {
-    let domain = xmpp_stream.jid.domain().to_string();
-    let domain = ServerName::try_from(domain).map_err(|e| StartTlsError::DnsNameError(e))?;
-    let stream = xmpp_stream.into_inner();
+    let domain = ServerName::try_from(domain.to_owned()).map_err(StartTlsError::DnsNameError)?;
+    let stream = xmpp_stream.into_inner().into_inner();
     let mut root_store = RootCertStore::empty();
     #[cfg(feature = "webpki-roots")]
     {
@@ -142,24 +174,33 @@ async fn get_tls_stream<S: AsyncRead + AsyncWrite + Unpin>(
 /// Performs `<starttls/>` on an XmppStream and returns a binary
 /// TlsStream.
 pub async fn starttls<S: AsyncRead + AsyncWrite + Unpin>(
-    mut xmpp_stream: XmppStream<S>,
+    mut stream: XmppStream<BufStream<S>>,
+    domain: &str,
 ) -> Result<TlsStream<S>, Error> {
-    let nonza = Element::builder("starttls", ns::TLS).build();
-    let packet = Packet::Stanza(nonza);
-    xmpp_stream.send(packet).await?;
+    stream
+        .send(&XmppStreamElement::Starttls(starttls::Nonza::Request(
+            Request,
+        )))
+        .await?;
 
     loop {
-        match xmpp_stream.next().await {
-            Some(Ok(Packet::Stanza(ref stanza))) if stanza.name() == "proceed" => break,
-            Some(Ok(Packet::Text(_))) => {}
-            Some(Err(e)) => return Err(e.into()),
-            _ => {
-                return Err(crate::Error::Protocol(ProtocolError::NoTls).into());
+        match stream.next().await {
+            Some(Ok(XmppStreamElement::Starttls(starttls::Nonza::Proceed(_)))) => {
+                break;
+            }
+            Some(Ok(_)) => (),
+            Some(Err(ReadError::SoftTimeout)) => (),
+            Some(Err(ReadError::HardError(e))) => return Err(e.into()),
+            Some(Err(ReadError::ParseError(e))) => {
+                return Err(io::Error::new(io::ErrorKind::InvalidData, e).into())
+            }
+            None | Some(Err(ReadError::StreamFooterReceived)) => {
+                return Err(crate::Error::Disconnected)
             }
         }
     }
 
-    get_tls_stream(xmpp_stream).await
+    get_tls_stream(stream, domain).await
 }
 
 /// StartTLS ServerConnector Error

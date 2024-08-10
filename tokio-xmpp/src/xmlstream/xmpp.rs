@@ -6,7 +6,7 @@
 
 use xso::{AsXml, FromXml};
 
-use xmpp_parsers::{iq::Iq, message::Message, presence::Presence, sasl, starttls};
+use xmpp_parsers::{component, iq::Iq, message::Message, presence::Presence, sasl, starttls};
 
 /// Any valid XMPP stream-level element.
 #[derive(FromXml, AsXml, Debug)]
@@ -31,4 +31,8 @@ pub enum XmppStreamElement {
     /// STARTTLS-related nonza
     #[xml(transparent)]
     Starttls(starttls::Nonza),
+
+    /// Component protocol nonzas
+    #[xml(transparent)]
+    ComponentHandshake(component::Handshake),
 }

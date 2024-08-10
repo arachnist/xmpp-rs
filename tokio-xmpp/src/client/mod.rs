@@ -1,12 +1,11 @@
 use futures::sink::SinkExt;
-use minidom::Element;
-use xmpp_parsers::{jid::Jid, ns, stream_features::StreamFeatures};
+use xmpp_parsers::{jid::Jid, stream_features::StreamFeatures};
 
 use crate::{
     client::{login::client_login, stream::ClientState},
     connect::ServerConnector,
     error::Error,
-    proto::{add_stanza_id, Packet},
+    Stanza,
 };
 
 #[cfg(any(feature = "starttls", feature = "insecure-tcp"))]
@@ -47,21 +46,21 @@ impl<C: ServerConnector> Client<C> {
     /// server).
     pub fn bound_jid(&self) -> Option<&Jid> {
         match self.state {
-            ClientState::Connected(ref stream) => Some(&stream.jid),
+            ClientState::Connected { ref bound_jid, .. } => Some(bound_jid),
             _ => None,
         }
     }
 
     /// Send stanza
-    pub async fn send_stanza(&mut self, stanza: Element) -> Result<(), Error> {
-        self.send(Packet::Stanza(add_stanza_id(stanza, ns::JABBER_CLIENT)))
-            .await
+    pub async fn send_stanza(&mut self, mut stanza: Stanza) -> Result<(), Error> {
+        stanza.ensure_id();
+        self.send(stanza).await
     }
 
     /// Get the stream features (`<stream:features/>`) of the underlying stream
     pub fn get_stream_features(&self) -> Option<&StreamFeatures> {
         match self.state {
-            ClientState::Connected(ref stream) => Some(&stream.stream_features),
+            ClientState::Connected { ref features, .. } => Some(features),
             _ => None,
         }
     }
@@ -73,7 +72,14 @@ impl<C: ServerConnector> Client<C> {
     ///
     /// Make sure to disable reconnect.
     pub async fn send_end(&mut self) -> Result<(), Error> {
-        self.send(Packet::StreamEnd).await
+        match self.state {
+            ClientState::Connected { ref mut stream, .. } => Ok(stream.close().await?),
+            ClientState::Connecting { .. } => {
+                self.state = ClientState::Disconnected;
+                Ok(())
+            }
+            _ => Ok(()),
+        }
     }
 }
 

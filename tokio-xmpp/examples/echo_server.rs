@@ -1,8 +1,8 @@
 use futures::{SinkExt, StreamExt};
 use tokio::{self, io, net::TcpSocket};
-use tokio_util::codec::Framed;
 
-use tokio_xmpp::proto::XmppCodec;
+use tokio_xmpp::parsers::stream_features::StreamFeatures;
+use tokio_xmpp::xmlstream::{accept_stream, StreamHeader};
 
 #[tokio::main]
 async fn main() -> Result<(), io::Error> {
@@ -16,16 +16,22 @@ async fn main() -> Result<(), io::Error> {
     // Main loop, accepts incoming connections
     loop {
         let (stream, _addr) = listener.accept().await?;
-
-        // Use the `XMPPCodec` to encode and decode frames
-        let mut framed = Framed::new(stream, XmppCodec::new());
+        let stream = accept_stream(
+            tokio::io::BufStream::new(stream),
+            tokio_xmpp::parsers::ns::DEFAULT_NS,
+        )
+        .await?;
+        let stream = stream.send_header(StreamHeader::default()).await?;
+        let mut stream = stream
+            .send_features::<minidom::Element>(&StreamFeatures::default())
+            .await?;
 
         tokio::spawn(async move {
-            while let Some(packet) = framed.next().await {
+            while let Some(packet) = stream.next().await {
                 match packet {
                     Ok(packet) => {
                         println!("Received packet: {:?}", packet);
-                        framed.send(packet).await.unwrap();
+                        stream.send(&packet).await.unwrap();
                     }
                     Err(e) => {
                         eprintln!("Error: {:?}", e);

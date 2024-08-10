@@ -7,10 +7,8 @@
 use futures::StreamExt;
 use tokio_xmpp::connect::ServerConnector;
 use tokio_xmpp::{
-    parsers::{
-        disco::DiscoInfoQuery, iq::Iq, message::Message, presence::Presence, roster::Roster,
-    },
-    Event as TokioXmppEvent,
+    parsers::{disco::DiscoInfoQuery, iq::Iq, roster::Roster},
+    Event as TokioXmppEvent, Stanza,
 };
 
 use crate::{iq, message, presence, Agent, Event};
@@ -46,24 +44,17 @@ pub async fn wait_for_events<C: ServerConnector>(agent: &mut Agent<C>) -> Vec<Ev
             TokioXmppEvent::Disconnected(e) => {
                 events.push(Event::Disconnected(e));
             }
-            TokioXmppEvent::Stanza(elem) => {
-                if elem.is("iq", "jabber:client") {
-                    let iq = Iq::try_from(elem).unwrap();
-                    let new_events = iq::handle_iq(agent, iq).await;
-                    events.extend(new_events);
-                } else if elem.is("message", "jabber:client") {
-                    let message = Message::try_from(elem).unwrap();
-                    let new_events = message::receive::handle_message(agent, message).await;
-                    events.extend(new_events);
-                } else if elem.is("presence", "jabber:client") {
-                    let presence = Presence::try_from(elem).unwrap();
-                    let new_events = presence::receive::handle_presence(agent, presence).await;
-                    events.extend(new_events);
-                } else if elem.is("error", "http://etherx.jabber.org/streams") {
-                    println!("Received a fatal stream error: {}", String::from(&elem));
-                } else {
-                    panic!("Unknown stanza: {}", String::from(&elem));
-                }
+            TokioXmppEvent::Stanza(Stanza::Iq(iq)) => {
+                let new_events = iq::handle_iq(agent, iq).await;
+                events.extend(new_events);
+            }
+            TokioXmppEvent::Stanza(Stanza::Message(message)) => {
+                let new_events = message::receive::handle_message(agent, message).await;
+                events.extend(new_events);
+            }
+            TokioXmppEvent::Stanza(Stanza::Presence(presence)) => {
+                let new_events = presence::receive::handle_presence(agent, presence).await;
+                events.extend(new_events);
             }
         }
 

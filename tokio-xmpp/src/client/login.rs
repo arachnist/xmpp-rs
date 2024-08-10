@@ -1,25 +1,32 @@
-use futures::stream::StreamExt;
+use futures::{SinkExt, StreamExt};
 use sasl::client::mechanisms::{Anonymous, Plain, Scram};
 use sasl::client::Mechanism;
 use sasl::common::scram::{Sha1, Sha256};
 use sasl::common::Credentials;
+use std::borrow::Cow;
 use std::collections::HashSet;
+use std::io;
 use std::str::FromStr;
-use tokio::io::{AsyncRead, AsyncWrite};
-use xmpp_parsers::sasl::{Auth, Challenge, Failure, Mechanism as XMPPMechanism, Response, Success};
-use xmpp_parsers::{jid::Jid, ns};
+use tokio::io::{AsyncBufRead, AsyncWrite};
+use xmpp_parsers::{
+    jid::{FullJid, Jid},
+    ns,
+    sasl::{Auth, Mechanism as XMPPMechanism, Nonza, Response},
+    stream_features::{SaslMechanisms, StreamFeatures},
+};
 
 use crate::{
     client::bind::bind,
     connect::ServerConnector,
     error::{AuthError, Error, ProtocolError},
-    proto::{Packet, XmppStream},
+    xmlstream::{xmpp::XmppStreamElement, InitiatingStream, ReadError, StreamHeader, XmppStream},
 };
 
-pub async fn auth<S: AsyncRead + AsyncWrite + Unpin>(
+pub async fn auth<S: AsyncBufRead + AsyncWrite + Unpin>(
     mut stream: XmppStream<S>,
+    sasl_mechanisms: &SaslMechanisms,
     creds: Credentials,
-) -> Result<S, Error> {
+) -> Result<InitiatingStream<S>, Error> {
     let local_mechs: Vec<Box<dyn Fn() -> Box<dyn Mechanism + Send + Sync> + Send>> = vec![
         Box::new(|| Box::new(Scram::<Sha256>::from_credentials(creds.clone()).unwrap())),
         Box::new(|| Box::new(Scram::<Sha1>::from_credentials(creds.clone()).unwrap())),
@@ -27,13 +34,7 @@ pub async fn auth<S: AsyncRead + AsyncWrite + Unpin>(
         Box::new(|| Box::new(Anonymous::new())),
     ];
 
-    let remote_mechs: HashSet<String> = stream
-        .stream_features
-        .sasl_mechanisms
-        .mechanisms
-        .iter()
-        .cloned()
-        .collect();
+    let remote_mechs: HashSet<String> = sasl_mechanisms.mechanisms.iter().cloned().collect();
 
     for local_mech in local_mechs {
         let mut mechanism = local_mech();
@@ -43,43 +44,55 @@ pub async fn auth<S: AsyncRead + AsyncWrite + Unpin>(
                 XMPPMechanism::from_str(mechanism.name()).map_err(ProtocolError::Parsers)?;
 
             stream
-                .send_stanza(Auth {
+                .send(&XmppStreamElement::Sasl(Nonza::Auth(Auth {
                     mechanism: mechanism_name,
                     data: initial,
-                })
+                })))
                 .await?;
 
             loop {
                 match stream.next().await {
-                    Some(Ok(Packet::Stanza(stanza))) => {
-                        if let Ok(challenge) = Challenge::try_from(stanza.clone()) {
+                    Some(Ok(XmppStreamElement::Sasl(sasl))) => match sasl {
+                        Nonza::Challenge(challenge) => {
                             let response = mechanism
                                 .response(&challenge.data)
                                 .map_err(|e| AuthError::Sasl(e))?;
 
                             // Send response and loop
-                            stream.send_stanza(Response { data: response }).await?;
-                        } else if let Ok(_) = Success::try_from(stanza.clone()) {
-                            return Ok(stream.into_inner());
-                        } else if let Ok(failure) = Failure::try_from(stanza.clone()) {
-                            return Err(Error::Auth(AuthError::Fail(failure.defined_condition)));
-                        // TODO: This code was needed for compatibility with some broken server,
-                        // but it’s been forgotten which.  It is currently commented out so that we
-                        // can find it and fix the server software instead.
-                        /*
-                        } else if stanza.name() == "failure" {
-                            // Workaround for https://gitlab.com/xmpp-rs/xmpp-parsers/merge_requests/1
-                            return Err(Error::Auth(AuthError::Sasl("failure".to_string())));
-                        */
-                        } else {
-                            // ignore and loop
+                            stream
+                                .send(&XmppStreamElement::Sasl(Nonza::Response(Response {
+                                    data: response,
+                                })))
+                                .await?;
                         }
+                        Nonza::Success(_) => return Ok(stream.initiate_reset()),
+                        Nonza::Failure(failure) => {
+                            return Err(Error::Auth(AuthError::Fail(failure.defined_condition)));
+                        }
+                        _ => {
+                            // Ignore?!
+                        }
+                    },
+                    Some(Ok(el)) => {
+                        return Err(io::Error::new(
+                            io::ErrorKind::InvalidData,
+                            format!(
+                                "unexpected stream element during SASL negotiation: {:?}",
+                                el
+                            ),
+                        )
+                        .into())
                     }
-                    Some(Ok(_)) => {
-                        // ignore and loop
+                    Some(Err(ReadError::HardError(e))) => return Err(e.into()),
+                    Some(Err(ReadError::ParseError(e))) => {
+                        return Err(io::Error::new(io::ErrorKind::InvalidData, e).into())
                     }
-                    Some(Err(e)) => return Err(e),
-                    None => return Err(Error::Disconnected),
+                    Some(Err(ReadError::SoftTimeout)) => {
+                        // We cannot do anything about soft timeouts here...
+                    }
+                    Some(Err(ReadError::StreamFooterReceived)) | None => {
+                        return Err(Error::Disconnected)
+                    }
                 }
             }
         }
@@ -94,24 +107,31 @@ pub async fn client_login<C: ServerConnector>(
     server: C,
     jid: Jid,
     password: String,
-) -> Result<XmppStream<C::Stream>, Error> {
+) -> Result<(Option<FullJid>, StreamFeatures, XmppStream<C::Stream>), Error> {
     let username = jid.node().unwrap().as_str();
     let password = password;
 
     let xmpp_stream = server.connect(&jid, ns::JABBER_CLIENT).await?;
+    let (features, xmpp_stream) = xmpp_stream.recv_features().await?;
 
-    let channel_binding = C::channel_binding(xmpp_stream.stream.get_ref())?;
+    let channel_binding = C::channel_binding(xmpp_stream.get_stream())?;
 
     let creds = Credentials::default()
         .with_username(username)
         .with_password(password)
         .with_channel_binding(channel_binding);
     // Authenticated (unspecified) stream
-    let stream = auth(xmpp_stream, creds).await?;
-    // Authenticated XmppStream
-    let xmpp_stream = XmppStream::start(stream, jid, ns::JABBER_CLIENT.to_owned()).await?;
+    let stream = auth(xmpp_stream, &features.sasl_mechanisms, creds).await?;
+    let stream = stream
+        .send_header(StreamHeader {
+            to: Some(Cow::Borrowed(jid.domain().as_str())),
+            from: None,
+            id: None,
+        })
+        .await?;
+    let (features, mut stream) = stream.recv_features().await?;
 
     // XmppStream bound to user session
-    let xmpp_stream = bind(xmpp_stream).await?;
-    Ok(xmpp_stream)
+    let full_jid = bind(&mut stream, &features, &jid).await?;
+    Ok((full_jid, features, stream))
 }

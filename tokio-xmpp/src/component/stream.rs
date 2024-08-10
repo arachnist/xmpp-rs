@@ -2,21 +2,27 @@
 //! XMPP server under a JID consisting of just a domain name. They are
 //! allowed to use any user and resource identifiers in their stanzas.
 use futures::{task::Poll, Sink, Stream};
-use minidom::Element;
 use std::pin::Pin;
 use std::task::Context;
 
-use crate::{component::Component, connect::ServerConnector, proto::Packet, Error};
+use crate::{
+    component::Component, connect::ServerConnector, xmlstream::XmppStreamElement, Error, Stanza,
+};
 
 impl<C: ServerConnector> Stream for Component<C> {
-    type Item = Element;
+    type Item = Stanza;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Option<Self::Item>> {
         loop {
             match Pin::new(&mut self.stream).poll_next(cx) {
-                Poll::Ready(Some(Ok(Packet::Stanza(stanza)))) => return Poll::Ready(Some(stanza)),
-                Poll::Ready(Some(Ok(Packet::Text(_)))) => {
-                    // retry
+                Poll::Ready(Some(Ok(XmppStreamElement::Iq(stanza)))) => {
+                    return Poll::Ready(Some(Stanza::Iq(stanza)))
+                }
+                Poll::Ready(Some(Ok(XmppStreamElement::Message(stanza)))) => {
+                    return Poll::Ready(Some(Stanza::Message(stanza)))
+                }
+                Poll::Ready(Some(Ok(XmppStreamElement::Presence(stanza)))) => {
+                    return Poll::Ready(Some(Stanza::Presence(stanza)))
                 }
                 Poll::Ready(Some(Ok(_))) =>
                 // unexpected
@@ -31,12 +37,12 @@ impl<C: ServerConnector> Stream for Component<C> {
     }
 }
 
-impl<C: ServerConnector> Sink<Element> for Component<C> {
+impl<C: ServerConnector> Sink<Stanza> for Component<C> {
     type Error = Error;
 
-    fn start_send(mut self: Pin<&mut Self>, item: Element) -> Result<(), Self::Error> {
+    fn start_send(mut self: Pin<&mut Self>, item: Stanza) -> Result<(), Self::Error> {
         Pin::new(&mut self.stream)
-            .start_send(Packet::Stanza(item))
+            .start_send(&item.into())
             .map_err(|e| e.into())
     }
 

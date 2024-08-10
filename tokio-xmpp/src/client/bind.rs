@@ -1,46 +1,53 @@
-use futures::stream::StreamExt;
-use tokio::io::{AsyncRead, AsyncWrite};
+use std::io;
+
+use futures::{SinkExt, StreamExt};
+use tokio::io::{AsyncBufRead, AsyncWrite};
 use xmpp_parsers::bind::{BindQuery, BindResponse};
 use xmpp_parsers::iq::{Iq, IqType};
+use xmpp_parsers::stream_features::StreamFeatures;
 
 use crate::error::{Error, ProtocolError};
-use crate::proto::{Packet, XmppStream};
+use crate::jid::{FullJid, Jid};
+use crate::xmlstream::{ReadError, XmppStream, XmppStreamElement};
 
 const BIND_REQ_ID: &str = "resource-bind";
 
-pub async fn bind<S: AsyncRead + AsyncWrite + Unpin>(
-    mut stream: XmppStream<S>,
-) -> Result<XmppStream<S>, Error> {
-    if stream.stream_features.can_bind() {
-        let resource = stream
-            .jid
+pub async fn bind<S: AsyncBufRead + AsyncWrite + Unpin>(
+    stream: &mut XmppStream<S>,
+    features: &StreamFeatures,
+    jid: &Jid,
+) -> Result<Option<FullJid>, Error> {
+    if features.can_bind() {
+        let resource = jid
             .resource()
             .and_then(|resource| Some(resource.to_string()));
         let iq = Iq::from_set(BIND_REQ_ID, BindQuery::new(resource));
-        stream.send_stanza(iq).await?;
+        stream.send(&XmppStreamElement::Iq(iq)).await?;
 
         loop {
             match stream.next().await {
-                Some(Ok(Packet::Stanza(stanza))) => match Iq::try_from(stanza) {
-                    Ok(iq) if iq.id == BIND_REQ_ID => match iq.payload {
-                        IqType::Result(payload) => {
-                            payload
-                                .and_then(|payload| BindResponse::try_from(payload).ok())
-                                .map(|bind| stream.jid = bind.into());
-                            return Ok(stream);
+                Some(Ok(XmppStreamElement::Iq(iq))) if iq.id == BIND_REQ_ID => match iq.payload {
+                    IqType::Result(Some(payload)) => match BindResponse::try_from(payload) {
+                        Ok(v) => {
+                            return Ok(Some(v.into()));
                         }
-                        _ => return Err(ProtocolError::InvalidBindResponse.into()),
+                        Err(_) => return Err(ProtocolError::InvalidBindResponse.into()),
                     },
-                    _ => {}
+                    _ => return Err(ProtocolError::InvalidBindResponse.into()),
                 },
                 Some(Ok(_)) => {}
-                Some(Err(e)) => return Err(e),
-                None => return Err(Error::Disconnected),
+                Some(Err(ReadError::SoftTimeout)) => {}
+                Some(Err(ReadError::HardError(e))) => return Err(e.into()),
+                Some(Err(ReadError::ParseError(e))) => {
+                    return Err(io::Error::new(io::ErrorKind::InvalidData, e).into())
+                }
+                Some(Err(ReadError::StreamFooterReceived)) | None => {
+                    return Err(Error::Disconnected)
+                }
             }
         }
     } else {
-        // No resource binding available,
-        // return the (probably // usable) stream immediately
-        return Ok(stream);
+        // No resource binding available, do nothing.
+        return Ok(None);
     }
 }

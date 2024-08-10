@@ -1,22 +1,31 @@
 use futures::{task::Poll, Future, Sink, Stream};
+use std::io;
 use std::mem::replace;
 use std::pin::Pin;
 use std::task::Context;
 use tokio::task::JoinHandle;
+use xmpp_parsers::{
+    jid::{FullJid, Jid},
+    stream_features::StreamFeatures,
+};
 
 use crate::{
-    client::login::client_login,
+    client::{login::client_login, Client},
     connect::{AsyncReadAndWrite, ServerConnector},
-    error::{Error, ProtocolError},
-    proto::{Packet, XmppStream},
-    Client, Event,
+    error::Error,
+    xmlstream::{xmpp::XmppStreamElement, ReadError, XmppStream},
+    Event, Stanza,
 };
 
 pub(crate) enum ClientState<S: AsyncReadAndWrite> {
     Invalid,
     Disconnected,
-    Connecting(JoinHandle<Result<XmppStream<S>, Error>>),
-    Connected(XmppStream<S>),
+    Connecting(JoinHandle<Result<(Option<FullJid>, StreamFeatures, XmppStream<S>), Error>>),
+    Connected {
+        stream: XmppStream<S>,
+        features: StreamFeatures,
+        bound_jid: Jid,
+    },
 }
 
 /// Incoming XMPP events
@@ -56,9 +65,13 @@ impl<C: ServerConnector> Stream for Client<C> {
                 Poll::Ready(None)
             }
             ClientState::Connecting(mut connect) => match Pin::new(&mut connect).poll(cx) {
-                Poll::Ready(Ok(Ok(stream))) => {
-                    let bound_jid = stream.jid.clone();
-                    self.state = ClientState::Connected(stream);
+                Poll::Ready(Ok(Ok((bound_jid, features, stream)))) => {
+                    let bound_jid = bound_jid.map(Jid::from).unwrap_or_else(|| self.jid.clone());
+                    self.state = ClientState::Connected {
+                        stream,
+                        bound_jid: bound_jid.clone(),
+                        features,
+                    };
                     Poll::Ready(Some(Event::Online {
                         bound_jid,
                         resumed: false,
@@ -77,7 +90,11 @@ impl<C: ServerConnector> Stream for Client<C> {
                     Poll::Pending
                 }
             },
-            ClientState::Connected(mut stream) => {
+            ClientState::Connected {
+                mut stream,
+                features,
+                bound_jid,
+            } => {
                 // Poll sink
                 match Pin::new(&mut stream).poll_ready(cx) {
                     Poll::Pending => (),
@@ -99,39 +116,68 @@ impl<C: ServerConnector> Stream for Client<C> {
                 // return.
                 loop {
                     match Pin::new(&mut stream).poll_next(cx) {
-                        Poll::Ready(None) => {
+                        Poll::Ready(None)
+                        | Poll::Ready(Some(Err(ReadError::StreamFooterReceived))) => {
                             // EOF
                             self.state = ClientState::Disconnected;
                             return Poll::Ready(Some(Event::Disconnected(Error::Disconnected)));
                         }
-                        Poll::Ready(Some(Ok(Packet::Stanza(stanza)))) => {
-                            // Receive stanza
-                            self.state = ClientState::Connected(stream);
-                            return Poll::Ready(Some(Event::Stanza(stanza)));
+                        Poll::Ready(Some(Err(ReadError::HardError(e)))) => {
+                            // Treat stream as dead on I/O errors
+                            self.state = ClientState::Disconnected;
+                            return Poll::Ready(Some(Event::Disconnected(e.into())));
                         }
-                        Poll::Ready(Some(Ok(Packet::Text(_)))) => {
-                            // Ignore text between stanzas
-                        }
-                        Poll::Ready(Some(Ok(Packet::StreamStart(_)))) => {
-                            // <stream:stream>
+                        Poll::Ready(Some(Err(ReadError::ParseError(e)))) => {
+                            // Treat stream as dead on parse errors, too (for now...)
                             self.state = ClientState::Disconnected;
                             return Poll::Ready(Some(Event::Disconnected(
-                                ProtocolError::InvalidStreamStart.into(),
+                                io::Error::new(io::ErrorKind::InvalidData, e).into(),
                             )));
                         }
-                        Poll::Ready(Some(Ok(Packet::StreamEnd))) => {
-                            // End of stream: </stream:stream>
-                            self.state = ClientState::Disconnected;
-                            return Poll::Ready(Some(Event::Disconnected(Error::Disconnected)));
+                        Poll::Ready(Some(Err(ReadError::SoftTimeout))) => {
+                            // TODO: do something smart about this.
+                        }
+                        Poll::Ready(Some(Ok(XmppStreamElement::Iq(stanza)))) => {
+                            // Receive stanza
+                            self.state = ClientState::Connected {
+                                stream,
+                                features,
+                                bound_jid,
+                            };
+                            // TODO: use specific stanza types instead of going back to elements...
+                            return Poll::Ready(Some(Event::Stanza(stanza.into())));
+                        }
+                        Poll::Ready(Some(Ok(XmppStreamElement::Message(stanza)))) => {
+                            // Receive stanza
+                            self.state = ClientState::Connected {
+                                stream,
+                                features,
+                                bound_jid,
+                            };
+                            // TODO: use specific stanza types instead of going back to elements...
+                            return Poll::Ready(Some(Event::Stanza(stanza.into())));
+                        }
+                        Poll::Ready(Some(Ok(XmppStreamElement::Presence(stanza)))) => {
+                            // Receive stanza
+                            self.state = ClientState::Connected {
+                                stream,
+                                features,
+                                bound_jid,
+                            };
+                            // TODO: use specific stanza types instead of going back to elements...
+                            return Poll::Ready(Some(Event::Stanza(stanza.into())));
+                        }
+                        Poll::Ready(Some(Ok(_))) => {
+                            // We ignore these for now.
                         }
                         Poll::Pending => {
                             // Try again later
-                            self.state = ClientState::Connected(stream);
+                            self.state = ClientState::Connected {
+                                stream,
+                                features,
+                                bound_jid,
+                            };
                             return Poll::Pending;
-                        }
-                        Poll::Ready(Some(Err(e))) => {
-                            self.state = ClientState::Disconnected;
-                            return Poll::Ready(Some(Event::Disconnected(e.into())));
                         }
                     }
                 }
@@ -143,21 +189,21 @@ impl<C: ServerConnector> Stream for Client<C> {
 /// Outgoing XMPP packets
 ///
 /// See `send_stanza()` for an `async fn`
-impl<C: ServerConnector> Sink<Packet> for Client<C> {
+impl<C: ServerConnector> Sink<Stanza> for Client<C> {
     type Error = Error;
 
-    fn start_send(mut self: Pin<&mut Self>, item: Packet) -> Result<(), Self::Error> {
+    fn start_send(mut self: Pin<&mut Self>, item: Stanza) -> Result<(), Self::Error> {
         match self.state {
-            ClientState::Connected(ref mut stream) => {
-                Pin::new(stream).start_send(item).map_err(|e| e.into())
-            }
+            ClientState::Connected { ref mut stream, .. } => Pin::new(stream)
+                .start_send(&item.into())
+                .map_err(|e| e.into()),
             _ => Err(Error::InvalidState),
         }
     }
 
     fn poll_ready(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Result<(), Self::Error>> {
         match self.state {
-            ClientState::Connected(ref mut stream) => {
+            ClientState::Connected { ref mut stream, .. } => {
                 Pin::new(stream).poll_ready(cx).map_err(|e| e.into())
             }
             _ => Poll::Pending,
@@ -166,7 +212,7 @@ impl<C: ServerConnector> Sink<Packet> for Client<C> {
 
     fn poll_flush(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Result<(), Self::Error>> {
         match self.state {
-            ClientState::Connected(ref mut stream) => {
+            ClientState::Connected { ref mut stream, .. } => {
                 Pin::new(stream).poll_flush(cx).map_err(|e| e.into())
             }
             _ => Poll::Pending,
@@ -175,7 +221,7 @@ impl<C: ServerConnector> Sink<Packet> for Client<C> {
 
     fn poll_close(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Result<(), Self::Error>> {
         match self.state {
-            ClientState::Connected(ref mut stream) => {
+            ClientState::Connected { ref mut stream, .. } => {
                 Pin::new(stream).poll_close(cx).map_err(|e| e.into())
             }
             _ => Poll::Pending,

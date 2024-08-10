@@ -1,10 +1,10 @@
 //! `ServerConnector` provides streams for XMPP clients
 
 use sasl::common::ChannelBinding;
-use tokio::io::{AsyncRead, AsyncWrite};
+use tokio::io::{AsyncBufRead, AsyncWrite};
 use xmpp_parsers::jid::Jid;
 
-use crate::proto::XmppStream;
+use crate::xmlstream::PendingFeaturesRecv;
 use crate::Error;
 
 #[cfg(feature = "starttls")]
@@ -21,8 +21,8 @@ mod dns;
 pub use dns::DnsConfig;
 
 /// trait returned wrapped in XmppStream by ServerConnector
-pub trait AsyncReadAndWrite: AsyncRead + AsyncWrite + Unpin + Send {}
-impl<T: AsyncRead + AsyncWrite + Unpin + Send> AsyncReadAndWrite for T {}
+pub trait AsyncReadAndWrite: AsyncBufRead + AsyncWrite + Unpin + Send {}
+impl<T: AsyncBufRead + AsyncWrite + Unpin + Send> AsyncReadAndWrite for T {}
 
 /// Trait that must be extended by the implementation of ServerConnector
 pub trait ServerConnectorError: std::error::Error + Sync + Send {}
@@ -35,8 +35,8 @@ pub trait ServerConnector: Clone + core::fmt::Debug + Send + Unpin + 'static {
     fn connect(
         &self,
         jid: &Jid,
-        ns: &str,
-    ) -> impl std::future::Future<Output = Result<XmppStream<Self::Stream>, Error>> + Send;
+        ns: &'static str,
+    ) -> impl std::future::Future<Output = Result<PendingFeaturesRecv<Self::Stream>, Error>> + Send;
 
     /// Return channel binding data if available
     /// do not fail if channel binding is simply unavailable, just return Ok(None)

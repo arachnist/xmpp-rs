@@ -54,7 +54,8 @@ mod responder;
 mod tests;
 pub(crate) mod xmpp;
 
-use self::common::{RawXmlStream, ReadXsoError, ReadXsoState, StreamHeader};
+pub use self::common::StreamHeader;
+use self::common::{RawXmlStream, ReadXsoError, ReadXsoState};
 pub use self::initiator::{InitiatingStream, PendingFeaturesRecv};
 pub use self::responder::{AcceptedStream, PendingFeaturesSend};
 pub use self::xmpp::XmppStreamElement;
@@ -234,6 +235,12 @@ impl<Io: AsyncBufRead + AsyncWrite + Unpin, T: FromXml + AsXml> XmlStream<Io, T>
         Pin::new(&mut stream).reset_state();
         let header = StreamHeader::recv(Pin::new(&mut stream)).await?;
         Ok(AcceptedStream { stream, header })
+    }
+
+    /// Discard all XML state and return the inner I/O object.
+    pub fn into_inner(self) -> Io {
+        self.assert_retypable();
+        self.inner.into_inner()
     }
 }
 

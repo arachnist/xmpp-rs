@@ -1,12 +1,12 @@
-use futures::stream::StreamExt;
-use tokio::io::{AsyncRead, AsyncWrite};
+use std::io;
+
+use futures::{SinkExt, StreamExt};
+use tokio::io::{AsyncBufRead, AsyncWrite};
 use xmpp_parsers::{component::Handshake, jid::Jid, ns};
 
-use crate::{
-    connect::ServerConnector,
-    error::{AuthError, Error},
-    proto::{Packet, XmppStream},
-};
+use crate::component::ServerConnector;
+use crate::error::{AuthError, Error};
+use crate::xmlstream::{ReadError, XmppStream, XmppStreamElement};
 
 /// Log into an XMPP server as a client with a jid+pass
 pub async fn component_login<C: ServerConnector>(
@@ -15,32 +15,47 @@ pub async fn component_login<C: ServerConnector>(
     password: String,
 ) -> Result<XmppStream<C::Stream>, Error> {
     let password = password;
-    let mut xmpp_stream = connector.connect(&jid, ns::COMPONENT).await?;
-    auth(&mut xmpp_stream, password).await?;
-    Ok(xmpp_stream)
+    let mut stream = connector.connect(&jid, ns::COMPONENT).await?;
+    let header = stream.take_header();
+    let mut stream = stream.skip_features();
+    let stream_id = match header.id {
+        Some(ref v) => &**v,
+        None => {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "stream id missing on component stream",
+            )
+            .into())
+        }
+    };
+    auth(&mut stream, stream_id, &password).await?;
+    Ok(stream)
 }
 
-pub async fn auth<S: AsyncRead + AsyncWrite + Unpin>(
+pub async fn auth<S: AsyncBufRead + AsyncWrite + Unpin>(
     stream: &mut XmppStream<S>,
-    password: String,
+    stream_id: &str,
+    password: &str,
 ) -> Result<(), Error> {
-    let nonza = Handshake::from_password_and_stream_id(&password, &stream.id);
-    stream.send_stanza(nonza).await?;
+    let nonza = Handshake::from_password_and_stream_id(password, stream_id);
+    stream
+        .send(&XmppStreamElement::ComponentHandshake(nonza))
+        .await?;
 
     loop {
         match stream.next().await {
-            Some(Ok(Packet::Stanza(ref stanza)))
-                if stanza.is("handshake", ns::COMPONENT_ACCEPT) =>
-            {
+            Some(Ok(XmppStreamElement::ComponentHandshake(_))) => {
                 return Ok(());
             }
-            Some(Ok(Packet::Stanza(ref stanza)))
-                if stanza.is("error", "http://etherx.jabber.org/streams") =>
-            {
+            Some(Ok(_)) => {
                 return Err(AuthError::ComponentFail.into());
             }
-            Some(_) => {}
-            None => return Err(Error::Disconnected),
+            Some(Err(ReadError::SoftTimeout)) => (),
+            Some(Err(ReadError::HardError(e))) => return Err(e.into()),
+            Some(Err(ReadError::ParseError(e))) => {
+                return Err(io::Error::new(io::ErrorKind::InvalidData, e).into())
+            }
+            Some(Err(ReadError::StreamFooterReceived)) | None => return Err(Error::Disconnected),
         }
     }
 }

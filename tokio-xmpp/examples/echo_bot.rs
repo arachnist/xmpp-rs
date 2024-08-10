@@ -1,5 +1,4 @@
 use futures::stream::StreamExt;
-use minidom::Element;
 use std::env::args;
 use std::process::exit;
 use std::str::FromStr;
@@ -40,7 +39,7 @@ async fn main() {
                 println!("Online at {}", jid);
 
                 let presence = make_presence();
-                client.send_stanza(presence).await.unwrap();
+                client.send_stanza(presence.into()).await.unwrap();
             } else if let Some(message) = event
                 .into_stanza()
                 .and_then(|stanza| Message::try_from(stanza).ok())
@@ -55,7 +54,7 @@ async fn main() {
                         if message.type_ != MessageType::Error {
                             // This is a message we'll echo
                             let reply = make_reply(from.clone(), &body.0);
-                            client.send_stanza(reply).await.unwrap();
+                            client.send_stanza(reply.into()).await.unwrap();
                         }
                     }
                     _ => {}
@@ -69,18 +68,18 @@ async fn main() {
 }
 
 // Construct a <presence/>
-fn make_presence() -> Element {
+fn make_presence() -> Presence {
     let mut presence = Presence::new(PresenceType::None);
     presence.show = Some(PresenceShow::Chat);
     presence
         .statuses
         .insert(String::from("en"), String::from("Echoing messages."));
-    presence.into()
+    presence
 }
 
 // Construct a chat <message/>
-fn make_reply(to: Jid, body: &str) -> Element {
+fn make_reply(to: Jid, body: &str) -> Message {
     let mut message = Message::new(Some(to));
     message.bodies.insert(String::new(), Body(body.to_owned()));
-    message.into()
+    message
 }

@@ -127,6 +127,10 @@ impl<Io: AsyncBufRead + AsyncWrite> RawXmlStream<Io> {
         *this.parser.parser_pinned() = rxml::Parser::default();
         *this.writer = Self::new_writer(this.stream_ns);
     }
+
+    pub(super) fn into_inner(self) -> Io {
+        self.parser.into_inner().0
+    }
 }
 
 impl<Io> RawXmlStream<Io> {

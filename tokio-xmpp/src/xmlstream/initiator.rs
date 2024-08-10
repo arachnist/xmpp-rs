@@ -83,4 +83,19 @@ impl<Io: AsyncBufRead + AsyncWrite + Unpin> PendingFeaturesRecv<Io> {
         let features = ReadXso::read_from(Pin::new(&mut stream)).await?;
         Ok((features, XmlStream::wrap(stream)))
     }
+
+    /// Skip receiving the responder's stream features.
+    ///
+    /// The stream can be used for exchanging stream-level elements (stanzas
+    /// or "nonzas"). The Rust type for these elements must be given as type
+    /// parameter `T`.
+    ///
+    /// **Note:** Using this on RFC 6120 compliant streams where stream
+    /// features **are** sent after the stream header will cause a parse error
+    /// down the road (because the feature stream element cannot be handled).
+    /// The only place where this is useful is in
+    /// [XEP-0114](https://xmpp.org/extensions/xep-0114.html) connections.
+    pub fn skip_features<T: FromXml + AsXml>(self) -> XmlStream<Io, T> {
+        XmlStream::wrap(self.stream)
+    }
 }
