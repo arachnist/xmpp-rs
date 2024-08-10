@@ -163,6 +163,35 @@ pub struct Failure {
     pub texts: BTreeMap<Lang, String>,
 }
 
+/// Enum which allows parsing/serialising any SASL element.
+#[derive(FromXml, AsXml, Debug, Clone)]
+#[xml()]
+pub enum Nonza {
+    /// Abortion of SASL transaction
+    #[xml(transparent)]
+    Abort(Abort),
+
+    /// Failure of SASL transaction
+    #[xml(transparent)]
+    Failure(Failure),
+
+    /// Success of SASL transaction
+    #[xml(transparent)]
+    Success(Success),
+
+    /// Initiation of SASL transaction
+    #[xml(transparent)]
+    Auth(Auth),
+
+    /// Challenge sent by the server to the client
+    #[xml(transparent)]
+    Challenge(Challenge),
+
+    /// Response sent by the client to the server
+    #[xml(transparent)]
+    Response(Response),
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
