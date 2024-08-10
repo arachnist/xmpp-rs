@@ -26,6 +26,12 @@ impl<T: FromEventsBuilder> FromEventsBuilder for OptionBuilder<T> {
     }
 }
 
+/// Parsers `T` into `Some(.)`.
+///
+/// Note that this never generates `None`: The main use case is to allow
+/// external (i.e. without calling `from_events`) defaulting to `None` and
+/// for optional serialisation (the [`AsXml`][`crate::AsXml`] implementation
+/// on `Option<T>` emits nothing for `None`).
 impl<T: FromXml> FromXml for Option<T> {
     type Builder = OptionBuilder<T::Builder>;
 
@@ -48,6 +54,7 @@ impl<T: FromEventsBuilder> FromEventsBuilder for BoxBuilder<T> {
     }
 }
 
+/// Parsers `T` into a `Box`.
 impl<T: FromXml> FromXml for Box<T> {
     type Builder = BoxBuilder<T::Builder>;
 

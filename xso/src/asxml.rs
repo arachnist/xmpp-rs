@@ -38,6 +38,8 @@ impl<'x, T: Iterator<Item = Result<Item<'x>, Error>>> Iterator for OptionAsXml<T
     }
 }
 
+/// Emits the contents of `Some(.)` unchanged if present and nothing
+/// otherwise.
 impl<T: AsXml> AsXml for Option<T> {
     type ItemIter<'x> = OptionAsXml<T::ItemIter<'x>> where T: 'x;
 
@@ -60,6 +62,7 @@ impl<'x, T: Iterator<Item = Result<Item<'x>, Error>>> Iterator for BoxAsXml<T> {
     }
 }
 
+/// Emits the contents of `T` unchanged.
 impl<T: AsXml> AsXml for Box<T> {
     type ItemIter<'x> = BoxAsXml<T::ItemIter<'x>> where T: 'x;
 
