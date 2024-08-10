@@ -1633,3 +1633,42 @@ fn dynamic_enum_roundtrip_b() {
     };
     roundtrip_full::<DynamicEnum>("<b xmlns='urn:example:ns2'>hello world</b>");
 }
+
+#[derive(FromXml, Debug)]
+#[xml(namespace = NS1, name = "parent")]
+struct FallibleParse {
+    #[xml(child)]
+    child: ::core::result::Result<RequiredAttribute, ::xso::error::Error>,
+}
+
+#[test]
+fn fallible_parse_positive_ok() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    match parse_str::<FallibleParse>("<parent xmlns='urn:example:ns1'><attr foo='bar'/></parent>") {
+        Ok(FallibleParse {
+            child: Ok(RequiredAttribute { foo }),
+        }) => {
+            assert_eq!(foo, "bar");
+        }
+        other => panic!("unexpected result: {:?}", other),
+    }
+}
+
+#[test]
+fn fallible_parse_positive_err() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    match parse_str::<FallibleParse>("<parent xmlns='urn:example:ns1'><attr/></parent>") {
+        Ok(FallibleParse { child: Err(e) }) => {
+            assert!(e.to_string().contains("attribute"));
+        }
+        other => panic!("unexpected result: {:?}", other),
+    }
+}

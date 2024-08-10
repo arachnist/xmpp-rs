@@ -68,6 +68,21 @@ impl<T: AsXml> AsXml for Box<T> {
     }
 }
 
+/// Emits the items of `T` if `Ok(.)` or returns the error from `E` otherwise.
+impl<T: AsXml, E> AsXml for Result<T, E>
+where
+    for<'a> Error: From<&'a E>,
+{
+    type ItemIter<'x> = T::ItemIter<'x> where Self: 'x;
+
+    fn as_xml_iter(&self) -> Result<Self::ItemIter<'_>, Error> {
+        match self {
+            Self::Ok(v) => Ok(v.as_xml_iter()?),
+            Self::Err(e) => Err(e.into()),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

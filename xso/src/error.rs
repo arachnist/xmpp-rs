@@ -13,6 +13,26 @@ use core::fmt;
 
 use rxml::error::XmlError;
 
+/// Opaque string error.
+///
+/// This is exclusively used in the `From<&Error> for Error` implementation
+/// in order to type-erase and "clone" the TextParseError.
+///
+/// That implementation, in turn, is primarily used by the
+/// `AsXml for Result<T, E>` implementation. We intentionally do not implement
+/// `Clone` using this type because it'd lose type information (which you
+/// don't expect a clone to do).
+#[derive(Debug)]
+struct OpaqueError(String);
+
+impl fmt::Display for OpaqueError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
+impl std::error::Error for OpaqueError {}
+
 /// Error variants generated while parsing or serialising XML data.
 #[derive(Debug)]
 pub enum Error {
@@ -40,6 +60,22 @@ impl Error {
     /// argument to [`Result::map_err`].
     pub fn text_parse_error<T: std::error::Error + Send + Sync + 'static>(e: T) -> Self {
         Self::TextParseError(Box::new(e))
+    }
+}
+
+/// "Clone" an [`Error`] while discarding some information.
+///
+/// This discards the specific type information from the
+/// [`TextParseError`][`Self::TextParseError`] variant and it may discard
+/// more information in the future.
+impl From<&Error> for Error {
+    fn from(other: &Error) -> Self {
+        match other {
+            Self::XmlError(e) => Self::XmlError(e.clone()),
+            Self::TextParseError(e) => Self::TextParseError(Box::new(OpaqueError(e.to_string()))),
+            Self::Other(e) => Self::Other(e),
+            Self::TypeMismatch => Self::TypeMismatch,
+        }
     }
 }
 
