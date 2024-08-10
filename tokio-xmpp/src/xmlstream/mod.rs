@@ -161,6 +161,13 @@ pin_project_lite::pin_project! {
     }
 }
 
+impl<Io, T: FromXml> XmlStream<Io, T> {
+    /// Obtain a reference to the `Io` stream.
+    pub fn get_stream(&self) -> &Io {
+        self.inner.get_stream()
+    }
+}
+
 impl<Io: AsyncBufRead, T: FromXml + AsXml> XmlStream<Io, T> {
     fn wrap(inner: RawXmlStream<Io>) -> Self {
         Self {

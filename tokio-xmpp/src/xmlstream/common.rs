@@ -133,6 +133,10 @@ impl<Io> RawXmlStream<Io> {
     fn parser_pinned(self: Pin<&mut Self>) -> &mut rxml::Parser {
         self.project().parser.parser_pinned()
     }
+
+    pub(super) fn get_stream(&self) -> &Io {
+        self.parser.inner()
+    }
 }
 
 impl<Io: AsyncBufRead> Stream for RawXmlStream<Io> {
