@@ -41,7 +41,7 @@ use core::pin::Pin;
 use core::task::{Context, Poll};
 use std::io;
 
-use futures::{ready, Sink, SinkExt, Stream};
+use futures::{ready, Sink, Stream};
 
 use tokio::io::{AsyncBufRead, AsyncWrite};
 
@@ -54,7 +54,7 @@ mod responder;
 mod tests;
 
 use self::common::{RawXmlStream, ReadXsoError, ReadXsoState, StreamHeader};
-pub use self::initiator::PendingFeaturesRecv;
+pub use self::initiator::{InitiatingStream, PendingFeaturesRecv};
 pub use self::responder::{AcceptedStream, PendingFeaturesSend};
 
 /// Initiate a new stream
@@ -70,16 +70,8 @@ pub async fn initiate_stream<Io: AsyncBufRead + AsyncWrite + Unpin>(
     stream_ns: &'static str,
     stream_header: StreamHeader<'_>,
 ) -> Result<PendingFeaturesRecv<Io>, io::Error> {
-    let mut raw_stream = RawXmlStream::new(io, stream_ns);
-    stream_header.send(Pin::new(&mut raw_stream)).await?;
-    raw_stream.flush().await?;
-
-    let header = StreamHeader::recv(Pin::new(&mut raw_stream)).await?;
-
-    Ok(PendingFeaturesRecv {
-        stream: raw_stream,
-        header,
-    })
+    let stream = InitiatingStream(RawXmlStream::new(io, stream_ns));
+    stream.send_header(stream_header).await
 }
 
 /// Accept a new XML stream as responder
@@ -194,8 +186,8 @@ impl<Io: AsyncBufRead, T: FromXml + AsXml> XmlStream<Io, T> {
 impl<Io: AsyncBufRead + AsyncWrite + Unpin, T: FromXml + AsXml> XmlStream<Io, T> {
     /// Initiate a stream reset
     ///
-    /// The `header` is the new stream header which is sent to the remote
-    /// party.
+    /// To actually send the stream header, call
+    /// [`send_header`][`InitiatingStream::send_header`] on the result.
     ///
     /// # Panics
     ///
@@ -205,18 +197,12 @@ impl<Io: AsyncBufRead + AsyncWrite + Unpin, T: FromXml + AsXml> XmlStream<Io, T>
     ///
     /// In addition, attempting to reset a stream which has been closed by
     /// either side or which has had an I/O error will also cause a panic.
-    pub async fn initiate_reset(
-        self,
-        header: StreamHeader<'_>,
-    ) -> io::Result<PendingFeaturesRecv<Io>> {
+    pub fn initiate_reset(self) -> InitiatingStream<Io> {
         self.assert_retypable();
 
         let mut stream = self.inner;
         Pin::new(&mut stream).reset_state();
-        header.send(Pin::new(&mut stream)).await?;
-        stream.flush().await?;
-        let header = StreamHeader::recv(Pin::new(&mut stream)).await?;
-        Ok(PendingFeaturesRecv { stream, header })
+        InitiatingStream(stream)
     }
 
     /// Anticipate a new stream header sent by the remote party.

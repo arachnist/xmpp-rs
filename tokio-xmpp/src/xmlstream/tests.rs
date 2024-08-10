@@ -4,7 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use futures::StreamExt;
+use futures::{SinkExt, StreamExt};
 
 use xmpp_parsers::stream_features::StreamFeatures;
 
@@ -185,7 +185,8 @@ async fn test_exchange_data_stream_reset_and_shutdown() {
             other => panic!("unexpected stream message: {:?}", other),
         }
         let stream = stream
-            .initiate_reset(StreamHeader {
+            .initiate_reset()
+            .send_header(StreamHeader {
                 from: Some("client".into()),
                 to: Some("server".into()),
                 id: Some("client-id".into()),

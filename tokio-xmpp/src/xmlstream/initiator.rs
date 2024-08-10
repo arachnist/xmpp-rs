@@ -8,6 +8,8 @@ use core::pin::Pin;
 use std::borrow::Cow;
 use std::io;
 
+use futures::SinkExt;
+
 use tokio::io::{AsyncBufRead, AsyncWrite};
 
 use xmpp_parsers::stream_features::StreamFeatures;
@@ -18,6 +20,27 @@ use super::{
     common::{RawXmlStream, ReadXso, StreamHeader},
     XmlStream,
 };
+
+/// Type state for an initiator stream which has not yet sent its stream
+/// header.
+///
+/// To continue stream setup, call [`send_header`][`Self::send_header`].
+pub struct InitiatingStream<Io>(pub(super) RawXmlStream<Io>);
+
+impl<Io: AsyncBufRead + AsyncWrite + Unpin> InitiatingStream<Io> {
+    /// Send the stream header.
+    pub async fn send_header(
+        self,
+        header: StreamHeader<'_>,
+    ) -> io::Result<PendingFeaturesRecv<Io>> {
+        let Self(mut stream) = self;
+
+        header.send(Pin::new(&mut stream)).await?;
+        stream.flush().await?;
+        let header = StreamHeader::recv(Pin::new(&mut stream)).await?;
+        Ok(PendingFeaturesRecv { stream, header })
+    }
+}
 
 /// Type state for an initiator stream which has sent and received the stream
 /// header.
