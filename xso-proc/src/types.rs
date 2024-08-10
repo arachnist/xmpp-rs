@@ -769,6 +769,10 @@ pub(crate) fn option_as_xml_ty(inner_ty: Type) -> Type {
                     arguments: PathArguments::None,
                 },
                 PathSegment {
+                    ident: Ident::new("asxml", span),
+                    arguments: PathArguments::None,
+                },
+                PathSegment {
                     ident: Ident::new("OptionAsXml", span),
                     arguments: PathArguments::AngleBracketed(AngleBracketedGenericArguments {
                         colon2_token: None,

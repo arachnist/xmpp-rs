@@ -389,7 +389,7 @@ impl ExtractDef {
             // corresponding to this code above, and we will not repeat it
             // here.
             quote! {
-                ::xso::OptionAsXml::new(::core::option::Option::from(#bound_name).map(|#bound_name| {
+                ::xso::asxml::OptionAsXml::new(::core::option::Option::from(#bound_name).map(|#bound_name| {
                     #item_iter_ty_ident::new((#bound_name,))
                 }).transpose()?)
             },
