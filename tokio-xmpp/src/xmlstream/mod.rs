@@ -52,10 +52,12 @@ mod initiator;
 mod responder;
 #[cfg(test)]
 mod tests;
+pub(crate) mod xmpp;
 
 use self::common::{RawXmlStream, ReadXsoError, ReadXsoState, StreamHeader};
 pub use self::initiator::{InitiatingStream, PendingFeaturesRecv};
 pub use self::responder::{AcceptedStream, PendingFeaturesSend};
+pub use self::xmpp::XmppStreamElement;
 
 /// Initiate a new stream
 ///
@@ -321,3 +323,6 @@ impl<'x, Io: AsyncWrite, T: FromXml + AsXml> Sink<&'x T> for XmlStream<Io, T> {
         Ok(())
     }
 }
+
+/// Convenience alias for an XML stream using [`XmppStreamElement`].
+pub type XmppStream<Io> = XmlStream<Io, XmppStreamElement>;
