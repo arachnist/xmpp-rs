@@ -67,3 +67,65 @@ impl<T: AsXml> AsXml for Box<T> {
         Ok(BoxAsXml(Box::new(T::as_xml_iter(&self)?)))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use std::borrow::Cow;
+
+    #[test]
+    fn option_as_xml_terminates_immediately_for_none() {
+        let mut iter = OptionAsXml::<std::iter::Empty<_>>(None);
+        match iter.next() {
+            None => (),
+            other => panic!("unexpected item: {:?}", other),
+        }
+    }
+
+    #[test]
+    fn option_as_xml_passes_values_from_inner_some() {
+        let inner = vec![
+            Ok(Item::Text(Cow::Borrowed("hello world"))),
+            Ok(Item::ElementFoot),
+        ];
+        let mut iter = OptionAsXml(Some(inner.into_iter()));
+        match iter.next() {
+            Some(Ok(Item::Text(text))) => {
+                assert_eq!(text, "hello world");
+            }
+            other => panic!("unexpected item: {:?}", other),
+        }
+        match iter.next() {
+            Some(Ok(Item::ElementFoot)) => (),
+            other => panic!("unexpected item: {:?}", other),
+        }
+        match iter.next() {
+            None => (),
+            other => panic!("unexpected item: {:?}", other),
+        }
+    }
+
+    #[test]
+    fn box_as_xml_passes_values_from_inner() {
+        let inner = vec![
+            Ok(Item::Text(Cow::Borrowed("hello world"))),
+            Ok(Item::ElementFoot),
+        ];
+        let mut iter = BoxAsXml(Box::new(inner.into_iter()));
+        match iter.next() {
+            Some(Ok(Item::Text(text))) => {
+                assert_eq!(text, "hello world");
+            }
+            other => panic!("unexpected item: {:?}", other),
+        }
+        match iter.next() {
+            Some(Ok(Item::ElementFoot)) => (),
+            other => panic!("unexpected item: {:?}", other),
+        }
+        match iter.next() {
+            None => (),
+            other => panic!("unexpected item: {:?}", other),
+        }
+    }
+}
