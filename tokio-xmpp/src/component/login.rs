@@ -1,9 +1,24 @@
 use futures::stream::StreamExt;
 use tokio::io::{AsyncRead, AsyncWrite};
-use xmpp_parsers::{component::Handshake, ns};
+use xmpp_parsers::{component::Handshake, jid::Jid, ns};
 
-use crate::error::{AuthError, Error};
-use crate::proto::{Packet, XmppStream};
+use crate::{
+    connect::ServerConnector,
+    error::{AuthError, Error},
+    proto::{Packet, XmppStream},
+};
+
+/// Log into an XMPP server as a client with a jid+pass
+pub async fn component_login<C: ServerConnector>(
+    connector: C,
+    jid: Jid,
+    password: String,
+) -> Result<XmppStream<C::Stream>, Error> {
+    let password = password;
+    let mut xmpp_stream = connector.connect(&jid, ns::COMPONENT).await?;
+    auth(&mut xmpp_stream, password).await?;
+    Ok(xmpp_stream)
+}
 
 pub async fn auth<S: AsyncRead + AsyncWrite + Unpin>(
     stream: &mut XmppStream<S>,
