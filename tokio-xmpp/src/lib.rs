@@ -48,16 +48,17 @@ compile_error!(
 
 mod event;
 pub use event::Event;
-mod client;
 pub mod connect;
 pub mod proto;
 
-pub use client::async_client::Client;
+mod client;
+pub use client::Client;
 
 #[cfg(feature = "insecure-tcp")]
 mod component;
 #[cfg(feature = "insecure-tcp")]
 pub use crate::component::Component;
+
 /// Detailed error types
 pub mod error;
 
