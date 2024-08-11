@@ -53,8 +53,8 @@ impl Component<TcpServerConnector> {
 impl<C: ServerConnector> Component<C> {
     /// Start a new XMPP component.
     ///
-    /// Unfortunately [`StartTlsConnector`] is not supported yet. The tracking issue is
-    /// [#143](https://gitlab.com/xmpp-rs/xmpp-rs/-/issues/143).
+    /// Unfortunately [`StartTlsConnector`](tokio_xmpp::connect::StartTlsConnector) is not supported yet.
+    /// The tracking issue is [#143](https://gitlab.com/xmpp-rs/xmpp-rs/-/issues/143).
     pub async fn new_with_connector(
         jid: &str,
         password: &str,
