@@ -23,9 +23,9 @@ rxml = { version = "0.11.1", features = ["compact_str"] }
 rand = "0.8"
 syntect = { version = "5", optional = true }
 # same repository dependencies
-sasl = { version = "0.5" }
-xmpp-parsers = { version = "0.21" }
-minidom = { version = "0.16" }
+sasl = { version = "0.5", path = "../sasl" }
+xmpp-parsers = { version = "0.21", path = "../parsers" }
+minidom = { version = "0.16", path = "../minidom" }
 
 # these are only needed for starttls ServerConnector support
 hickory-resolver = { version = "0.24", optional = true}

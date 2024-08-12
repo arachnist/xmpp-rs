@@ -11,8 +11,8 @@ license = "MPL-2.0"
 
 [dependencies]
 rxml = { version = "0.11.1", default-features = false }
-minidom = { version = "0.16" }
-xso_proc = { version = "0.1", optional = true }
+minidom = { version = "0.16", path = "../minidom" }
+xso_proc = { version = "0.1", path = "../xso-proc", optional = true }
 
 # optional dependencies to provide text conversion to/from types from/using
 # these crates
@@ -20,7 +20,7 @@ xso_proc = { version = "0.1", optional = true }
 # defaults to picking the highest matching version by default, the only
 # sensible thing we can do here is to depend on the least version of the most
 # recent semver of each crate.
-jid = { version = "0.11", optional = true }
+jid = { version = "0.11", path = "../jid", optional = true }
 uuid = { version = "1", optional = true }
 base64 = { version = "0.22", optional = true }
 
