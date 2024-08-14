@@ -220,16 +220,15 @@ async fn test_exchange_data_stream_reset_and_shutdown() {
         let mut stream = stream
             .send_features::<Data>(&StreamFeatures::default())
             .await?;
-        stream
-            .send(&Data {
-                contents: "world!".to_owned(),
-            })
-            .await?;
         match stream.next().await {
             Some(Ok(Data { contents })) => assert_eq!(contents, "hello"),
             other => panic!("unexpected stream message: {:?}", other),
         }
-        let stream = stream.accept_reset().await?;
+        let stream = stream
+            .accept_reset(&Data {
+                contents: "world!".to_owned(),
+            })
+            .await?;
         assert_eq!(stream.header().from.unwrap(), "client");
         assert_eq!(stream.header().to.unwrap(), "server");
         assert_eq!(stream.header().id.unwrap(), "client-id");
