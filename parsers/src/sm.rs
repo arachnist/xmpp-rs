@@ -140,11 +140,22 @@ pub struct Resumed {
     pub previd: StreamId,
 }
 
+/// Marker whose presence indicates that negotiating stream management is
+/// optional.
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::SM, name = "optional")]
+pub struct Optional;
+
 // TODO: add support for optional and required.
 /// Represents availability of Stream Management in `<stream:features/>`.
 #[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = ns::SM, name = "sm")]
-pub struct StreamManagement;
+pub struct StreamManagement {
+    // TODO: replace with #[xml(flag)] once we have it.
+    /// `<optional/>` flag.
+    #[xml(child(default))]
+    pub optional: Option<Optional>,
+}
 
 #[cfg(test)]
 mod tests {
@@ -163,7 +174,8 @@ mod tests {
         assert_size!(R, 0);
         assert_size!(Resume, 16);
         assert_size!(Resumed, 16);
-        assert_size!(StreamManagement, 0);
+        assert_size!(StreamManagement, 1);
+        assert_size!(Optional, 0);
     }
 
     #[cfg(target_pointer_width = "64")]
@@ -178,7 +190,8 @@ mod tests {
         assert_size!(R, 0);
         assert_size!(Resume, 32);
         assert_size!(Resumed, 32);
-        assert_size!(StreamManagement, 0);
+        assert_size!(StreamManagement, 1);
+        assert_size!(Optional, 0);
     }
 
     #[test]
