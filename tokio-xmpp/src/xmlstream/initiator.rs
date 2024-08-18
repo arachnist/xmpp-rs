@@ -17,7 +17,7 @@ use xmpp_parsers::stream_features::StreamFeatures;
 use xso::{AsXml, FromXml};
 
 use super::{
-    common::{RawXmlStream, ReadXso, StreamHeader},
+    common::{RawXmlStream, ReadXso, ReadXsoError, StreamHeader},
     XmlStream,
 };
 
@@ -80,7 +80,22 @@ impl<Io: AsyncBufRead + AsyncWrite + Unpin> PendingFeaturesRecv<Io> {
             mut stream,
             header: _,
         } = self;
-        let features = ReadXso::read_from(Pin::new(&mut stream)).await?;
+        let features = loop {
+            match ReadXso::read_from(Pin::new(&mut stream)).await {
+                Ok(v) => break v,
+                Err(ReadXsoError::SoftTimeout) => (),
+                Err(ReadXsoError::Hard(e)) => return Err(e),
+                Err(ReadXsoError::Parse(e)) => {
+                    return Err(io::Error::new(io::ErrorKind::InvalidData, e))
+                }
+                Err(ReadXsoError::Footer) => {
+                    return Err(io::Error::new(
+                        io::ErrorKind::UnexpectedEof,
+                        "unexpected stream footer",
+                    ))
+                }
+            }
+        };
         Ok((features, XmlStream::wrap(stream)))
     }
 

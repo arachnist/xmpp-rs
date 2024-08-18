@@ -6,8 +6,10 @@ use std::str::FromStr;
 use xmpp_parsers::jid::Jid;
 
 use crate::{
-    component::login::component_login, connect::ServerConnector, xmlstream::XmppStream, Error,
-    Stanza,
+    component::login::component_login,
+    connect::ServerConnector,
+    xmlstream::{Timeouts, XmppStream},
+    Error, Stanza,
 };
 
 #[cfg(any(feature = "starttls", feature = "insecure-tcp"))]
@@ -46,7 +48,13 @@ impl Component<TcpServerConnector> {
     /// Start a new XMPP component over plaintext TCP to localhost:5347
     #[cfg(feature = "insecure-tcp")]
     pub async fn new(jid: &str, password: &str) -> Result<Self, Error> {
-        Self::new_plaintext(jid, password, DnsConfig::addr("127.0.0.1:5347")).await
+        Self::new_plaintext(
+            jid,
+            password,
+            DnsConfig::addr("127.0.0.1:5347"),
+            Timeouts::tight(),
+        )
+        .await
     }
 
     /// Start a new XMPP component over plaintext TCP
@@ -55,8 +63,15 @@ impl Component<TcpServerConnector> {
         jid: &str,
         password: &str,
         dns_config: DnsConfig,
+        timeouts: Timeouts,
     ) -> Result<Self, Error> {
-        Component::new_with_connector(jid, password, TcpServerConnector::from(dns_config)).await
+        Component::new_with_connector(
+            jid,
+            password,
+            TcpServerConnector::from(dns_config),
+            timeouts,
+        )
+        .await
     }
 }
 
@@ -69,10 +84,11 @@ impl<C: ServerConnector> Component<C> {
         jid: &str,
         password: &str,
         connector: C,
+        timeouts: Timeouts,
     ) -> Result<Self, Error> {
         let jid = Jid::from_str(jid)?;
         let password = password.to_owned();
-        let stream = component_login(connector, jid.clone(), password).await?;
+        let stream = component_login(connector, jid.clone(), password, timeouts).await?;
         Ok(Component { jid, stream })
     }
 }

@@ -5,6 +5,7 @@ use crate::{
     client::{login::client_login, stream::ClientState},
     connect::ServerConnector,
     error::Error,
+    xmlstream::Timeouts,
     Stanza,
 };
 
@@ -30,6 +31,7 @@ pub struct Client<C: ServerConnector> {
     password: String,
     connector: C,
     state: ClientState<C::Stream>,
+    timeouts: Timeouts,
     reconnect: bool,
     // TODO: tls_required=true
 }
@@ -95,6 +97,7 @@ impl Client<StartTlsServerConnector> {
             jid.clone(),
             password,
             DnsConfig::srv(&jid.domain().to_string(), "_xmpp-client._tcp", 5222),
+            Timeouts::default(),
         );
         client.set_reconnect(true);
         client
@@ -105,8 +108,14 @@ impl Client<StartTlsServerConnector> {
         jid: J,
         password: P,
         dns_config: DnsConfig,
+        timeouts: Timeouts,
     ) -> Self {
-        Self::new_with_connector(jid, password, StartTlsServerConnector::from(dns_config))
+        Self::new_with_connector(
+            jid,
+            password,
+            StartTlsServerConnector::from(dns_config),
+            timeouts,
+        )
     }
 }
 
@@ -117,8 +126,14 @@ impl Client<TcpServerConnector> {
         jid: J,
         password: P,
         dns_config: DnsConfig,
+        timeouts: Timeouts,
     ) -> Self {
-        Self::new_with_connector(jid, password, TcpServerConnector::from(dns_config))
+        Self::new_with_connector(
+            jid,
+            password,
+            TcpServerConnector::from(dns_config),
+            timeouts,
+        )
     }
 }
 
@@ -128,6 +143,7 @@ impl<C: ServerConnector> Client<C> {
         jid: J,
         password: P,
         connector: C,
+        timeouts: Timeouts,
     ) -> Self {
         let jid = jid.into();
         let password = password.into();
@@ -136,6 +152,7 @@ impl<C: ServerConnector> Client<C> {
             connector.clone(),
             jid.clone(),
             password.clone(),
+            timeouts,
         ));
         let client = Client {
             jid,
@@ -143,6 +160,7 @@ impl<C: ServerConnector> Client<C> {
             connector,
             state: ClientState::Connecting(connect),
             reconnect: false,
+            timeouts,
         };
         client
     }

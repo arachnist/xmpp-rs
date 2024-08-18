@@ -15,6 +15,7 @@ use tokio_xmpp::{
         disco::{DiscoInfoResult, Feature, Identity},
         ns,
     },
+    xmlstream::Timeouts,
     Client as TokioXmppClient,
 };
 
@@ -51,6 +52,7 @@ pub struct ClientBuilder<'a, C: ServerConnector> {
     disco: (ClientType, String),
     features: Vec<ClientFeature>,
     resource: Option<String>,
+    timeouts: Timeouts,
 }
 
 #[cfg(any(feature = "starttls-rust", feature = "starttls-native"))]
@@ -80,6 +82,7 @@ impl<C: ServerConnector> ClientBuilder<'_, C> {
             disco: (ClientType::default(), String::from("tokio-xmpp")),
             features: vec![],
             resource: None,
+            timeouts: Timeouts::default(),
         }
     }
 
@@ -106,6 +109,15 @@ impl<C: ServerConnector> ClientBuilder<'_, C> {
 
     pub fn set_lang(mut self, lang: Vec<String>) -> Self {
         self.lang = lang;
+        self
+    }
+
+    /// Configure the timeouts used.
+    ///
+    /// See [`Timeouts`] for more information on the semantics and the
+    /// defaults (which are used unless you call this method).
+    pub fn set_timeouts(mut self, timeouts: Timeouts) -> Self {
+        self.timeouts = timeouts;
         self
     }
 
@@ -146,8 +158,12 @@ impl<C: ServerConnector> ClientBuilder<'_, C> {
             self.jid.clone().into()
         };
 
-        let mut client =
-            TokioXmppClient::new_with_connector(jid, self.password, self.server_connector.clone());
+        let mut client = TokioXmppClient::new_with_connector(
+            jid,
+            self.password,
+            self.server_connector.clone(),
+            self.timeouts,
+        );
         client.set_reconnect(true);
         self.build_impl(client)
     }

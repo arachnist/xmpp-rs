@@ -7,6 +7,7 @@
 use core::future::Future;
 use core::pin::Pin;
 use core::task::{Context, Poll};
+use core::time::Duration;
 use std::borrow::Cow;
 use std::io;
 
@@ -14,7 +15,10 @@ use futures::{ready, Sink, SinkExt, Stream, StreamExt};
 
 use bytes::{Buf, BytesMut};
 
-use tokio::io::{AsyncBufRead, AsyncWrite};
+use tokio::{
+    io::{AsyncBufRead, AsyncWrite},
+    time::Instant,
+};
 
 use xso::{
     exports::rxml::{self, writer::TrackNamespace, xml_ncname, Event, Namespace},
@@ -24,6 +28,129 @@ use xso::{
 use super::capture::{log_enabled, log_recv, log_send, CaptureBufRead};
 
 use xmpp_parsers::ns::STREAM as XML_STREAM_NS;
+
+/// Configuration for timeouts on an XML stream.
+///
+/// The defaults are tuned toward common desktop/laptop use and may not hold
+/// up to extreme conditions (arctic sattelite link, mobile internet on a
+/// train in Brandenburg, Germany, and similar) and may be inefficient in
+/// other conditions (stable server link, localhost communication).
+#[derive(Debug, Clone, Copy)]
+pub struct Timeouts {
+    /// Maximum silence time before a
+    /// [`ReadError::SoftTimeout`][`super::ReadError::SoftTimeout`] is
+    /// returned.
+    ///
+    /// Soft timeouts are not fatal, but they must be handled by user code so
+    /// that more data is read after at most [`Self::response_timeout`],
+    /// starting from the moment the soft timeout is returned.
+    pub read_timeout: Duration,
+
+    /// Maximum silence after a soft timeout.
+    ///
+    /// If the stream is silent for longer than this time after a soft timeout
+    /// has been emitted, a hard [`TimedOut`][`std::io::ErrorKind::TimedOut`]
+    /// I/O error is returned and the stream is to be considered dead.
+    pub response_timeout: Duration,
+}
+
+impl Default for Timeouts {
+    fn default() -> Self {
+        Self {
+            read_timeout: Duration::new(300, 0),
+            response_timeout: Duration::new(300, 0),
+        }
+    }
+}
+
+impl Timeouts {
+    /// Tight timeouts suitable for communicating on a fast LAN or localhost.
+    pub fn tight() -> Self {
+        Self {
+            read_timeout: Duration::new(60, 0),
+            response_timeout: Duration::new(15, 0),
+        }
+    }
+
+    fn data_to_soft(&self) -> Duration {
+        self.read_timeout
+    }
+
+    fn soft_to_warn(&self) -> Duration {
+        self.response_timeout / 2
+    }
+
+    fn warn_to_hard(&self) -> Duration {
+        self.response_timeout / 2
+    }
+}
+
+#[derive(Clone, Copy)]
+enum TimeoutLevel {
+    Soft,
+    Warn,
+    Hard,
+}
+
+#[derive(Debug)]
+pub(super) enum RawError {
+    Io(io::Error),
+    SoftTimeout,
+}
+
+impl From<io::Error> for RawError {
+    fn from(other: io::Error) -> Self {
+        Self::Io(other)
+    }
+}
+
+struct TimeoutState {
+    /// Configuration for the timeouts.
+    timeouts: Timeouts,
+
+    /// Level of the next timeout which will trip.
+    level: TimeoutLevel,
+
+    /// Sleep timer used for read timeouts.
+    // NOTE: even though we pretend we could deal with an !Unpin
+    // RawXmlStream, we really can't: box_stream for example needs it,
+    // but also all the typestate around the initial stream setup needs
+    // to be able to move the stream around.
+    deadline: Pin<Box<tokio::time::Sleep>>,
+}
+
+impl TimeoutState {
+    fn new(timeouts: Timeouts) -> Self {
+        Self {
+            deadline: Box::pin(tokio::time::sleep(timeouts.data_to_soft())),
+            level: TimeoutLevel::Soft,
+            timeouts,
+        }
+    }
+
+    fn poll(&mut self, cx: &mut Context) -> Poll<TimeoutLevel> {
+        ready!(self.deadline.as_mut().poll(cx));
+        // Deadline elapsed!
+        let to_return = self.level;
+        let (next_level, next_duration) = match self.level {
+            TimeoutLevel::Soft => (TimeoutLevel::Warn, self.timeouts.soft_to_warn()),
+            TimeoutLevel::Warn => (TimeoutLevel::Hard, self.timeouts.warn_to_hard()),
+            // Something short-ish so that we fire this over and over until
+            // someone finally kills the stream for good.
+            TimeoutLevel::Hard => (TimeoutLevel::Hard, Duration::new(1, 0)),
+        };
+        self.level = next_level;
+        self.deadline.as_mut().reset(Instant::now() + next_duration);
+        Poll::Ready(to_return)
+    }
+
+    fn reset(&mut self) {
+        self.level = TimeoutLevel::Soft;
+        self.deadline
+            .as_mut()
+            .reset((Instant::now() + self.timeouts.data_to_soft()).into());
+    }
+}
 
 pin_project_lite::pin_project! {
     // NOTE: due to limitations of pin_project_lite, the field comments are
@@ -36,6 +163,8 @@ pin_project_lite::pin_project! {
 
         // The writer used for serialising data.
         writer: rxml::writer::Encoder<rxml::writer::SimpleNamespaces>,
+
+        timeouts: TimeoutState,
 
         // The default namespace to declare on the stream header.
         stream_ns: &'static str,
@@ -112,7 +241,7 @@ impl<Io: AsyncBufRead + AsyncWrite> RawXmlStream<Io> {
         writer
     }
 
-    pub(super) fn new(io: Io, stream_ns: &'static str) -> Self {
+    pub(super) fn new(io: Io, stream_ns: &'static str, timeouts: Timeouts) -> Self {
         let parser = rxml::Parser::default();
         let mut io = CaptureBufRead::wrap(io);
         if log_enabled() {
@@ -121,6 +250,7 @@ impl<Io: AsyncBufRead + AsyncWrite> RawXmlStream<Io> {
         Self {
             parser: rxml::AsyncReader::wrap(io, parser),
             writer: Self::new_writer(stream_ns),
+            timeouts: TimeoutState::new(timeouts),
             tx_buffer_logged: 0,
             stream_ns,
             tx_buffer: BytesMut::new(),
@@ -189,18 +319,34 @@ impl<Io> RawXmlStream<Io> {
 }
 
 impl<Io: AsyncBufRead> Stream for RawXmlStream<Io> {
-    type Item = Result<rxml::Event, io::Error>;
+    type Item = Result<rxml::Event, RawError>;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let mut this = self.project();
         loop {
-            return Poll::Ready(
-                match ready!(this.parser.as_mut().poll_read(cx)).transpose() {
-                    // Skip the XML declaration, nobody wants to hear about that.
-                    Some(Ok(rxml::Event::XmlDeclaration(_, _))) => continue,
-                    other => other,
-                },
-            );
+            match this.parser.as_mut().poll_read(cx) {
+                Poll::Pending => (),
+                Poll::Ready(v) => {
+                    this.timeouts.reset();
+                    match v.transpose() {
+                        // Skip the XML declaration, nobody wants to hear about that.
+                        Some(Ok(rxml::Event::XmlDeclaration(_, _))) => continue,
+                        other => return Poll::Ready(other.map(|x| x.map_err(RawError::Io))),
+                    }
+                }
+            };
+
+            // poll_read returned pending... what do the timeouts have to say?
+            match ready!(this.timeouts.poll(cx)) {
+                TimeoutLevel::Soft => return Poll::Ready(Some(Err(RawError::SoftTimeout))),
+                TimeoutLevel::Warn => (),
+                TimeoutLevel::Hard => {
+                    return Poll::Ready(Some(Err(RawError::Io(io::Error::new(
+                        io::ErrorKind::TimedOut,
+                        "read and response timeouts elapsed",
+                    )))))
+                }
+            }
         }
     }
 }
@@ -312,6 +458,20 @@ pub(super) enum ReadXsoError {
     /// not well-formed document.
     Hard(io::Error),
 
+    /// The underlying stream signalled a soft read timeout before a child
+    /// element could be read.
+    ///
+    /// Note that soft timeouts which are triggered in the middle of receiving
+    /// an element are converted to hard timeouts (i.e. I/O errors).
+    ///
+    /// This masking is intentional, because:
+    /// - Returning a [`Self::SoftTimeout`] from the middle of parsing is not
+    ///   possible without complicating the API.
+    /// - There is no reason why the remote side should interrupt sending data
+    ///   in the middle of an element except if it or the transport has failed
+    ///   fatally.
+    SoftTimeout,
+
     /// A parse error occurred.
     ///
     /// The XML structure was well-formed, but the data contained did not
@@ -322,19 +482,6 @@ pub(super) enum ReadXsoError {
     /// been consumed. This allows to read more XSOs even if one fails to
     /// parse.
     Parse(xso::error::Error),
-}
-
-impl From<ReadXsoError> for io::Error {
-    fn from(other: ReadXsoError) -> Self {
-        match other {
-            ReadXsoError::Hard(v) => v,
-            ReadXsoError::Parse(e) => io::Error::new(io::ErrorKind::InvalidData, e),
-            ReadXsoError::Footer => io::Error::new(
-                io::ErrorKind::UnexpectedEof,
-                "element footer while waiting for XSO element start",
-            ),
-        }
-    }
 }
 
 impl From<io::Error> for ReadXsoError {
@@ -425,13 +572,13 @@ impl<T: FromXml> ReadXsoState<T> {
                 .parser_pinned()
                 .set_text_buffering(text_buffering);
 
-            let ev = ready!(source.as_mut().poll_next(cx)).transpose()?;
+            let ev = ready!(source.as_mut().poll_next(cx)).transpose();
             match self {
                 ReadXsoState::PreData => {
                     log::trace!("ReadXsoState::PreData ev = {:?}", ev);
                     match ev {
-                        Some(rxml::Event::XmlDeclaration(_, _)) => (),
-                        Some(rxml::Event::Text(_, data)) => {
+                        Ok(Some(rxml::Event::XmlDeclaration(_, _))) => (),
+                        Ok(Some(rxml::Event::Text(_, data))) => {
                             if xso::is_xml_whitespace(data.as_bytes()) {
                                 log::trace!("Received {} bytes of whitespace", data.len());
                                 source.as_mut().stream_pinned().discard_capture();
@@ -445,18 +592,18 @@ impl<T: FromXml> ReadXsoState<T> {
                                 .into()));
                             }
                         }
-                        Some(rxml::Event::StartElement(_, name, attrs)) => {
+                        Ok(Some(rxml::Event::StartElement(_, name, attrs))) => {
                             *self = ReadXsoState::Parsing(
                                 <Result<T, xso::error::Error> as FromXml>::from_events(name, attrs)
                                     .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?,
                             );
                         }
                         // Amounts to EOF, as we expect to start on the stream level.
-                        Some(rxml::Event::EndElement(_)) => {
+                        Ok(Some(rxml::Event::EndElement(_))) => {
                             *self = ReadXsoState::Done;
                             return Poll::Ready(Err(ReadXsoError::Footer));
                         }
-                        None => {
+                        Ok(None) => {
                             *self = ReadXsoState::Done;
                             return Poll::Ready(Err(io::Error::new(
                                 io::ErrorKind::InvalidData,
@@ -464,17 +611,42 @@ impl<T: FromXml> ReadXsoState<T> {
                             )
                             .into()));
                         }
+                        Err(RawError::SoftTimeout) => {
+                            *self = ReadXsoState::Done;
+                            return Poll::Ready(Err(ReadXsoError::SoftTimeout));
+                        }
+                        Err(RawError::Io(e)) => {
+                            *self = ReadXsoState::Done;
+                            return Poll::Ready(Err(ReadXsoError::Hard(e)));
+                        }
                     }
                 }
                 ReadXsoState::Parsing(builder) => {
                     log::trace!("ReadXsoState::Parsing ev = {:?}", ev);
-                    let Some(ev) = ev else {
-                        *self = ReadXsoState::Done;
-                        return Poll::Ready(Err(io::Error::new(
-                            io::ErrorKind::UnexpectedEof,
-                            "eof during XSO parsing",
-                        )
-                        .into()));
+                    let ev = match ev {
+                        Ok(Some(ev)) => ev,
+                        Ok(None) => {
+                            *self = ReadXsoState::Done;
+                            return Poll::Ready(Err(io::Error::new(
+                                io::ErrorKind::UnexpectedEof,
+                                "eof during XSO parsing",
+                            )
+                            .into()));
+                        }
+                        Err(RawError::Io(e)) => {
+                            *self = ReadXsoState::Done;
+                            return Poll::Ready(Err(e.into()));
+                        }
+                        Err(RawError::SoftTimeout) => {
+                            // See also [`ReadXsoError::SoftTimeout`] for why
+                            // we mask the SoftTimeout condition here.
+                            *self = ReadXsoState::Done;
+                            return Poll::Ready(Err(io::Error::new(
+                                io::ErrorKind::TimedOut,
+                                "read timeout during XSO parsing",
+                            )
+                            .into()));
+                        }
                     };
 
                     match builder.feed(ev) {
@@ -622,8 +794,10 @@ impl StreamHeader<'static> {
         mut stream: Pin<&mut RawXmlStream<Io>>,
     ) -> io::Result<Self> {
         loop {
-            match stream.as_mut().next().await.transpose()? {
-                Some(Event::StartElement(_, (ns, name), mut attrs)) => {
+            match stream.as_mut().next().await {
+                Some(Err(RawError::Io(e))) => return Err(e),
+                Some(Err(RawError::SoftTimeout)) => (),
+                Some(Ok(Event::StartElement(_, (ns, name), mut attrs))) => {
                     if ns != XML_STREAM_NS || name != "stream" {
                         return Err(io::Error::new(
                             io::ErrorKind::InvalidData,
@@ -666,7 +840,7 @@ impl StreamHeader<'static> {
                         id: id.map(Cow::Owned),
                     });
                 }
-                Some(Event::Text(_, _)) | Some(Event::EndElement(_)) => {
+                Some(Ok(Event::Text(_, _))) | Some(Ok(Event::EndElement(_))) => {
                     return Err(io::Error::new(
                         io::ErrorKind::UnexpectedEof,
                         "unexpected content before stream header",
@@ -674,7 +848,7 @@ impl StreamHeader<'static> {
                 }
                 // We cannot loop infinitely here because the XML parser will
                 // prevent more than one XML declaration from being parsed.
-                Some(Event::XmlDeclaration(_, _)) => (),
+                Some(Ok(Event::XmlDeclaration(_, _))) => (),
                 None => {
                     return Err(io::Error::new(
                         io::ErrorKind::UnexpectedEof,

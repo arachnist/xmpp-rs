@@ -6,7 +6,7 @@ use tokio::{io::BufStream, net::TcpStream};
 
 use crate::{
     connect::{DnsConfig, ServerConnector},
-    xmlstream::{initiate_stream, PendingFeaturesRecv, StreamHeader},
+    xmlstream::{initiate_stream, PendingFeaturesRecv, StreamHeader, Timeouts},
     Client, Component, Error,
 };
 
@@ -35,6 +35,7 @@ impl ServerConnector for TcpServerConnector {
         &self,
         jid: &xmpp_parsers::jid::Jid,
         ns: &'static str,
+        timeouts: Timeouts,
     ) -> Result<PendingFeaturesRecv<Self::Stream>, Error> {
         let stream = BufStream::new(self.0.resolve().await?);
         Ok(initiate_stream(
@@ -45,6 +46,7 @@ impl ServerConnector for TcpServerConnector {
                 from: None,
                 id: None,
             },
+            timeouts,
         )
         .await?)
     }

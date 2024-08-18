@@ -39,6 +39,7 @@ tokio-rustls = { version = "0.26", optional = true }
 [dev-dependencies]
 env_logger = { version = "0.11", default-features = false, features = ["auto-color", "humantime"] }
 # this is needed for echo-component example
+tokio = { version = "1", features = ["test-util"] }
 tokio-xmpp = { path = ".", features = ["insecure-tcp"]}
 
 [features]

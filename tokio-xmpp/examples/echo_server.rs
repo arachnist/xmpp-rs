@@ -2,7 +2,7 @@ use futures::{SinkExt, StreamExt};
 use tokio::{self, io, net::TcpSocket};
 
 use tokio_xmpp::parsers::stream_features::StreamFeatures;
-use tokio_xmpp::xmlstream::{accept_stream, StreamHeader};
+use tokio_xmpp::xmlstream::{accept_stream, StreamHeader, Timeouts};
 
 #[tokio::main]
 async fn main() -> Result<(), io::Error> {
@@ -19,6 +19,7 @@ async fn main() -> Result<(), io::Error> {
         let stream = accept_stream(
             tokio::io::BufStream::new(stream),
             tokio_xmpp::parsers::ns::DEFAULT_NS,
+            Timeouts::default(),
         )
         .await?;
         let stream = stream.send_header(StreamHeader::default()).await?;

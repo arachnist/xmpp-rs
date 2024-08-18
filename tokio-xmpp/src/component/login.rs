@@ -6,16 +6,17 @@ use xmpp_parsers::{component::Handshake, jid::Jid, ns};
 
 use crate::component::ServerConnector;
 use crate::error::{AuthError, Error};
-use crate::xmlstream::{ReadError, XmppStream, XmppStreamElement};
+use crate::xmlstream::{ReadError, Timeouts, XmppStream, XmppStreamElement};
 
 /// Log into an XMPP server as a client with a jid+pass
 pub async fn component_login<C: ServerConnector>(
     connector: C,
     jid: Jid,
     password: String,
+    timeouts: Timeouts,
 ) -> Result<XmppStream<C::Stream>, Error> {
     let password = password;
-    let mut stream = connector.connect(&jid, ns::COMPONENT).await?;
+    let mut stream = connector.connect(&jid, ns::COMPONENT, timeouts).await?;
     let header = stream.take_header();
     let mut stream = stream.skip_features();
     let stream_id = match header.id {

@@ -77,8 +77,8 @@ mod responder;
 mod tests;
 pub(crate) mod xmpp;
 
-pub use self::common::StreamHeader;
-use self::common::{RawXmlStream, ReadXsoError, ReadXsoState};
+use self::common::{RawError, RawXmlStream, ReadXsoError, ReadXsoState};
+pub use self::common::{StreamHeader, Timeouts};
 pub use self::initiator::{InitiatingStream, PendingFeaturesRecv};
 pub use self::responder::{AcceptedStream, PendingFeaturesSend};
 pub use self::xmpp::XmppStreamElement;
@@ -129,8 +129,9 @@ pub async fn initiate_stream<Io: AsyncBufRead + AsyncWrite + Unpin>(
     io: Io,
     stream_ns: &'static str,
     stream_header: StreamHeader<'_>,
+    timeouts: Timeouts,
 ) -> Result<PendingFeaturesRecv<Io>, io::Error> {
-    let stream = InitiatingStream(RawXmlStream::new(io, stream_ns));
+    let stream = InitiatingStream(RawXmlStream::new(io, stream_ns, timeouts));
     stream.send_header(stream_header).await
 }
 
@@ -144,8 +145,9 @@ pub async fn initiate_stream<Io: AsyncBufRead + AsyncWrite + Unpin>(
 pub async fn accept_stream<Io: AsyncBufRead + AsyncWrite + Unpin>(
     io: Io,
     stream_ns: &'static str,
+    timeouts: Timeouts,
 ) -> Result<AcceptedStream<Io>, io::Error> {
-    let mut stream = RawXmlStream::new(io, stream_ns);
+    let mut stream = RawXmlStream::new(io, stream_ns, timeouts);
     let header = StreamHeader::recv(Pin::new(&mut stream)).await?;
     Ok(AcceptedStream { stream, header })
 }
@@ -319,14 +321,21 @@ impl<Io: AsyncBufRead, T: FromXml + AsXml + fmt::Debug> Stream for XmlStream<Io,
     type Item = Result<T, ReadError>;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        let this = self.project();
+        let mut this = self.project();
         let result = match this.read_state.as_mut() {
             None => {
                 // awaiting eof.
-                return match ready!(this.inner.poll_next(cx)) {
-                    None => Poll::Ready(None),
-                    Some(Ok(_)) => unreachable!("xml parser allowed data after stream footer"),
-                    Some(Err(e)) => Poll::Ready(Some(Err(ReadError::HardError(e)))),
+                return loop {
+                    match ready!(this.inner.as_mut().poll_next(cx)) {
+                        None => break Poll::Ready(None),
+                        Some(Ok(_)) => unreachable!("xml parser allowed data after stream footer"),
+                        Some(Err(RawError::Io(e))) => {
+                            break Poll::Ready(Some(Err(ReadError::HardError(e))))
+                        }
+                        // Swallow soft timeout, we don't want the user to trigger
+                        // anything here.
+                        Some(Err(RawError::SoftTimeout)) => continue,
+                    }
                 };
             }
             Some(read_state) => ready!(read_state.poll_advance(this.inner, cx)),
@@ -341,6 +350,7 @@ impl<Io: AsyncBufRead, T: FromXml + AsXml + fmt::Debug> Stream for XmlStream<Io,
                 // another read state.
                 return Poll::Ready(Some(Err(ReadError::StreamFooterReceived)));
             }
+            Err(ReadXsoError::SoftTimeout) => Poll::Ready(Some(Err(ReadError::SoftTimeout))),
         };
         *this.read_state = Some(ReadXsoState::default());
         result

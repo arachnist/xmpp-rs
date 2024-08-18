@@ -44,7 +44,7 @@ use crate::{
     connect::{DnsConfig, ServerConnector, ServerConnectorError},
     error::{Error, ProtocolError},
     xmlstream::{
-        initiate_stream, PendingFeaturesRecv, ReadError, StreamHeader, XmppStream,
+        initiate_stream, PendingFeaturesRecv, ReadError, StreamHeader, Timeouts, XmppStream,
         XmppStreamElement,
     },
     Client,
@@ -70,6 +70,7 @@ impl ServerConnector for StartTlsServerConnector {
         &self,
         jid: &Jid,
         ns: &'static str,
+        timeouts: Timeouts,
     ) -> Result<PendingFeaturesRecv<Self::Stream>, Error> {
         let tcp_stream = tokio::io::BufStream::new(self.0.resolve().await?);
 
@@ -82,6 +83,7 @@ impl ServerConnector for StartTlsServerConnector {
                 from: None,
                 id: None,
             },
+            timeouts,
         )
         .await?;
         let (features, xmpp_stream) = xmpp_stream.recv_features().await?;
@@ -98,6 +100,7 @@ impl ServerConnector for StartTlsServerConnector {
                     from: None,
                     id: None,
                 },
+                timeouts,
             )
             .await?)
         } else {

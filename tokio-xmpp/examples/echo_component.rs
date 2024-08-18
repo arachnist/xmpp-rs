@@ -31,9 +31,7 @@ async fn main() {
 
     // If you don't need a custom server but default localhost:5347, you can use
     // Component::new() directly
-    let mut component = Component::new_plaintext(jid, password, server)
-        .await
-        .unwrap();
+    let mut component = Component::new(jid, password).await.unwrap();
 
     // Make the two interfaces for sending and receiving independent
     // of each other so we can move one into a closure.

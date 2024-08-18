@@ -4,7 +4,7 @@ use sasl::common::ChannelBinding;
 use tokio::io::{AsyncBufRead, AsyncWrite};
 use xmpp_parsers::jid::Jid;
 
-use crate::xmlstream::PendingFeaturesRecv;
+use crate::xmlstream::{PendingFeaturesRecv, Timeouts};
 use crate::Error;
 
 #[cfg(feature = "starttls")]
@@ -36,6 +36,7 @@ pub trait ServerConnector: Clone + core::fmt::Debug + Send + Unpin + 'static {
         &self,
         jid: &Jid,
         ns: &'static str,
+        timeouts: Timeouts,
     ) -> impl std::future::Future<Output = Result<PendingFeaturesRecv<Self::Stream>, Error>> + Send;
 
     /// Return channel binding data if available

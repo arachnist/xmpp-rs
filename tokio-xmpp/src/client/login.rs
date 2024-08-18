@@ -19,7 +19,9 @@ use crate::{
     client::bind::bind,
     connect::ServerConnector,
     error::{AuthError, Error, ProtocolError},
-    xmlstream::{xmpp::XmppStreamElement, InitiatingStream, ReadError, StreamHeader, XmppStream},
+    xmlstream::{
+        xmpp::XmppStreamElement, InitiatingStream, ReadError, StreamHeader, Timeouts, XmppStream,
+    },
 };
 
 pub async fn auth<S: AsyncBufRead + AsyncWrite + Unpin>(
@@ -107,11 +109,12 @@ pub async fn client_login<C: ServerConnector>(
     server: C,
     jid: Jid,
     password: String,
+    timeouts: Timeouts,
 ) -> Result<(Option<FullJid>, StreamFeatures, XmppStream<C::Stream>), Error> {
     let username = jid.node().unwrap().as_str();
     let password = password;
 
-    let xmpp_stream = server.connect(&jid, ns::JABBER_CLIENT).await?;
+    let xmpp_stream = server.connect(&jid, ns::JABBER_CLIENT, timeouts).await?;
     let (features, xmpp_stream) = xmpp_stream.recv_features().await?;
 
     let channel_binding = C::channel_binding(xmpp_stream.get_stream())?;

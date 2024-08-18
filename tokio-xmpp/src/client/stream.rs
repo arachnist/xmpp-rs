@@ -56,6 +56,7 @@ impl<C: ServerConnector> Stream for Client<C> {
                     self.connector.clone(),
                     self.jid.clone(),
                     self.password.clone(),
+                    self.timeouts,
                 ));
                 self.state = ClientState::Connecting(connect);
                 self.poll_next(cx)
