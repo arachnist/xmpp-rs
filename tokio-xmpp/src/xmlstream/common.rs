@@ -18,8 +18,10 @@ use tokio::io::{AsyncBufRead, AsyncWrite};
 
 use xso::{
     exports::rxml::{self, writer::TrackNamespace, xml_ncname, Event, Namespace},
-    FromEventsBuilder, FromXml, Item,
+    AsXml, FromEventsBuilder, FromXml, Item,
 };
+
+use super::capture::{log_enabled, log_recv, log_send, CaptureBufRead};
 
 use xmpp_parsers::ns::STREAM as XML_STREAM_NS;
 
@@ -30,7 +32,7 @@ pin_project_lite::pin_project! {
     pub(super) struct RawXmlStream<Io> {
         // The parser used for deserialising data.
         #[pin]
-        parser: rxml::AsyncReader<Io>,
+        parser: rxml::AsyncReader<CaptureBufRead<Io>>,
 
         // The writer used for serialising data.
         writer: rxml::writer::Encoder<rxml::writer::SimpleNamespaces>,
@@ -43,6 +45,10 @@ pin_project_lite::pin_project! {
         // `poll_ready` and `poll_flush`, while appending serialised data
         // happens in `start_send`.
         tx_buffer: BytesMut,
+
+        // Position inside tx_buffer up to which to-be-sent data has already
+        // been logged.
+        tx_buffer_logged: usize,
 
         // This signifies the limit at the point of which the Sink will
         // refuse to accept more data: if the `tx_buffer`'s size grows beyond
@@ -108,9 +114,14 @@ impl<Io: AsyncBufRead + AsyncWrite> RawXmlStream<Io> {
 
     pub(super) fn new(io: Io, stream_ns: &'static str) -> Self {
         let parser = rxml::Parser::default();
+        let mut io = CaptureBufRead::wrap(io);
+        if log_enabled() {
+            io.enable_capture();
+        }
         Self {
             parser: rxml::AsyncReader::wrap(io, parser),
             writer: Self::new_writer(stream_ns),
+            tx_buffer_logged: 0,
             stream_ns,
             tx_buffer: BytesMut::new(),
 
@@ -129,7 +140,37 @@ impl<Io: AsyncBufRead + AsyncWrite> RawXmlStream<Io> {
     }
 
     pub(super) fn into_inner(self) -> Io {
-        self.parser.into_inner().0
+        self.parser.into_inner().0.into_inner()
+    }
+}
+
+impl<Io: AsyncWrite> RawXmlStream<Io> {
+    /// Start sending an entire XSO.
+    ///
+    /// Unlike the `Sink` implementation, this provides nice syntax
+    /// highlighting for the serialised data in log outputs (if enabled) *and*
+    /// is error safe: if the XSO fails to serialise completely, it will be as
+    /// if it hadn't been attempted to serialise it at all.
+    ///
+    /// Note that, like with `start_send`, the caller is responsible for
+    /// ensuring that the stream is ready by polling
+    /// [`<Self as Sink>::poll_ready`] as needed.
+    pub(super) fn start_send_xso<T: AsXml>(self: Pin<&mut Self>, xso: &T) -> io::Result<()> {
+        let mut this = self.project();
+        let prev_len = this.tx_buffer.len();
+        match this.try_send_xso(xso) {
+            Ok(()) => Ok(()),
+            Err(e) => {
+                let curr_len = this.tx_buffer.len();
+                this.tx_buffer.truncate(prev_len);
+                log::trace!(
+                    "SEND failed: {}. Rewinding buffer by {} bytes.",
+                    e,
+                    curr_len - prev_len
+                );
+                Err(e)
+            }
+        }
     }
 }
 
@@ -138,8 +179,12 @@ impl<Io> RawXmlStream<Io> {
         self.project().parser.parser_pinned()
     }
 
+    fn stream_pinned(self: Pin<&mut Self>) -> Pin<&mut CaptureBufRead<Io>> {
+        self.project().parser.inner_pinned()
+    }
+
     pub(super) fn get_stream(&self) -> &Io {
-        self.parser.inner()
+        self.parser.inner().inner()
     }
 }
 
@@ -161,7 +206,38 @@ impl<Io: AsyncBufRead> Stream for RawXmlStream<Io> {
 }
 
 impl<'x, Io: AsyncWrite> RawXmlStreamProj<'x, Io> {
+    fn flush_tx_log(&mut self) {
+        let range = &self.tx_buffer[*self.tx_buffer_logged..];
+        if range.len() == 0 {
+            return;
+        }
+        log_send(range);
+        *self.tx_buffer_logged = self.tx_buffer.len();
+    }
+
+    fn start_send(&mut self, item: &xso::Item<'_>) -> io::Result<()> {
+        self.writer
+            .encode_into_bytes(item.as_rxml_item(), self.tx_buffer)
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))
+    }
+
+    fn try_send_xso<T: AsXml>(&mut self, xso: &T) -> io::Result<()> {
+        let iter = match xso.as_xml_iter() {
+            Ok(v) => v,
+            Err(e) => return Err(io::Error::new(io::ErrorKind::InvalidInput, e)),
+        };
+        for item in iter {
+            let item = match item {
+                Ok(v) => v,
+                Err(e) => return Err(io::Error::new(io::ErrorKind::InvalidInput, e)),
+            };
+            self.start_send(&item)?;
+        }
+        Ok(())
+    }
+
     fn progress_write(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), io::Error>> {
+        self.flush_tx_log();
         while self.tx_buffer.len() > 0 {
             let written = match ready!(self
                 .parser
@@ -173,6 +249,10 @@ impl<'x, Io: AsyncWrite> RawXmlStreamProj<'x, Io> {
                 Err(e) => return Poll::Ready(Err(e)),
             };
             self.tx_buffer.advance(written);
+            *self.tx_buffer_logged = self
+                .tx_buffer_logged
+                .checked_sub(written)
+                .expect("Buffer arithmetic error");
         }
         Poll::Ready(Ok(()))
     }
@@ -212,10 +292,8 @@ impl<'x, Io: AsyncWrite> Sink<xso::Item<'x>> for RawXmlStream<Io> {
     }
 
     fn start_send(self: Pin<&mut Self>, item: xso::Item<'x>) -> Result<(), Self::Error> {
-        let this = self.project();
-        this.writer
-            .encode_into_bytes(item.as_rxml_item(), this.tx_buffer)
-            .map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))
+        let mut this = self.project();
+        this.start_send(&item)
     }
 }
 
@@ -346,42 +424,48 @@ impl<T: FromXml> ReadXsoState<T> {
                 .as_mut()
                 .parser_pinned()
                 .set_text_buffering(text_buffering);
+
             let ev = ready!(source.as_mut().poll_next(cx)).transpose()?;
             match self {
-                ReadXsoState::PreData => match ev {
-                    Some(rxml::Event::XmlDeclaration(_, _)) => (),
-                    Some(rxml::Event::Text(_, data)) => {
-                        if xso::is_xml_whitespace(data.as_bytes()) {
-                            continue;
-                        } else {
+                ReadXsoState::PreData => {
+                    log::trace!("ReadXsoState::PreData ev = {:?}", ev);
+                    match ev {
+                        Some(rxml::Event::XmlDeclaration(_, _)) => (),
+                        Some(rxml::Event::Text(_, data)) => {
+                            if xso::is_xml_whitespace(data.as_bytes()) {
+                                log::trace!("Received {} bytes of whitespace", data.len());
+                                source.as_mut().stream_pinned().discard_capture();
+                                continue;
+                            } else {
+                                *self = ReadXsoState::Done;
+                                return Poll::Ready(Err(io::Error::new(
+                                    io::ErrorKind::InvalidData,
+                                    "non-whitespace text content before XSO",
+                                )
+                                .into()));
+                            }
+                        }
+                        Some(rxml::Event::StartElement(_, name, attrs)) => {
+                            *self = ReadXsoState::Parsing(
+                                <Result<T, xso::error::Error> as FromXml>::from_events(name, attrs)
+                                    .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?,
+                            );
+                        }
+                        // Amounts to EOF, as we expect to start on the stream level.
+                        Some(rxml::Event::EndElement(_)) => {
+                            *self = ReadXsoState::Done;
+                            return Poll::Ready(Err(ReadXsoError::Footer));
+                        }
+                        None => {
                             *self = ReadXsoState::Done;
                             return Poll::Ready(Err(io::Error::new(
                                 io::ErrorKind::InvalidData,
-                                "non-whitespace text content before XSO",
+                                "end of parent element before XSO started",
                             )
                             .into()));
                         }
                     }
-                    Some(rxml::Event::StartElement(_, name, attrs)) => {
-                        *self = ReadXsoState::Parsing(
-                            <Result<T, xso::error::Error> as FromXml>::from_events(name, attrs)
-                                .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?,
-                        );
-                    }
-                    // Amounts to EOF, as we expect to start on the stream level.
-                    Some(rxml::Event::EndElement(_)) => {
-                        *self = ReadXsoState::Done;
-                        return Poll::Ready(Err(ReadXsoError::Footer));
-                    }
-                    None => {
-                        *self = ReadXsoState::Done;
-                        return Poll::Ready(Err(io::Error::new(
-                            io::ErrorKind::UnexpectedEof,
-                            "end of parent element before XSO started",
-                        )
-                        .into()));
-                    }
-                },
+                }
                 ReadXsoState::Parsing(builder) => {
                     let Some(ev) = ev else {
                         *self = ReadXsoState::Done;
@@ -395,6 +479,7 @@ impl<T: FromXml> ReadXsoState<T> {
                     match builder.feed(ev) {
                         Err(err) => {
                             *self = ReadXsoState::Done;
+                            source.as_mut().stream_pinned().discard_capture();
                             return Poll::Ready(Err(io::Error::new(
                                 io::ErrorKind::InvalidData,
                                 err,
@@ -403,10 +488,12 @@ impl<T: FromXml> ReadXsoState<T> {
                         }
                         Ok(Some(Err(err))) => {
                             *self = ReadXsoState::Done;
+                            log_recv(Some(&err), source.as_mut().stream_pinned().take_capture());
                             return Poll::Ready(Err(ReadXsoError::Parse(err)));
                         }
                         Ok(Some(Ok(value))) => {
                             *self = ReadXsoState::Done;
+                            log_recv(None, source.as_mut().stream_pinned().take_capture());
                             return Poll::Ready(Ok(value));
                         }
                         Ok(None) => (),

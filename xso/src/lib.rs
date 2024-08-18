@@ -416,6 +416,18 @@ pub fn from_bytes<T: FromXml>(mut buf: &[u8]) -> Result<T, self::error::Error> {
     Err(self::error::Error::XmlError(rxml::Error::InvalidEof(None)))
 }
 
+/// Attempt to serialise a type implementing [`AsXml`] to a vector of bytes.
+pub fn to_vec<T: AsXml>(xso: &T) -> Result<Vec<u8>, self::error::Error> {
+    let iter = xso.as_xml_iter()?;
+    let mut writer = rxml::writer::Encoder::new();
+    let mut buf = Vec::new();
+    for item in iter {
+        let item = item?;
+        writer.encode(item.as_rxml_item(), &mut buf)?;
+    }
+    Ok(buf)
+}
+
 /// Return true if the string contains exclusively XML whitespace.
 ///
 /// XML whitespace is defined as U+0020 (space), U+0009 (tab), U+000a

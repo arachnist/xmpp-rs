@@ -56,9 +56,12 @@
 //! [`XmlStream::accept_reset`] handles sending the last pre-reset element and
 //! resetting the stream in a single step.
 
+use core::fmt;
 use core::pin::Pin;
 use core::task::{Context, Poll};
 use std::io;
+#[cfg(feature = "syntax-highlighting")]
+use std::sync::OnceLock;
 
 use futures::{ready, Sink, SinkExt, Stream};
 
@@ -66,6 +69,7 @@ use tokio::io::{AsyncBufRead, AsyncWrite};
 
 use xso::{AsXml, FromXml, Item};
 
+mod capture;
 mod common;
 mod initiator;
 mod responder;
@@ -78,6 +82,40 @@ use self::common::{RawXmlStream, ReadXsoError, ReadXsoState};
 pub use self::initiator::{InitiatingStream, PendingFeaturesRecv};
 pub use self::responder::{AcceptedStream, PendingFeaturesSend};
 pub use self::xmpp::XmppStreamElement;
+
+#[cfg(feature = "syntax-highlighting")]
+static PS: OnceLock<syntect::parsing::SyntaxSet> = OnceLock::new();
+#[cfg(feature = "syntax-highlighting")]
+static SYNTAX: OnceLock<syntect::parsing::SyntaxReference> = OnceLock::new();
+#[cfg(feature = "syntax-highlighting")]
+static THEME: OnceLock<syntect::highlighting::Theme> = OnceLock::new();
+
+#[cfg(feature = "syntax-highlighting")]
+fn highlight_xml(xml: &str) -> String {
+    let ps = PS.get_or_init(syntect::parsing::SyntaxSet::load_defaults_newlines);
+    let mut h = syntect::easy::HighlightLines::new(
+        SYNTAX.get_or_init(|| ps.find_syntax_by_extension("xml").unwrap().clone()),
+        THEME.get_or_init(|| {
+            syntect::highlighting::ThemeSet::load_defaults().themes["Solarized (dark)"].clone()
+        }),
+    );
+
+    let ranges: Vec<_> = h.highlight_line(&xml, ps).unwrap();
+    let escaped = syntect::util::as_24_bit_terminal_escaped(&ranges[..], false);
+    format!("{}\x1b[0m", escaped)
+}
+
+struct LogXsoBuf<'x>(&'x [u8]);
+
+impl<'x> fmt::Display for LogXsoBuf<'x> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        // We always generate UTF-8, so this should be good... I think.
+        let text = std::str::from_utf8(&self.0).unwrap();
+        #[cfg(feature = "syntax-highlighting")]
+        let text = highlight_xml(text);
+        f.write_str(&text)
+    }
+}
 
 /// Initiate a new stream
 ///
@@ -212,7 +250,7 @@ impl<Io: AsyncBufRead, T: FromXml + AsXml> XmlStream<Io, T> {
     }
 }
 
-impl<Io: AsyncBufRead + AsyncWrite + Unpin, T: FromXml + AsXml> XmlStream<Io, T> {
+impl<Io: AsyncBufRead + AsyncWrite + Unpin, T: FromXml + AsXml + fmt::Debug> XmlStream<Io, T> {
     /// Initiate a stream reset
     ///
     /// To actually send the stream header, call
@@ -277,7 +315,7 @@ impl<Io: AsyncBufRead + AsyncWrite + Unpin, T: FromXml + AsXml> XmlStream<Io, T>
     }
 }
 
-impl<Io: AsyncBufRead, T: FromXml + AsXml> Stream for XmlStream<Io, T> {
+impl<Io: AsyncBufRead, T: FromXml + AsXml + fmt::Debug> Stream for XmlStream<Io, T> {
     type Item = Result<T, ReadError>;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
@@ -300,7 +338,7 @@ impl<Io: AsyncBufRead, T: FromXml + AsXml> Stream for XmlStream<Io, T> {
     }
 }
 
-impl<'x, Io: AsyncWrite, T: FromXml + AsXml> Sink<&'x T> for XmlStream<Io, T> {
+impl<'x, Io: AsyncWrite, T: FromXml + AsXml + fmt::Debug> Sink<&'x T> for XmlStream<Io, T> {
     type Error = io::Error;
 
     fn poll_ready(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
@@ -347,20 +385,9 @@ impl<'x, Io: AsyncWrite, T: FromXml + AsXml> Sink<&'x T> for XmlStream<Io, T> {
     }
 
     fn start_send(self: Pin<&mut Self>, item: &'x T) -> Result<(), Self::Error> {
-        let mut this = self.project();
+        let this = self.project();
         this.write_state.check_writable()?;
-        let iter = match item.as_xml_iter() {
-            Ok(v) => v,
-            Err(e) => return Err(io::Error::new(io::ErrorKind::InvalidInput, e)),
-        };
-        for item in iter {
-            let item = match item {
-                Ok(v) => v,
-                Err(e) => return Err(io::Error::new(io::ErrorKind::InvalidInput, e)),
-            };
-            this.inner.as_mut().start_send(item)?;
-        }
-        Ok(())
+        this.inner.start_send_xso(item)
     }
 }
 

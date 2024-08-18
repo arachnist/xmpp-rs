@@ -83,14 +83,7 @@ impl<Io: AsyncBufRead + AsyncWrite + Unpin> PendingFeaturesSend<Io> {
         features: &'_ StreamFeatures,
     ) -> io::Result<XmlStream<Io, T>> {
         let Self { mut stream } = self;
-        let iter = features
-            .as_xml_iter()
-            .map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?;
-
-        for item in iter {
-            let item = item.map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?;
-            stream.send(item).await?;
-        }
+        Pin::new(&mut stream).start_send_xso(features)?;
         stream.flush().await?;
 
         Ok(XmlStream::wrap(stream))
