@@ -157,6 +157,36 @@ pub struct StreamManagement {
     pub optional: Option<Optional>,
 }
 
+/// Application-specific error condition to use when the peer acknowledges
+/// more stanzas than the local side has sent.
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::SM, name = "handled-count-too-high")]
+pub struct HandledCountTooHigh {
+    /// The `h` value received by the peer.
+    #[xml(attribute)]
+    pub h: u32,
+
+    /// The number of stanzas which were in fact sent.
+    #[xml(attribute = "send-count")]
+    pub send_count: u32,
+}
+
+impl From<HandledCountTooHigh> for crate::stream_error::StreamError {
+    fn from(other: HandledCountTooHigh) -> Self {
+        Self {
+            condition: crate::stream_error::DefinedCondition::UndefinedCondition,
+            text: Some((
+                None,
+                format!(
+                    "You acknowledged {} stanza(s), while I only sent {} so far.",
+                    other.h, other.send_count
+                ),
+            )),
+            application_specific: vec![other.into()],
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -176,6 +206,7 @@ mod tests {
         assert_size!(Resumed, 16);
         assert_size!(StreamManagement, 1);
         assert_size!(Optional, 0);
+        assert_size!(HandledCountTooHigh, 8);
     }
 
     #[cfg(target_pointer_width = "64")]
@@ -192,6 +223,7 @@ mod tests {
         assert_size!(Resumed, 32);
         assert_size!(StreamManagement, 1);
         assert_size!(Optional, 0);
+        assert_size!(HandledCountTooHigh, 8);
     }
 
     #[test]
@@ -205,6 +237,16 @@ mod tests {
     fn stream_feature() {
         let elem: Element = "<sm xmlns='urn:xmpp:sm:3'/>".parse().unwrap();
         StreamManagement::try_from(elem).unwrap();
+    }
+
+    #[test]
+    fn handle_count_too_high() {
+        let elem: Element = "<handled-count-too-high xmlns='urn:xmpp:sm:3' h='10' send-count='8'/>"
+            .parse()
+            .unwrap();
+        let elem = HandledCountTooHigh::try_from(elem).unwrap();
+        assert_eq!(elem.h, 10);
+        assert_eq!(elem.send_count, 8);
     }
 
     #[test]

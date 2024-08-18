@@ -32,6 +32,7 @@ XXXX-YY-ZZ RELEASER <admin@example.com>
         - RFC 6120 stream errors
     * Improvements:
         - Add support for `<optional/> in XEP-0198 feature advertisment
+        - Add support application-specific error conditions in XEP-0198
 
 Version 0.21.0:
 2024-07-25 Emmanuel Gil Peyrot <linkmauve@linkmauve.fr>
