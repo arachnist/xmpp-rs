@@ -395,3 +395,73 @@ async fn test_emits_soft_timeout_after_silence() {
     responder.await.unwrap().expect("responder failed");
     initiator.await.unwrap().expect("initiator failed");
 }
+
+#[tokio::test]
+async fn test_can_receive_after_shutdown() {
+    let (lhs, rhs) = tokio::io::duplex(65536);
+
+    let initiator = tokio::spawn(async move {
+        let stream = initiate_stream(
+            tokio::io::BufStream::new(lhs),
+            "jabber:client",
+            StreamHeader::default(),
+            Timeouts::tight(),
+        )
+        .await?;
+        let (_, mut stream) = stream.recv_features::<Data>().await?;
+        match stream.next().await {
+            Some(Err(ReadError::StreamFooterReceived)) => (),
+            other => panic!("unexpected stream message: {:?}", other),
+        }
+        match stream.next().await {
+            None => (),
+            other => panic!("unexpected stream message: {:?}", other),
+        }
+        stream
+            .send(&Data {
+                contents: "hello".to_owned(),
+            })
+            .await?;
+        stream
+            .send(&Data {
+                contents: "world!".to_owned(),
+            })
+            .await?;
+        stream.close().await?;
+        Ok::<_, io::Error>(())
+    });
+
+    let responder = tokio::spawn(async move {
+        let stream = accept_stream(
+            tokio::io::BufStream::new(rhs),
+            "jabber:client",
+            Timeouts::tight(),
+        )
+        .await?;
+        let stream = stream.send_header(StreamHeader::default()).await?;
+        let mut stream = stream
+            .send_features::<Data>(&StreamFeatures::default())
+            .await?;
+        stream.shutdown().await?;
+        match stream.next().await {
+            Some(Ok(Data { contents })) => assert_eq!(contents, "hello"),
+            other => panic!("unexpected stream message: {:?}", other),
+        }
+        match stream.next().await {
+            Some(Ok(Data { contents })) => assert_eq!(contents, "world!"),
+            other => panic!("unexpected stream message: {:?}", other),
+        }
+        match stream.next().await {
+            Some(Err(ReadError::StreamFooterReceived)) => (),
+            other => panic!("unexpected stream message: {:?}", other),
+        }
+        match stream.next().await {
+            None => (),
+            other => panic!("unexpected stream message: {:?}", other),
+        }
+        Ok::<_, io::Error>(())
+    });
+
+    responder.await.unwrap().expect("responder failed");
+    initiator.await.unwrap().expect("initiator failed");
+}

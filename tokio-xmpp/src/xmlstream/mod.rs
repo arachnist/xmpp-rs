@@ -57,6 +57,7 @@
 //! resetting the stream in a single step.
 
 use core::fmt;
+use core::future::Future;
 use core::pin::Pin;
 use core::task::{Context, Poll};
 use std::io;
@@ -357,22 +358,11 @@ impl<Io: AsyncBufRead, T: FromXml + AsXml + fmt::Debug> Stream for XmlStream<Io,
     }
 }
 
-impl<'x, Io: AsyncWrite, T: FromXml + AsXml + fmt::Debug> Sink<&'x T> for XmlStream<Io, T> {
-    type Error = io::Error;
-
-    fn poll_ready(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        let this = self.project();
-        this.write_state.check_writable()?;
-        this.inner.poll_ready(cx)
-    }
-
-    fn poll_flush(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        let this = self.project();
-        this.write_state.check_writable()?;
-        this.inner.poll_flush(cx)
-    }
-
-    fn poll_close(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+impl<Io: AsyncWrite, T: FromXml + AsXml> XmlStream<Io, T> {
+    /// Initiate stream shutdown and poll for completion.
+    ///
+    /// Please see [`Self::shutdown`] for details.
+    pub fn poll_shutdown(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Result<(), io::Error>> {
         let mut this = self.project();
         this.write_state.check_ok()?;
         loop {
@@ -401,14 +391,49 @@ impl<'x, Io: AsyncWrite, T: FromXml + AsXml + fmt::Debug> Sink<&'x T> for XmlStr
                     }
                     *this.write_state = WriteState::FooterSent;
                 }
-                // Footer sent => just poll the inner sink for flush.
-                WriteState::FooterSent => {
-                    ready!(this.inner.as_mut().poll_flush(cx)?);
-                    break;
-                }
+                // Footer sent => just close the inner stream.
+                WriteState::FooterSent => break,
                 WriteState::Failed => unreachable!(), // caught by check_ok()
             }
         }
+        this.inner.poll_shutdown(cx)
+    }
+}
+
+impl<Io: AsyncWrite + Unpin, T: FromXml + AsXml> XmlStream<Io, T> {
+    /// Send the stream footer and close the sender side of the underlying
+    /// transport.
+    ///
+    /// Unlike `poll_close` (from the `Sink` impls), this will not close the
+    /// receiving side of the underlying the transport. It is advisable to call
+    /// `poll_close` eventually after `poll_shutdown` in order to gracefully
+    /// handle situations where the remote side does not close the stream
+    /// cleanly.
+    pub fn shutdown(&mut self) -> Shutdown<'_, Io, T> {
+        Shutdown {
+            stream: Pin::new(self),
+        }
+    }
+}
+
+impl<'x, Io: AsyncWrite, T: FromXml + AsXml> Sink<&'x T> for XmlStream<Io, T> {
+    type Error = io::Error;
+
+    fn poll_ready(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+        let this = self.project();
+        this.write_state.check_writable()?;
+        this.inner.poll_ready(cx)
+    }
+
+    fn poll_flush(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+        let this = self.project();
+        this.write_state.check_writable()?;
+        this.inner.poll_flush(cx)
+    }
+
+    fn poll_close(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+        ready!(self.as_mut().poll_shutdown(cx))?;
+        let this = self.project();
         this.inner.poll_close(cx)
     }
 
@@ -416,6 +441,20 @@ impl<'x, Io: AsyncWrite, T: FromXml + AsXml + fmt::Debug> Sink<&'x T> for XmlStr
         let this = self.project();
         this.write_state.check_writable()?;
         this.inner.start_send_xso(item)
+    }
+}
+
+/// Future implementing [`XmlStream::shutdown`] using
+/// [`XmlStream::poll_shutdown`].
+pub struct Shutdown<'a, Io: AsyncWrite, T: FromXml + AsXml> {
+    stream: Pin<&'a mut XmlStream<Io, T>>,
+}
+
+impl<'a, Io: AsyncWrite, T: FromXml + AsXml> Future for Shutdown<'a, Io, T> {
+    type Output = io::Result<()>;
+
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
+        self.stream.as_mut().poll_shutdown(cx)
     }
 }
 

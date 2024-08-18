@@ -404,6 +404,22 @@ impl<'x, Io: AsyncWrite> RawXmlStreamProj<'x, Io> {
     }
 }
 
+impl<Io: AsyncWrite> RawXmlStream<Io> {
+    /// Flush all buffered data and shut down the sender side of the
+    /// underlying transport.
+    ///
+    /// Unlike `poll_close` (from the `Sink` impls), this will not close the
+    /// receiving side of the underlying the transport. It is advisable to call
+    /// `poll_close` eventually after `poll_shutdown` in order to gracefully
+    /// handle situations where the remote side does not close the stream
+    /// cleanly.
+    pub fn poll_shutdown(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
+        ready!(self.as_mut().poll_flush(cx))?;
+        let this = self.project();
+        this.parser.inner_pinned().poll_shutdown(cx)
+    }
+}
+
 impl<'x, Io: AsyncWrite> Sink<xso::Item<'x>> for RawXmlStream<Io> {
     type Error = io::Error;
 
