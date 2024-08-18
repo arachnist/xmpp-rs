@@ -321,7 +321,14 @@ impl<Io: AsyncBufRead, T: FromXml + AsXml + fmt::Debug> Stream for XmlStream<Io,
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let this = self.project();
         let result = match this.read_state.as_mut() {
-            None => return Poll::Ready(Some(Err(ReadError::StreamFooterReceived))),
+            None => {
+                // awaiting eof.
+                return match ready!(this.inner.poll_next(cx)) {
+                    None => Poll::Ready(None),
+                    Some(Ok(_)) => unreachable!("xml parser allowed data after stream footer"),
+                    Some(Err(e)) => Poll::Ready(Some(Err(ReadError::HardError(e)))),
+                };
+            }
             Some(read_state) => ready!(read_state.poll_advance(this.inner, cx)),
         };
         let result = match result {
@@ -330,7 +337,9 @@ impl<Io: AsyncBufRead, T: FromXml + AsXml + fmt::Debug> Stream for XmlStream<Io,
             Err(ReadXsoError::Parse(e)) => Poll::Ready(Some(Err(ReadError::ParseError(e)))),
             Err(ReadXsoError::Footer) => {
                 *this.read_state = None;
-                Poll::Ready(Some(Err(ReadError::StreamFooterReceived)))
+                // Return early here, because we cannot allow recreation of
+                // another read state.
+                return Poll::Ready(Some(Err(ReadError::StreamFooterReceived)));
             }
         };
         *this.read_state = Some(ReadXsoState::default());
@@ -367,17 +376,26 @@ impl<'x, Io: AsyncWrite, T: FromXml + AsXml + fmt::Debug> Sink<&'x T> for XmlStr
                     match ready!(this.inner.as_mut().poll_ready(cx))
                         .and_then(|_| this.inner.as_mut().start_send(Item::ElementFoot))
                     {
-                        Ok(()) => (),
+                        Ok(()) => {
+                            log::trace!("stream footer sent successfully");
+                        }
                         // If it fails, we fail the sink immediately.
                         Err(e) => {
+                            log::debug!(
+                                "omitting stream footer: failed to make stream ready: {}",
+                                e
+                            );
                             *this.write_state = WriteState::Failed;
                             return Poll::Ready(Err(e));
                         }
                     }
                     *this.write_state = WriteState::FooterSent;
                 }
-                // Footer sent => just poll the inner sink for closure.
-                WriteState::FooterSent => break,
+                // Footer sent => just poll the inner sink for flush.
+                WriteState::FooterSent => {
+                    ready!(this.inner.as_mut().poll_flush(cx)?);
+                    break;
+                }
                 WriteState::Failed => unreachable!(), // caught by check_ok()
             }
         }

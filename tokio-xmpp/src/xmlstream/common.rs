@@ -460,13 +460,14 @@ impl<T: FromXml> ReadXsoState<T> {
                             *self = ReadXsoState::Done;
                             return Poll::Ready(Err(io::Error::new(
                                 io::ErrorKind::InvalidData,
-                                "end of parent element before XSO started",
+                                "eof before XSO started",
                             )
                             .into()));
                         }
                     }
                 }
                 ReadXsoState::Parsing(builder) => {
+                    log::trace!("ReadXsoState::Parsing ev = {:?}", ev);
                     let Some(ev) = ev else {
                         *self = ReadXsoState::Done;
                         return Poll::Ready(Err(io::Error::new(
