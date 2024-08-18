@@ -572,6 +572,15 @@ impl Compound {
         }
     }
 
+    /// Construct a tuple type with this compound's field's types in the same
+    /// order as they appear in the compound.
+    pub(crate) fn to_single_or_tuple_ty(&self) -> Type {
+        match self.single_ty() {
+            None => self.to_tuple_ty().into(),
+            Some(v) => v.clone(),
+        }
+    }
+
     /// Construct a tuple type with references to this compound's field's
     /// types in the same order as they appear in the compound, with the given
     /// lifetime.

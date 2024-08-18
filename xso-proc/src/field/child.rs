@@ -10,8 +10,8 @@
 //! implementations in a single type.
 
 use proc_macro2::{Span, TokenStream};
-use quote::quote;
-use syn::*;
+use quote::{quote, quote_spanned};
+use syn::{spanned::Spanned, *};
 
 use crate::compound::Compound;
 use crate::error_message::{self, ParentRef};
@@ -53,9 +53,13 @@ impl Field for ChildField {
         };
 
         let (extra_defs, matcher, fetch, builder) = match self.extract {
-            Some(ref extract) => {
-                extract.make_from_xml_builder_parts(scope, container_name, member, is_container)?
-            }
+            Some(ref extract) => extract.make_from_xml_builder_parts(
+                scope,
+                container_name,
+                member,
+                is_container,
+                ty,
+            )?,
             None => {
                 let FromEventsScope {
                     ref substate_result,
@@ -165,6 +169,7 @@ impl Field for ChildField {
         let (extra_defs, init, iter_ty) = match self.extract {
             Some(ref extract) => extract.make_as_item_iter_parts(
                 scope,
+                ty,
                 container_name,
                 bound_name,
                 member,
@@ -271,6 +276,7 @@ impl ExtractDef {
         container_name: &ParentRef,
         member: &Member,
         collecting_into_container: bool,
+        output_ty: &Type,
     ) -> Result<(TokenStream, TokenStream, TokenStream, Type)> {
         let FromEventsScope {
             ref substate_result,
@@ -302,6 +308,8 @@ impl ExtractDef {
         let from_xml_builder_ty = ty_from_ident(from_xml_builder_ty_ident.clone()).into();
 
         let matcher = quote! { #state_ty_ident::new(name, attrs).map(|x| #from_xml_builder_ty_ident(::core::option::Option::Some(x))) };
+
+        let inner_ty = self.parts.to_single_or_tuple_ty();
 
         let fetch = if self.parts.field_count() == 1 {
             // If we extract only a single field, we automatically unwrap the
@@ -337,8 +345,9 @@ impl ExtractDef {
             // the type constraint imposed by the place the value is *used*,
             // which is strictly bound by the field's type (so there is, in
             // fact, no ambiguity). So this works all kinds of magic.
-            quote! {
-                #fetch.into()
+            quote_spanned! {
+                output_ty.span()=>
+                    <#output_ty as ::core::convert::From::<#inner_ty>>::from(#fetch)
             }
         };
 
@@ -352,6 +361,7 @@ impl ExtractDef {
     fn make_as_item_iter_parts(
         &self,
         scope: &AsItemsScope,
+        input_ty: &Type,
         container_name: &ParentRef,
         bound_name: &Ident,
         member: &Member,
@@ -450,9 +460,12 @@ impl ExtractDef {
             // about that in [`make_from_xml_builder_parts`] implementation
             // corresponding to this code above, and we will not repeat it
             // here.
+            let cast = quote_spanned! { input_ty.span()=>
+                ::core::option::Option::from(#bound_name)
+            };
             (
                 quote! {
-                    ::xso::asxml::OptionAsXml::new(::core::option::Option::from(#bound_name).map(|#bound_name: #inner_ty| {
+                    ::xso::asxml::OptionAsXml::new(#cast.map(|#bound_name: #inner_ty| {
                         #item_iter_ty_ident::new((#repack))
                     }).transpose()?)
                 },
