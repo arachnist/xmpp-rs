@@ -6,7 +6,10 @@
 
 use xso::{AsXml, FromXml};
 
-use xmpp_parsers::{component, iq::Iq, message::Message, presence::Presence, sasl, starttls};
+use xmpp_parsers::{
+    component, iq::Iq, message::Message, presence::Presence, sasl, starttls,
+    stream_error::ReceivedStreamError,
+};
 
 /// Any valid XMPP stream-level element.
 #[derive(FromXml, AsXml, Debug)]
@@ -35,4 +38,8 @@ pub enum XmppStreamElement {
     /// Component protocol nonzas
     #[xml(transparent)]
     ComponentHandshake(component::Handshake),
+
+    /// Stream error received
+    #[xml(transparent)]
+    StreamError(ReceivedStreamError),
 }
