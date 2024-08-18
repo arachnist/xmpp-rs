@@ -4,6 +4,9 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use core::fmt;
+use std::error::Error;
+
 use minidom::Element;
 use xso::{AsXml, FromXml};
 
@@ -262,6 +265,39 @@ pub enum DefinedCondition {
     UnsupportedVersion,
 }
 
+impl fmt::Display for DefinedCondition {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let s = match self {
+            Self::BadFormat => "bad-format",
+            Self::BadNamespacePrefix => "bad-namespace-prefix",
+            Self::Conflict => "conflict",
+            Self::ConnectionTimeout => "connection-timeout",
+            Self::HostGone => "host-gone",
+            Self::HostUnknown => "host-unknown",
+            Self::ImproperAddressing => "improper-addressing",
+            Self::InternalServerError => "internal-server-error",
+            Self::InvalidFrom => "invalid-from",
+            Self::InvalidNamespace => "invalid-namespace",
+            Self::InvalidXml => "invalid-xml",
+            Self::NotAuthorized => "not-authorized",
+            Self::NotWellFormed => "not-well-formed",
+            Self::PolicyViolation => "policy-violation",
+            Self::RemoteConnectionFailed => "remote-connection-failed",
+            Self::Reset => "reset",
+            Self::ResourceConstraint => "resource-constraint",
+            Self::RestrictedXml => "restricted-xml",
+            Self::SeeOtherHost(ref host) => return write!(f, "see-other-host: {}", host),
+            Self::SystemShutdown => "system-shutdown",
+            Self::UndefinedCondition => "undefined-condition",
+            Self::UnsupportedEncoding => "unsupported-encoding",
+            Self::UnsupportedFeature => "unsupported-feature",
+            Self::UnsupportedStanzaType => "unsupported-stanza-type",
+            Self::UnsupportedVersion => "unsupported-version",
+        };
+        f.write_str(s)
+    }
+}
+
 /// Stream error as specified in RFC 6120.
 #[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = ns::STREAM, name = "error")]
@@ -281,3 +317,48 @@ pub struct StreamError {
     #[xml(element(n = ..))]
     pub application_specific: Vec<Element>,
 }
+
+impl fmt::Display for StreamError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        <DefinedCondition as fmt::Display>::fmt(&self.condition, f)?;
+        match self.text {
+            Some((_, ref text)) => write!(f, " ({:?})", text)?,
+            None => (),
+        };
+        match self.application_specific.get(0) {
+            Some(cond) => {
+                f.write_str(&String::from(cond))?;
+            }
+            None => (),
+        }
+        Ok(())
+    }
+}
+
+/// Wrapper around [`StreamError`] which implements [`std::error::Error`]
+/// with an appropriate error message.
+#[derive(FromXml, AsXml, Debug)]
+#[xml(transparent)]
+pub struct ReceivedStreamError(pub StreamError);
+
+impl fmt::Display for ReceivedStreamError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "received stream error: {}", self.0)
+    }
+}
+
+impl Error for ReceivedStreamError {}
+
+/// Wrapper around [`StreamError`] which implements [`std::error::Error`]
+/// with an appropriate error message.
+#[derive(FromXml, AsXml, Debug)]
+#[xml(transparent)]
+pub struct SentStreamError(pub StreamError);
+
+impl fmt::Display for SentStreamError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "sent stream error: {}", self.0)
+    }
+}
+
+impl Error for SentStreamError {}
