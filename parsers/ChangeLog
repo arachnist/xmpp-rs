@@ -29,6 +29,7 @@ XXXX-YY-ZZ RELEASER <admin@example.com>
         - Extensible SASL Profile (XEP-0388)
         - SASL Channel-Binding Type Capability (XEP-0440)
         - Stream Limits Advertisement (XEP-0478)
+        - RFC 6120 stream errors
 
 Version 0.21.0:
 2024-07-25 Emmanuel Gil Peyrot <linkmauve@linkmauve.fr>

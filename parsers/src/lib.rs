@@ -59,6 +59,8 @@ pub mod starttls;
 /// RFC 6120: Extensible Messaging and Presence Protocol (XMPP): Core
 pub mod stream;
 /// RFC 6120: Extensible Messaging and Presence Protocol (XMPP): Core
+pub mod stream_error;
+/// RFC 6120: Extensible Messaging and Presence Protocol (XMPP): Core
 pub mod stream_features;
 
 /// RFC 6121: Extensible Messaging and Presence Protocol (XMPP): Instant Messaging and Presence
