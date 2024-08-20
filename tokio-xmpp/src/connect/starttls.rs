@@ -61,7 +61,8 @@ use crate::{
 };
 
 /// Client that connects over StartTls
-pub type StartTlsClient = Client<StartTlsServerConnector>;
+#[deprecated(since = "5.0.0", note = "use tokio_xmpp::Client instead")]
+pub type StartTlsClient = Client;
 
 /// Connect via TCP+StartTLS to an XMPP server
 #[derive(Debug, Clone)]

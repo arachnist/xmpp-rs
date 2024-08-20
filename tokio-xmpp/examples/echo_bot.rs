@@ -21,50 +21,41 @@ async fn main() {
 
     // Client instance
     let mut client = Client::new(jid, password.to_owned());
-    client.set_reconnect(true);
 
     // Main loop, processes events
-    let mut wait_for_stream_end = false;
-    let mut stream_ended = false;
-    while !stream_ended {
-        if let Some(event) = client.next().await {
-            println!("event: {:?}", event);
-            if wait_for_stream_end {
-                /* Do nothing */
-            } else if event.is_online() {
-                let jid = event
-                    .get_jid()
-                    .map(|jid| format!("{}", jid))
-                    .unwrap_or("unknown".to_owned());
-                println!("Online at {}", jid);
+    while let Some(event) = client.next().await {
+        println!("event: {:?}", event);
+        if event.is_online() {
+            let jid = event
+                .get_jid()
+                .map(|jid| format!("{}", jid))
+                .unwrap_or("unknown".to_owned());
+            println!("Online at {}", jid);
 
-                let presence = make_presence();
-                client.send_stanza(presence.into()).await.unwrap();
-            } else if let Some(message) = event
-                .into_stanza()
-                .and_then(|stanza| Message::try_from(stanza).ok())
-            {
-                match (message.from, message.bodies.get("")) {
-                    (Some(ref from), Some(ref body)) if body.0 == "die" => {
-                        println!("Secret die command triggered by {}", from);
-                        wait_for_stream_end = true;
-                        client.send_end().await.unwrap();
-                    }
-                    (Some(ref from), Some(ref body)) => {
-                        if message.type_ != MessageType::Error {
-                            // This is a message we'll echo
-                            let reply = make_reply(from.clone(), &body.0);
-                            client.send_stanza(reply.into()).await.unwrap();
-                        }
-                    }
-                    _ => {}
+            let presence = make_presence();
+            client.send_stanza(presence.into()).await.unwrap();
+        } else if let Some(message) = event
+            .into_stanza()
+            .and_then(|stanza| Message::try_from(stanza).ok())
+        {
+            match (message.from, message.bodies.get("")) {
+                (Some(ref from), Some(ref body)) if body.0 == "die" => {
+                    println!("Secret die command triggered by {}", from);
+                    break;
                 }
+                (Some(ref from), Some(ref body)) => {
+                    if message.type_ != MessageType::Error {
+                        // This is a message we'll echo
+                        let reply = make_reply(from.clone(), &body.0);
+                        client.send_stanza(reply.into()).await.unwrap();
+                    }
+                }
+                _ => {}
             }
-        } else {
-            println!("stream_ended");
-            stream_ended = true;
         }
     }
+
+    client.send_end().await.unwrap();
 }
 
 // Construct a <presence/>

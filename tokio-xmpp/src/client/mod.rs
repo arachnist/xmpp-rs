@@ -1,11 +1,18 @@
-use futures::sink::SinkExt;
+// Copyright (c) 2019 Emmanuel Gil Peyrot <linkmauve@linkmauve.fr>
+//
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+use std::io;
+
 use xmpp_parsers::{jid::Jid, stream_features::StreamFeatures};
 
 use crate::{
-    client::{login::client_login, stream::ClientState},
     connect::ServerConnector,
     error::Error,
-    xmlstream::{Timeouts, XmppStream, XmppStreamElement},
+    stanzastream::{StanzaStage, StanzaState, StanzaStream, StanzaToken},
+    xmlstream::Timeouts,
     Stanza,
 };
 
@@ -16,93 +23,68 @@ use crate::connect::StartTlsServerConnector;
 #[cfg(feature = "insecure-tcp")]
 use crate::connect::TcpServerConnector;
 
-mod bind;
 pub(crate) mod login;
 mod stream;
 
 /// XMPP client connection and state
 ///
-/// It is able to reconnect. TODO: implement session management.
-///
 /// This implements the `futures` crate's [`Stream`](#impl-Stream) and
 /// [`Sink`](#impl-Sink<Packet>) traits.
-pub struct Client<C: ServerConnector> {
-    jid: Jid,
-    password: String,
-    connector: C,
-    state: ClientState<C::Stream>,
-    timeouts: Timeouts,
-    reconnect: bool,
-    // TODO: tls_required=true
+pub struct Client {
+    stream: StanzaStream,
+    bound_jid: Option<Jid>,
+    features: Option<StreamFeatures>,
 }
 
-impl<C: ServerConnector> Client<C> {
-    /// Set whether to reconnect (`true`) or let the stream end
-    /// (`false`) when a connection to the server has ended.
-    pub fn set_reconnect(&mut self, reconnect: bool) -> &mut Self {
-        self.reconnect = reconnect;
-        self
-    }
-
+impl Client {
     /// Get the client's bound JID (the one reported by the XMPP
     /// server).
     pub fn bound_jid(&self) -> Option<&Jid> {
-        match self.state {
-            ClientState::Connected { ref bound_jid, .. } => Some(bound_jid),
-            _ => None,
-        }
+        self.bound_jid.as_ref()
     }
 
     /// Send stanza
-    pub async fn send_stanza(&mut self, mut stanza: Stanza) -> Result<(), Error> {
+    pub async fn send_stanza(&mut self, mut stanza: Stanza) -> Result<StanzaToken, io::Error> {
         stanza.ensure_id();
-        self.send(stanza).await
+        let mut token = self.stream.send(Box::new(stanza)).await;
+        match token.wait_for(StanzaStage::Sent).await {
+            // Queued < Sent, so it cannot be reached.
+            Some(StanzaState::Queued) => unreachable!(),
+
+            None | Some(StanzaState::Dropped) => Err(io::Error::new(
+                io::ErrorKind::NotConnected,
+                "stream disconnected fatally before stanza could be sent",
+            )),
+            Some(StanzaState::Failed { error }) => Err(error.into_io_error()),
+            Some(StanzaState::Sent { .. }) | Some(StanzaState::Acked { .. }) => Ok(token),
+        }
     }
 
     /// Get the stream features (`<stream:features/>`) of the underlying stream
     pub fn get_stream_features(&self) -> Option<&StreamFeatures> {
-        match self.state {
-            ClientState::Connected { ref features, .. } => Some(features),
-            _ => None,
-        }
+        self.features.as_ref()
     }
 
     /// End connection by sending `</stream:stream>`
     ///
     /// You may expect the server to respond with the same. This
     /// client will then drop its connection.
-    ///
-    /// Make sure to disable reconnect.
-    pub async fn send_end(&mut self) -> Result<(), Error> {
-        match self.state {
-            ClientState::Connected { ref mut stream, .. } => {
-                Ok(<XmppStream<C::Stream> as SinkExt<&XmppStreamElement>>::close(stream).await?)
-            }
-            ClientState::Connecting { .. } => {
-                self.state = ClientState::Disconnected;
-                Ok(())
-            }
-            _ => Ok(()),
-        }
+    pub async fn send_end(self) -> Result<(), Error> {
+        self.stream.close().await;
+        Ok(())
     }
 }
 
 #[cfg(feature = "starttls")]
-impl Client<StartTlsServerConnector> {
+impl Client {
     /// Start a new XMPP client using StartTLS transport and autoreconnect
     ///
     /// Start polling the returned instance so that it will connect
     /// and yield events.
     pub fn new<J: Into<Jid>, P: Into<String>>(jid: J, password: P) -> Self {
         let jid = jid.into();
-        let mut client = Self::new_starttls(
-            jid.clone(),
-            password,
-            DnsConfig::srv(&jid.domain().to_string(), "_xmpp-client._tcp", 5222),
-            Timeouts::default(),
-        );
-        client.set_reconnect(true);
-        client
+        let dns_config = DnsConfig::srv(&jid.domain().to_string(), "_xmpp-client._tcp", 5222);
+        Self::new_starttls(jid, password, dns_config, Timeouts::default())
     }
 
     /// Start a new XMPP client with StartTLS transport and specific DNS config
@@ -122,7 +104,7 @@ impl Client<StartTlsServerConnector> {
 }
 
 #[cfg(feature = "insecure-tcp")]
-impl Client<TcpServerConnector> {
+impl Client {
     /// Start a new XMPP client with plaintext insecure connection and specific DNS config
     pub fn new_plaintext<J: Into<Jid>, P: Into<String>>(
         jid: J,
@@ -139,31 +121,18 @@ impl Client<TcpServerConnector> {
     }
 }
 
-impl<C: ServerConnector> Client<C> {
+impl Client {
     /// Start a new client given that the JID is already parsed.
-    pub fn new_with_connector<J: Into<Jid>, P: Into<String>>(
+    pub fn new_with_connector<J: Into<Jid>, P: Into<String>, C: ServerConnector>(
         jid: J,
         password: P,
         connector: C,
         timeouts: Timeouts,
     ) -> Self {
-        let jid = jid.into();
-        let password = password.into();
-
-        let connect = tokio::spawn(client_login(
-            connector.clone(),
-            jid.clone(),
-            password.clone(),
-            timeouts,
-        ));
-        let client = Client {
-            jid,
-            password,
-            connector,
-            state: ClientState::Connecting(connect),
-            reconnect: false,
-            timeouts,
-        };
-        client
+        Self {
+            stream: StanzaStream::new_c2s(connector, jid.into(), password.into(), timeouts, 16),
+            bound_jid: None,
+            features: None,
+        }
     }
 }

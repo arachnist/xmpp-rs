@@ -28,39 +28,31 @@ async fn main() {
     let mut client = Client::new(jid, password);
 
     // Main loop, processes events
-    let mut wait_for_stream_end = false;
-    let mut stream_ended = false;
-    while !stream_ended {
-        if let Some(event) = client.next().await {
-            if wait_for_stream_end {
-                /* Do Nothing. */
-            } else if event.is_online() {
-                println!("Online!");
+    while let Some(event) = client.next().await {
+        if event.is_online() {
+            println!("Online!");
 
-                let target_jid: Jid = target.clone().parse().unwrap();
-                let iq = make_disco_iq(target_jid);
-                println!("Sending disco#info request to {}", target.clone());
-                println!(">> {:?}", iq);
-                client.send_stanza(iq.into()).await.unwrap();
-            } else if let Some(Stanza::Iq(iq)) = event.into_stanza() {
-                if let IqType::Result(Some(payload)) = iq.payload {
-                    if payload.is("query", ns::DISCO_INFO) {
-                        if let Ok(disco_info) = DiscoInfoResult::try_from(payload) {
-                            for ext in disco_info.extensions {
-                                if let Ok(server_info) = ServerInfo::try_from(ext) {
-                                    print_server_info(server_info);
-                                }
+            let target_jid: Jid = target.clone().parse().unwrap();
+            let iq = make_disco_iq(target_jid);
+            println!("Sending disco#info request to {}", target.clone());
+            println!(">> {:?}", iq);
+            client.send_stanza(iq.into()).await.unwrap();
+        } else if let Some(Stanza::Iq(iq)) = event.into_stanza() {
+            if let IqType::Result(Some(payload)) = iq.payload {
+                if payload.is("query", ns::DISCO_INFO) {
+                    if let Ok(disco_info) = DiscoInfoResult::try_from(payload) {
+                        for ext in disco_info.extensions {
+                            if let Ok(server_info) = ServerInfo::try_from(ext) {
+                                print_server_info(server_info);
                             }
                         }
                     }
-                    wait_for_stream_end = true;
-                    client.send_end().await.unwrap();
                 }
+                break;
             }
-        } else {
-            stream_ended = true;
         }
     }
+    client.send_end().await.expect("Stream shutdown unclean");
 }
 
 fn make_disco_iq(target: Jid) -> Iq {

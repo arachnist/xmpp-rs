@@ -38,6 +38,10 @@ pub type Error = tokio_xmpp::Error;
 pub type Id = Option<String>;
 pub type RoomNick = String;
 
+// The test below is dysfunctional since we have moved to StanzaStream. The
+// StanzaStream will attempt to connect to foo@bar indefinitely.
+// Keeping it here as inspiration for future integration tests.
+/*
 #[cfg(all(test, any(feature = "starttls-rust", feature = "starttls-native")))]
 mod tests {
     use super::jid::BareJid;
@@ -74,3 +78,4 @@ mod tests {
         }
     }
 }
+*/

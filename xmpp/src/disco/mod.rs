@@ -4,7 +4,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use tokio_xmpp::connect::ServerConnector;
 use tokio_xmpp::{
     jid::Jid,
     parsers::{
@@ -19,11 +18,7 @@ use tokio_xmpp::{
 
 use crate::Agent;
 
-pub async fn handle_disco_info_result<C: ServerConnector>(
-    agent: &mut Agent<C>,
-    disco: DiscoInfoResult,
-    from: Jid,
-) {
+pub async fn handle_disco_info_result(agent: &mut Agent, disco: DiscoInfoResult, from: Jid) {
     // Safe unwrap because no DISCO is received when we are not online
     if from == agent.client.bound_jid().unwrap().to_bare() && agent.awaiting_disco_bookmarks_type {
         info!("Received disco info about bookmarks type");

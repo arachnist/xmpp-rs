@@ -11,7 +11,6 @@ use crate::{
 };
 use std::str::FromStr;
 use tokio_xmpp::{
-    connect::ServerConnector,
     jid::{BareJid, Jid},
     minidom::Element,
     parsers::{
@@ -23,10 +22,10 @@ use tokio_xmpp::{
 #[cfg(feature = "avatars")]
 pub(crate) mod avatar;
 
-pub(crate) async fn handle_event<C: ServerConnector>(
+pub(crate) async fn handle_event(
     #[cfg_attr(not(feature = "avatars"), allow(unused_variables))] from: &Jid,
     elem: Element,
-    #[cfg_attr(not(feature = "avatars"), allow(unused_variables))] agent: &mut Agent<C>,
+    #[cfg_attr(not(feature = "avatars"), allow(unused_variables))] agent: &mut Agent,
 ) -> Vec<Event> {
     // We allow the useless mut warning for no-default-features,
     // since for now only avatars pushes events here.
@@ -101,10 +100,10 @@ pub(crate) async fn handle_event<C: ServerConnector>(
     events
 }
 
-pub(crate) async fn handle_iq_result<C: ServerConnector>(
+pub(crate) async fn handle_iq_result(
     #[cfg_attr(not(feature = "avatars"), allow(unused_variables))] from: &Jid,
     elem: Element,
-    agent: &mut Agent<C>,
+    agent: &mut Agent,
 ) -> impl IntoIterator<Item = Event> {
     // We allow the useless mut warning for no-default-features,
     // since for now only avatars pushes events here.

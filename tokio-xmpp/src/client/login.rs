@@ -9,14 +9,13 @@ use std::io;
 use std::str::FromStr;
 use tokio::io::{AsyncBufRead, AsyncWrite};
 use xmpp_parsers::{
-    jid::{FullJid, Jid},
+    jid::Jid,
     ns,
     sasl::{Auth, Mechanism as XMPPMechanism, Nonza, Response},
     stream_features::{SaslMechanisms, StreamFeatures},
 };
 
 use crate::{
-    client::bind::bind,
     connect::ServerConnector,
     error::{AuthError, Error, ProtocolError},
     xmlstream::{
@@ -132,19 +131,4 @@ pub async fn client_auth<C: ServerConnector>(
         })
         .await?;
     Ok(stream.recv_features().await?)
-}
-
-/// Log into an XMPP server as a client with a jid+pass
-/// does channel binding if supported
-pub async fn client_login<C: ServerConnector>(
-    server: C,
-    jid: Jid,
-    password: String,
-    timeouts: Timeouts,
-) -> Result<(Option<FullJid>, StreamFeatures, XmppStream<C::Stream>), Error> {
-    let (features, mut stream) = client_auth(server, jid.clone(), password, timeouts).await?;
-
-    // XmppStream bound to user session
-    let full_jid = bind(&mut stream, &features, &jid).await?;
-    Ok((full_jid, features, stream))
 }

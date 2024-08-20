@@ -40,33 +40,29 @@ async fn main() {
     let disco_info = make_disco();
 
     // Main loop, processes events
-    let mut wait_for_stream_end = false;
-    let mut stream_ended = false;
-    while !stream_ended {
-        if let Some(event) = client.next().await {
-            if wait_for_stream_end {
-                /* Do nothing */
-            } else if event.is_online() {
-                println!("Online!");
+    while let Some(event) = client.next().await {
+        if event.is_online() {
+            println!("Online!");
 
-                let caps = get_disco_caps(&disco_info, "https://gitlab.com/xmpp-rs/tokio-xmpp");
-                let presence = make_presence(caps);
-                client.send_stanza(presence.into()).await.unwrap();
-            } else if let Some(stanza) = event.into_stanza() {
-                match stanza {
-                    Stanza::Iq(iq) => {
-                        if let IqType::Get(payload) = iq.payload {
-                            if payload.is("query", ns::DISCO_INFO) {
-                                let query = DiscoInfoQuery::try_from(payload);
-                                match query {
-                                    Ok(query) => {
-                                        let mut disco = disco_info.clone();
-                                        disco.node = query.node;
-                                        let iq = Iq::from_result(iq.id, Some(disco))
-                                            .with_to(iq.from.unwrap());
-                                        client.send_stanza(iq.into()).await.unwrap();
-                                    }
-                                    Err(err) => client
+            let caps = get_disco_caps(&disco_info, "https://gitlab.com/xmpp-rs/tokio-xmpp");
+            let presence = make_presence(caps);
+            client.send_stanza(presence.into()).await.unwrap();
+        } else if let Some(stanza) = event.into_stanza() {
+            match stanza {
+                Stanza::Iq(iq) => {
+                    if let IqType::Get(payload) = iq.payload {
+                        if payload.is("query", ns::DISCO_INFO) {
+                            let query = DiscoInfoQuery::try_from(payload);
+                            match query {
+                                Ok(query) => {
+                                    let mut disco = disco_info.clone();
+                                    disco.node = query.node;
+                                    let iq = Iq::from_result(iq.id, Some(disco))
+                                        .with_to(iq.from.unwrap());
+                                    client.send_stanza(iq.into()).await.unwrap();
+                                }
+                                Err(err) => {
+                                    client
                                         .send_stanza(
                                             make_error(
                                                 iq.from.unwrap(),
@@ -78,32 +74,11 @@ async fn main() {
                                             .into(),
                                         )
                                         .await
-                                        .unwrap(),
+                                        .unwrap();
                                 }
-                            } else {
-                                // We MUST answer unhandled get iqs with a service-unavailable error.
-                                client
-                                    .send_stanza(
-                                        make_error(
-                                            iq.from.unwrap(),
-                                            iq.id,
-                                            ErrorType::Cancel,
-                                            DefinedCondition::ServiceUnavailable,
-                                            "No handler defined for this kind of iq.",
-                                        )
-                                        .into(),
-                                    )
-                                    .await
-                                    .unwrap();
                             }
-                        } else if let IqType::Result(Some(payload)) = iq.payload {
-                            if payload.is("pubsub", ns::PUBSUB) {
-                                let pubsub = PubSub::try_from(payload).unwrap();
-                                let from = iq.from.clone().unwrap_or(jid.clone().into());
-                                handle_iq_result(pubsub, &from);
-                            }
-                        } else if let IqType::Set(_) = iq.payload {
-                            // We MUST answer unhandled set iqs with a service-unavailable error.
+                        } else {
+                            // We MUST answer unhandled get iqs with a service-unavailable error.
                             client
                                 .send_stanza(
                                     make_error(
@@ -118,47 +93,64 @@ async fn main() {
                                 .await
                                 .unwrap();
                         }
-                    }
-                    Stanza::Message(message) => {
-                        let from = message.from.clone().unwrap();
-                        if let Some(body) = message.get_best_body(vec!["en"]) {
-                            if body.0 == "die" {
-                                println!("Secret die command triggered by {}", from);
-                                wait_for_stream_end = true;
-                                client.send_end().await.unwrap();
-                            }
+                    } else if let IqType::Result(Some(payload)) = iq.payload {
+                        if payload.is("pubsub", ns::PUBSUB) {
+                            let pubsub = PubSub::try_from(payload).unwrap();
+                            let from = iq.from.clone().unwrap_or(jid.clone().into());
+                            handle_iq_result(pubsub, &from);
                         }
-                        for child in message.payloads {
-                            if child.is("event", ns::PUBSUB_EVENT) {
-                                let event = PubSubEvent::try_from(child).unwrap();
-                                if let PubSubEvent::PublishedItems { node, items } = event {
-                                    if node.0 == ns::AVATAR_METADATA {
-                                        for item in items.into_iter() {
-                                            let payload = item.payload.clone().unwrap();
-                                            if payload.is("metadata", ns::AVATAR_METADATA) {
-                                                // TODO: do something with these metadata.
-                                                let _metadata =
-                                                    AvatarMetadata::try_from(payload).unwrap();
-                                                println!(
-                                                    "[1m{}[0m has published an avatar, downloading...",
-                                                    from.clone()
-                                                );
-                                                let iq = download_avatar(from.clone());
-                                                client.send_stanza(iq.into()).await.unwrap();
-                                            }
+                    } else if let IqType::Set(_) = iq.payload {
+                        // We MUST answer unhandled set iqs with a service-unavailable error.
+                        client
+                            .send_stanza(
+                                make_error(
+                                    iq.from.unwrap(),
+                                    iq.id,
+                                    ErrorType::Cancel,
+                                    DefinedCondition::ServiceUnavailable,
+                                    "No handler defined for this kind of iq.",
+                                )
+                                .into(),
+                            )
+                            .await
+                            .unwrap();
+                    }
+                }
+                Stanza::Message(message) => {
+                    let from = message.from.clone().unwrap();
+                    if let Some(body) = message.get_best_body(vec!["en"]) {
+                        if body.0 == "die" {
+                            println!("Secret die command triggered by {}", from);
+                            break;
+                        }
+                    }
+                    for child in message.payloads {
+                        if child.is("event", ns::PUBSUB_EVENT) {
+                            let event = PubSubEvent::try_from(child).unwrap();
+                            if let PubSubEvent::PublishedItems { node, items } = event {
+                                if node.0 == ns::AVATAR_METADATA {
+                                    for item in items.into_iter() {
+                                        let payload = item.payload.clone().unwrap();
+                                        if payload.is("metadata", ns::AVATAR_METADATA) {
+                                            // TODO: do something with these metadata.
+                                            let _metadata =
+                                                AvatarMetadata::try_from(payload).unwrap();
+                                            println!(
+                                                "[1m{}[0m has published an avatar, downloading...",
+                                                from.clone()
+                                            );
+                                            let iq = download_avatar(from.clone());
+                                            client.send_stanza(iq.into()).await.unwrap();
                                         }
                                     }
                                 }
                             }
                         }
                     }
-                    // Nothing to do here.
-                    Stanza::Presence(_) => (),
                 }
+                // Nothing to do here.
+                Stanza::Presence(_) => (),
             }
-        } else {
-            println!("stream_ended");
-            stream_ended = true;
         }
     }
 }

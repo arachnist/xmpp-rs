@@ -4,7 +4,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use tokio_xmpp::connect::ServerConnector;
 use tokio_xmpp::{
     jid::{BareJid, Jid},
     parsers::{
@@ -15,8 +14,8 @@ use tokio_xmpp::{
 
 use crate::{Agent, RoomNick};
 
-pub async fn send_room_private_message<C: ServerConnector>(
-    agent: &mut Agent<C>,
+pub async fn send_room_private_message(
+    agent: &mut Agent,
     room: BareJid,
     recipient: RoomNick,
     lang: &str,

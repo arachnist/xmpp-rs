@@ -5,7 +5,6 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 use crate::parsers::message::MessageType;
-use tokio_xmpp::connect::ServerConnector;
 use tokio_xmpp::{
     jid::BareJid,
     parsers::{
@@ -51,10 +50,7 @@ impl<'a> JoinRoomSettings<'a> {
 }
 
 /// TODO: this method should add bookmark and ensure autojoin is true
-pub async fn join_room<'a, C: ServerConnector>(
-    agent: &mut Agent<C>,
-    settings: JoinRoomSettings<'a>,
-) {
+pub async fn join_room<'a>(agent: &mut Agent, settings: JoinRoomSettings<'a>) {
     let JoinRoomSettings {
         room,
         nick,
@@ -122,10 +118,7 @@ impl<'a> LeaveRoomSettings<'a> {
 /// If successful, a `RoomLeft` event should be received later as a confirmation. See [XEP-0045](https://xmpp.org/extensions/xep-0045.html#exit).
 ///
 /// TODO: this method should set autojoin false on bookmark
-pub async fn leave_room<'a, C: ServerConnector>(
-    agent: &mut Agent<C>,
-    settings: LeaveRoomSettings<'a>,
-) {
+pub async fn leave_room<'a>(agent: &mut Agent, settings: LeaveRoomSettings<'a>) {
     let LeaveRoomSettings { room, status } = settings;
 
     if agent.rooms_leaving.contains_key(&room) {
@@ -188,10 +181,7 @@ impl<'a> RoomMessageSettings<'a> {
     }
 }
 
-pub async fn send_room_message<'a, C: ServerConnector>(
-    agent: &mut Agent<C>,
-    settings: RoomMessageSettings<'a>,
-) {
+pub async fn send_room_message<'a>(agent: &mut Agent, settings: RoomMessageSettings<'a>) {
     let RoomMessageSettings {
         room,
         message,

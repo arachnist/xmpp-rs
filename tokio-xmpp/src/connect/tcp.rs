@@ -14,7 +14,8 @@ use crate::{
 pub type TcpComponent = Component<TcpServerConnector>;
 
 /// Client that connects over TCP
-pub type TcpClient = Client<TcpServerConnector>;
+#[deprecated(since = "5.0.0", note = "use tokio_xmpp::Client instead")]
+pub type TcpClient = Client;
 
 /// Connect via insecure plaintext TCP to an XMPP server
 /// This should only be used over localhost or otherwise when you know what you are doing

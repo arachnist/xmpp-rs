@@ -152,25 +152,24 @@ impl<C: ServerConnector> ClientBuilder<'_, C> {
         }
     }
 
-    pub fn build(self) -> Agent<C> {
+    pub fn build(self) -> Agent {
         let jid: Jid = if let Some(resource) = &self.resource {
             self.jid.with_resource_str(resource).unwrap().into()
         } else {
             self.jid.clone().into()
         };
 
-        let mut client = TokioXmppClient::new_with_connector(
+        let client = TokioXmppClient::new_with_connector(
             jid,
             self.password,
             self.server_connector.clone(),
             self.timeouts,
         );
-        client.set_reconnect(true);
         self.build_impl(client)
     }
 
     // This function is meant to be used for testing build
-    pub(crate) fn build_impl(self, client: TokioXmppClient<C>) -> Agent<C> {
+    pub(crate) fn build_impl(self, client: TokioXmppClient) -> Agent {
         let disco = self.make_disco();
         let node = self.website;
 
