@@ -14,7 +14,6 @@
 //! see [`vcard_update`][crate::vcard_update] module.
 
 use xso::{
-    error::Error,
     text::{Base64, StripWhitespace, TextCodec},
     AsXml, FromXml,
 };
@@ -55,39 +54,16 @@ pub struct Binval {
 }
 
 /// A `<vCard>` element; only the `<PHOTO>` element is supported for this legacy vCard ; the rest is ignored.
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::VCARD, name = "vCard")]
 pub struct VCard {
     /// A photo element.
+    #[xml(child(default))]
     pub photo: Option<Photo>,
-}
 
-impl TryFrom<Element> for VCard {
-    type Error = xso::error::Error;
-
-    fn try_from(value: Element) -> Result<Self, Self::Error> {
-        // Check that the root element is <vCard>
-        if !value.is("vCard", ns::VCARD) {
-            return Err(Error::Other(
-                "Root element is not <vCard xmlns='vcard-temp'>",
-            ));
-        }
-
-        // Parse the <PHOTO> element, if any.
-        let photo = value
-            .get_child("PHOTO", ns::VCARD)
-            .map(|photo| Photo::try_from(photo.clone()))
-            .transpose()?;
-
-        // Return the result.
-        Ok(VCard { photo })
-    }
-}
-
-impl From<VCard> for Element {
-    fn from(vcard: VCard) -> Element {
-        Element::builder("vCard", ns::VCARD)
-            .append_all(vcard.photo)
-            .build()
-    }
+    /// Every other element in the vCard.
+    #[xml(element(n = ..))]
+    pub payloads: Vec<Element>,
 }
 
 impl IqGetPayload for VCard {}
@@ -99,6 +75,24 @@ mod tests {
     use super::*;
     use base64::Engine;
     use std::str::FromStr;
+
+    #[cfg(target_pointer_width = "32")]
+    #[test]
+    fn test_size() {
+        assert_size!(Photo, 24);
+        assert_size!(Type, 12);
+        assert_size!(Binval, 12);
+        assert_size!(VCard, 36);
+    }
+
+    #[cfg(target_pointer_width = "64")]
+    #[test]
+    fn test_size() {
+        assert_size!(Photo, 48);
+        assert_size!(Type, 24);
+        assert_size!(Binval, 24);
+        assert_size!(VCard, 72);
+    }
 
     #[test]
     fn test_vcard() {
