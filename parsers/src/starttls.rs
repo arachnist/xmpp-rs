@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Emmanuel Gil Peyrot <linkmauve@linkmauve.fr>
+// Copyright (c) 2024 Emmanuel Gil Peyrot <linkmauve@linkmauve.fr>
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -36,7 +36,7 @@ pub struct StartTls {
 pub struct RequiredStartTls;
 
 /// Enum which allows parsing/serialising any STARTTLS element.
-#[derive(FromXml, AsXml, Debug, Clone)]
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml()]
 pub enum Nonza {
     /// Request to start TLS
@@ -51,18 +51,64 @@ pub enum Nonza {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use minidom::Element;
 
-    #[cfg(target_pointer_width = "32")]
     #[test]
     fn test_size() {
-        assert_size!(RequiredStartTls, 0);
+        assert_size!(Request, 0);
+        assert_size!(Proceed, 0);
         assert_size!(StartTls, 1);
+        assert_size!(RequiredStartTls, 0);
+        assert_size!(Nonza, 1);
     }
 
-    #[cfg(target_pointer_width = "64")]
     #[test]
-    fn test_size() {
-        assert_size!(RequiredStartTls, 0);
-        assert_size!(StartTls, 1);
+    fn test_parsers() {
+        let elem: Element = "<starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'/>"
+            .parse()
+            .unwrap();
+        let request = Request::try_from(elem.clone()).unwrap();
+        let elem2 = Element::from(request);
+        assert_eq!(elem, elem2);
+
+        let elem: Element = "<proceed xmlns='urn:ietf:params:xml:ns:xmpp-tls'/>"
+            .parse()
+            .unwrap();
+        let proceed = Proceed::try_from(elem.clone()).unwrap();
+        let elem2 = Element::from(proceed);
+        assert_eq!(elem, elem2);
+
+        let elem: Element = "<starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'/>"
+            .parse()
+            .unwrap();
+        let starttls = StartTls::try_from(elem.clone()).unwrap();
+        assert_eq!(starttls.required, None);
+        let elem2 = Element::from(starttls);
+        assert_eq!(elem, elem2);
+
+        let elem: Element =
+            "<starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'><required/></starttls>"
+                .parse()
+                .unwrap();
+        let starttls = StartTls::try_from(elem.clone()).unwrap();
+        assert_eq!(starttls.required, Some(RequiredStartTls));
+        let elem2 = Element::from(starttls);
+        assert_eq!(elem, elem2);
+
+        let elem: Element = "<starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'/>"
+            .parse()
+            .unwrap();
+        let nonza = Nonza::try_from(elem.clone()).unwrap();
+        assert_eq!(nonza, Nonza::Request(Request));
+        let elem2 = Element::from(nonza);
+        assert_eq!(elem, elem2);
+
+        let elem: Element = "<proceed xmlns='urn:ietf:params:xml:ns:xmpp-tls'/>"
+            .parse()
+            .unwrap();
+        let nonza = Nonza::try_from(elem.clone()).unwrap();
+        assert_eq!(nonza, Nonza::Proceed(Proceed));
+        let elem2 = Element::from(nonza);
+        assert_eq!(elem, elem2);
     }
 }
