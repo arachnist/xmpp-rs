@@ -120,9 +120,15 @@ async fn get_tls_stream<S: AsyncRead + AsyncWrite + Unpin>(
     let domain = xmpp_stream.jid.domain().to_string();
     let domain = ServerName::try_from(domain).map_err(|e| StartTlsError::DnsNameError(e))?;
     let stream = xmpp_stream.into_inner();
-    let root_store = RootCertStore {
-        roots: webpki_roots::TLS_SERVER_ROOTS.into(),
-    };
+    let mut root_store = RootCertStore::empty();
+    #[cfg(feature = "webpki-roots")]
+    {
+        root_store.extend(webpki_roots::TLS_SERVER_ROOTS.iter().cloned());
+    }
+    #[cfg(feature = "rustls-native-certs")]
+    {
+        root_store.add_parsable_certificates(rustls_native_certs::load_native_certs()?);
+    }
     let config = ClientConfig::builder()
         .with_root_certificates(root_store)
         .with_no_client_auth();
