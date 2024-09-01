@@ -88,7 +88,6 @@ impl<T> CaptureBufRead<T> {
         let this = self.project();
         let (buf, consumed_up_to) = this.buf.as_mut()?;
         let result = buf.drain(..*consumed_up_to).collect();
-        buf.drain(..*consumed_up_to);
         *consumed_up_to = 0;
         Some(result)
     }
