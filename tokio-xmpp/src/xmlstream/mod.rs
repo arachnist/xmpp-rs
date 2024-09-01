@@ -62,7 +62,7 @@ use core::pin::Pin;
 use core::task::{Context, Poll};
 use std::io;
 #[cfg(feature = "syntax-highlighting")]
-use std::sync::OnceLock;
+use std::sync::LazyLock;
 
 use futures::{ready, Sink, SinkExt, Stream};
 
@@ -85,25 +85,25 @@ pub use self::responder::{AcceptedStream, PendingFeaturesSend};
 pub use self::xmpp::XmppStreamElement;
 
 #[cfg(feature = "syntax-highlighting")]
-static PS: OnceLock<syntect::parsing::SyntaxSet> = OnceLock::new();
+static PS: LazyLock<syntect::parsing::SyntaxSet> =
+    LazyLock::new(syntect::parsing::SyntaxSet::load_defaults_newlines);
+
 #[cfg(feature = "syntax-highlighting")]
-static SYNTAX: OnceLock<syntect::parsing::SyntaxReference> = OnceLock::new();
+static SYNTAX: LazyLock<&syntect::parsing::SyntaxReference> =
+    LazyLock::new(|| PS.find_syntax_by_extension("xml").unwrap());
+
 #[cfg(feature = "syntax-highlighting")]
-static THEME: OnceLock<syntect::highlighting::Theme> = OnceLock::new();
+static THEME: LazyLock<syntect::highlighting::Theme> = LazyLock::new(|| {
+    syntect::highlighting::ThemeSet::load_defaults().themes["Solarized (dark)"].clone()
+});
 
 #[cfg(feature = "syntax-highlighting")]
 fn highlight_xml(xml: &str) -> String {
-    let ps = PS.get_or_init(syntect::parsing::SyntaxSet::load_defaults_newlines);
-    let mut h = syntect::easy::HighlightLines::new(
-        SYNTAX.get_or_init(|| ps.find_syntax_by_extension("xml").unwrap().clone()),
-        THEME.get_or_init(|| {
-            syntect::highlighting::ThemeSet::load_defaults().themes["Solarized (dark)"].clone()
-        }),
-    );
-
-    let ranges: Vec<_> = h.highlight_line(&xml, ps).unwrap();
-    let escaped = syntect::util::as_24_bit_terminal_escaped(&ranges[..], false);
-    format!("{}\x1b[0m", escaped)
+    let mut h = syntect::easy::HighlightLines::new(&SYNTAX, &THEME);
+    let ranges: Vec<_> = h.highlight_line(&xml, &PS).unwrap();
+    let mut escaped = syntect::util::as_24_bit_terminal_escaped(&ranges[..], false);
+    escaped += "\x1b[0m";
+    escaped
 }
 
 struct LogXsoBuf<'x>(&'x [u8]);
