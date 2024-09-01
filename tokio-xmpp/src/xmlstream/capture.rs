@@ -202,3 +202,75 @@ pub(super) fn log_recv(err: Option<&xmpp_parsers::Error>, capture: Option<Vec<u8
 pub(super) fn log_send(data: &[u8]) {
     log::trace!("SEND {}", LogXsoBuf(data));
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use tokio::io::{AsyncBufReadExt, AsyncReadExt};
+
+    #[tokio::test]
+    async fn captures_data_read_via_async_read() {
+        let mut src = &b"Hello World!"[..];
+        let src = tokio::io::BufReader::new(&mut src);
+        let mut src = CaptureBufRead::wrap(src);
+        src.enable_capture();
+
+        let mut dst = [0u8; 8];
+        assert_eq!(src.read(&mut dst[..]).await.unwrap(), 8);
+        assert_eq!(&dst, b"Hello Wo");
+        assert_eq!(Pin::new(&mut src).take_capture().unwrap(), b"Hello Wo");
+    }
+
+    #[tokio::test]
+    async fn captures_data_read_via_async_buf_read() {
+        let mut src = &b"Hello World!"[..];
+        let src = tokio::io::BufReader::new(&mut src);
+        let mut src = CaptureBufRead::wrap(src);
+        src.enable_capture();
+
+        assert_eq!(src.fill_buf().await.unwrap().len(), 12);
+        // We haven't consumed any bytes yet -> must return zero.
+        assert_eq!(Pin::new(&mut src).take_capture().unwrap().len(), 0);
+
+        src.consume(5);
+        assert_eq!(Pin::new(&mut src).take_capture().unwrap(), b"Hello");
+
+        src.consume(6);
+        assert_eq!(Pin::new(&mut src).take_capture().unwrap(), b" World");
+    }
+
+    #[tokio::test]
+    async fn discard_capture_drops_consumed_data() {
+        let mut src = &b"Hello World!"[..];
+        let src = tokio::io::BufReader::new(&mut src);
+        let mut src = CaptureBufRead::wrap(src);
+        src.enable_capture();
+
+        assert_eq!(src.fill_buf().await.unwrap().len(), 12);
+        // We haven't consumed any bytes yet -> must return zero.
+        assert_eq!(Pin::new(&mut src).take_capture().unwrap().len(), 0);
+
+        src.consume(5);
+        Pin::new(&mut src).discard_capture();
+
+        src.consume(6);
+        assert_eq!(Pin::new(&mut src).take_capture().unwrap(), b" World");
+    }
+
+    #[tokio::test]
+    async fn captured_data_accumulates() {
+        let mut src = &b"Hello World!"[..];
+        let src = tokio::io::BufReader::new(&mut src);
+        let mut src = CaptureBufRead::wrap(src);
+        src.enable_capture();
+
+        assert_eq!(src.fill_buf().await.unwrap().len(), 12);
+        // We haven't consumed any bytes yet -> must return zero.
+        assert_eq!(Pin::new(&mut src).take_capture().unwrap().len(), 0);
+
+        src.consume(5);
+        src.consume(6);
+        assert_eq!(Pin::new(&mut src).take_capture().unwrap(), b"Hello World");
+    }
+}
