@@ -17,7 +17,7 @@ use crate::connect::StartTlsServerConnector;
 use crate::connect::TcpServerConnector;
 
 mod bind;
-mod login;
+pub(crate) mod login;
 mod stream;
 
 /// XMPP client connection and state

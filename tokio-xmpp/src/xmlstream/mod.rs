@@ -7,7 +7,8 @@
 //! # RFC 6120 XML Streams
 //!
 //! **Note:** The XML stream is a low-level API which you should probably not
-//! use directly.
+//! use directly. You may be looking for
+//! [`StanzaStream`][`crate::stanzastream::StanzaStream`] instead.
 //!
 //! Establishing an XML stream is always a multi-stage process due to how
 //! stream negotiation works. Based on the values sent by the initiator in the
@@ -239,6 +240,10 @@ pin_project_lite::pin_project! {
     /// [RFC 6120](https://tools.ietf.org/html/rfc6120) XML stream, where the
     /// payload consists of items of type `T` implementing [`FromXml`] and
     /// [`AsXml`].
+    ///
+    /// **Note:** The XML stream is a low-level API which you should probably
+    /// not use directly. You may be looking for
+    /// [`StanzaStream`][`crate::stanzastream::StnazaStream`] instead.
     pub struct XmlStream<Io, T: FromXml> {
         #[pin]
         inner: RawXmlStream<Io>,

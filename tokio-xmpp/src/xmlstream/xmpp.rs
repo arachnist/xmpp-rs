@@ -6,7 +6,7 @@
 
 use xso::{AsXml, FromXml};
 
-use xmpp_parsers::{component, sasl, starttls, stream_error::ReceivedStreamError};
+use xmpp_parsers::{component, sasl, sm, starttls, stream_error::ReceivedStreamError};
 
 use crate::Stanza;
 
@@ -33,4 +33,8 @@ pub enum XmppStreamElement {
     /// Stream error received
     #[xml(transparent)]
     StreamError(ReceivedStreamError),
+
+    /// XEP-0198 nonzas
+    #[xml(transparent)]
+    SM(sm::Nonza),
 }

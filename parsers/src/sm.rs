@@ -180,6 +180,39 @@ impl From<HandledCountTooHigh> for crate::stream_error::StreamError {
     }
 }
 
+/// Enum which allows parsing/serialising any XEP-0198 element.
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml()]
+pub enum Nonza {
+    /// Request to enable SM
+    #[xml(transparent)]
+    Enable(Enable),
+
+    /// Successful SM enablement response
+    #[xml(transparent)]
+    Enabled(Enabled),
+
+    /// Request to resume SM
+    #[xml(transparent)]
+    Resume(Resume),
+
+    /// Sucessful SM resumption response
+    #[xml(transparent)]
+    Resumed(Resumed),
+
+    /// Error response
+    #[xml(transparent)]
+    Failed(Failed),
+
+    /// Acknowledgement
+    #[xml(transparent)]
+    Ack(A),
+
+    /// Request for an acknowledgement
+    #[xml(transparent)]
+    Req(R),
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

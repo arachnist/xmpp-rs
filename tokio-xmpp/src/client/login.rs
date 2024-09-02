@@ -103,14 +103,13 @@ pub async fn auth<S: AsyncBufRead + AsyncWrite + Unpin>(
     Err(AuthError::NoMechanism.into())
 }
 
-/// Log into an XMPP server as a client with a jid+pass
-/// does channel binding if supported
-pub async fn client_login<C: ServerConnector>(
+/// Authenticate to an XMPP server, but do not bind a resource.
+pub async fn client_auth<C: ServerConnector>(
     server: C,
     jid: Jid,
     password: String,
     timeouts: Timeouts,
-) -> Result<(Option<FullJid>, StreamFeatures, XmppStream<C::Stream>), Error> {
+) -> Result<(StreamFeatures, XmppStream<C::Stream>), Error> {
     let username = jid.node().unwrap().as_str();
     let password = password;
 
@@ -132,7 +131,18 @@ pub async fn client_login<C: ServerConnector>(
             id: None,
         })
         .await?;
-    let (features, mut stream) = stream.recv_features().await?;
+    Ok(stream.recv_features().await?)
+}
+
+/// Log into an XMPP server as a client with a jid+pass
+/// does channel binding if supported
+pub async fn client_login<C: ServerConnector>(
+    server: C,
+    jid: Jid,
+    password: String,
+    timeouts: Timeouts,
+) -> Result<(Option<FullJid>, StreamFeatures, XmppStream<C::Stream>), Error> {
+    let (features, mut stream) = client_auth(server, jid.clone(), password, timeouts).await?;
 
     // XmppStream bound to user session
     let full_jid = bind(&mut stream, &features, &jid).await?;

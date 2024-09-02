@@ -43,6 +43,10 @@ pub struct StreamFeatures {
     #[xml(child(default))]
     pub sasl_cb: Option<SaslChannelBinding>,
 
+    /// Stream management feature
+    #[xml(child(default))]
+    pub stream_management: Option<crate::sm::StreamManagement>,
+
     /// Other stream features advertised
     ///
     /// If some features you use end up here, you may want to contribute
