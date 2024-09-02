@@ -102,11 +102,7 @@ impl TryFrom<Stanza> for Iq {
 
 impl From<Stanza> for XmppStreamElement {
     fn from(other: Stanza) -> Self {
-        match other {
-            Stanza::Iq(st) => Self::Iq(st),
-            Stanza::Message(st) => Self::Message(st),
-            Stanza::Presence(st) => Self::Presence(st),
-        }
+        Self::Stanza(other)
     }
 }
 

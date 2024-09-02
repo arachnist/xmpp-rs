@@ -7,6 +7,7 @@ use xmpp_parsers::iq::{Iq, IqType};
 use xmpp_parsers::stream_features::StreamFeatures;
 
 use crate::error::{Error, ProtocolError};
+use crate::event::Stanza;
 use crate::jid::{FullJid, Jid};
 use crate::xmlstream::{ReadError, XmppStream, XmppStreamElement};
 
@@ -22,19 +23,21 @@ pub async fn bind<S: AsyncBufRead + AsyncWrite + Unpin>(
             .resource()
             .and_then(|resource| Some(resource.to_string()));
         let iq = Iq::from_set(BIND_REQ_ID, BindQuery::new(resource));
-        stream.send(&XmppStreamElement::Iq(iq)).await?;
+        stream.send(&iq).await?;
 
         loop {
             match stream.next().await {
-                Some(Ok(XmppStreamElement::Iq(iq))) if iq.id == BIND_REQ_ID => match iq.payload {
-                    IqType::Result(Some(payload)) => match BindResponse::try_from(payload) {
-                        Ok(v) => {
-                            return Ok(Some(v.into()));
-                        }
-                        Err(_) => return Err(ProtocolError::InvalidBindResponse.into()),
-                    },
-                    _ => return Err(ProtocolError::InvalidBindResponse.into()),
-                },
+                Some(Ok(XmppStreamElement::Stanza(Stanza::Iq(iq)))) if iq.id == BIND_REQ_ID => {
+                    match iq.payload {
+                        IqType::Result(Some(payload)) => match BindResponse::try_from(payload) {
+                            Ok(v) => {
+                                return Ok(Some(v.into()));
+                            }
+                            Err(_) => return Err(ProtocolError::InvalidBindResponse.into()),
+                        },
+                        _ => return Err(ProtocolError::InvalidBindResponse.into()),
+                    }
+                }
                 Some(Ok(_)) => {}
                 Some(Err(ReadError::SoftTimeout)) => {}
                 Some(Err(ReadError::HardError(e))) => return Err(e.into()),

@@ -18,14 +18,8 @@ impl<C: ServerConnector> Stream for Component<C> {
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Option<Self::Item>> {
         loop {
             match Pin::new(&mut self.stream).poll_next(cx) {
-                Poll::Ready(Some(Ok(XmppStreamElement::Iq(stanza)))) => {
-                    return Poll::Ready(Some(Stanza::Iq(stanza)))
-                }
-                Poll::Ready(Some(Ok(XmppStreamElement::Message(stanza)))) => {
-                    return Poll::Ready(Some(Stanza::Message(stanza)))
-                }
-                Poll::Ready(Some(Ok(XmppStreamElement::Presence(stanza)))) => {
-                    return Poll::Ready(Some(Stanza::Presence(stanza)))
+                Poll::Ready(Some(Ok(XmppStreamElement::Stanza(stanza)))) => {
+                    return Poll::Ready(Some(stanza))
                 }
                 Poll::Ready(Some(Ok(_))) =>
                 // unexpected

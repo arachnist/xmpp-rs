@@ -141,35 +141,14 @@ impl<C: ServerConnector> Stream for Client<C> {
                         Poll::Ready(Some(Err(ReadError::SoftTimeout))) => {
                             // TODO: do something smart about this.
                         }
-                        Poll::Ready(Some(Ok(XmppStreamElement::Iq(stanza)))) => {
+                        Poll::Ready(Some(Ok(XmppStreamElement::Stanza(stanza)))) => {
                             // Receive stanza
                             self.state = ClientState::Connected {
                                 stream,
                                 features,
                                 bound_jid,
                             };
-                            // TODO: use specific stanza types instead of going back to elements...
-                            return Poll::Ready(Some(Event::Stanza(stanza.into())));
-                        }
-                        Poll::Ready(Some(Ok(XmppStreamElement::Message(stanza)))) => {
-                            // Receive stanza
-                            self.state = ClientState::Connected {
-                                stream,
-                                features,
-                                bound_jid,
-                            };
-                            // TODO: use specific stanza types instead of going back to elements...
-                            return Poll::Ready(Some(Event::Stanza(stanza.into())));
-                        }
-                        Poll::Ready(Some(Ok(XmppStreamElement::Presence(stanza)))) => {
-                            // Receive stanza
-                            self.state = ClientState::Connected {
-                                stream,
-                                features,
-                                bound_jid,
-                            };
-                            // TODO: use specific stanza types instead of going back to elements...
-                            return Poll::Ready(Some(Event::Stanza(stanza.into())));
+                            return Poll::Ready(Some(Event::Stanza(stanza)));
                         }
                         Poll::Ready(Some(Ok(_))) => {
                             // We ignore these for now.

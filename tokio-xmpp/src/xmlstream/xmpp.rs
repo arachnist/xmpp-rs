@@ -6,26 +6,17 @@
 
 use xso::{AsXml, FromXml};
 
-use xmpp_parsers::{
-    component, iq::Iq, message::Message, presence::Presence, sasl, starttls,
-    stream_error::ReceivedStreamError,
-};
+use xmpp_parsers::{component, sasl, starttls, stream_error::ReceivedStreamError};
+
+use crate::Stanza;
 
 /// Any valid XMPP stream-level element.
 #[derive(FromXml, AsXml, Debug)]
 #[xml()]
 pub enum XmppStreamElement {
-    /// IQ stanza
+    /// Stanza
     #[xml(transparent)]
-    Iq(Iq),
-
-    /// Message stanza
-    #[xml(transparent)]
-    Message(Message),
-
-    /// Presence stanza
-    #[xml(transparent)]
-    Presence(Presence),
+    Stanza(Stanza),
 
     /// SASL-related nonza
     #[xml(transparent)]
