@@ -70,6 +70,8 @@ use tokio::io::{AsyncBufRead, AsyncWrite};
 
 use xso::{AsXml, FromXml, Item};
 
+use crate::connect::AsyncReadAndWrite;
+
 mod capture;
 mod common;
 mod initiator;
@@ -336,6 +338,21 @@ impl<Io: AsyncBufRead + AsyncWrite + Unpin, T: FromXml + AsXml + fmt::Debug> Xml
     pub fn into_inner(self) -> Io {
         self.assert_retypable();
         self.inner.into_inner()
+    }
+
+    /// Box the underlying transport stream.
+    ///
+    /// This removes the specific type of the transport from the XML stream's
+    /// type signature.
+    pub fn box_stream(self) -> XmlStream<Box<dyn AsyncReadAndWrite + Send + 'static>, T>
+    where
+        Io: AsyncReadAndWrite + Send + 'static,
+    {
+        XmlStream {
+            inner: self.inner.box_stream(),
+            read_state: self.read_state,
+            write_state: self.write_state,
+        }
     }
 }
 

@@ -25,6 +25,8 @@ use xso::{
     AsXml, FromEventsBuilder, FromXml, Item,
 };
 
+use crate::connect::AsyncReadAndWrite;
+
 use super::capture::{log_enabled, log_recv, log_send, CaptureBufRead};
 
 use xmpp_parsers::ns::STREAM as XML_STREAM_NS;
@@ -271,6 +273,31 @@ impl<Io: AsyncBufRead + AsyncWrite> RawXmlStream<Io> {
 
     pub(super) fn into_inner(self) -> Io {
         self.parser.into_inner().0.into_inner()
+    }
+
+    /// Box the underlying transport stream.
+    ///
+    /// This removes the specific type of the transport from the XML stream's
+    /// type signature.
+    pub(super) fn box_stream(self) -> RawXmlStream<Box<dyn AsyncReadAndWrite + Send + 'static>>
+    where
+        Io: AsyncReadAndWrite + Send + 'static,
+    {
+        let (io, p) = self.parser.into_inner();
+        let mut io = CaptureBufRead::wrap(Box::new(io) as Box<_>);
+        if log_enabled() {
+            io.enable_capture();
+        }
+        let parser = rxml::AsyncReader::wrap(io, p);
+        RawXmlStream {
+            parser,
+            timeouts: self.timeouts,
+            writer: self.writer,
+            tx_buffer: self.tx_buffer,
+            tx_buffer_logged: self.tx_buffer_logged,
+            tx_buffer_high_water_mark: self.tx_buffer_high_water_mark,
+            stream_ns: self.stream_ns,
+        }
     }
 }
 
