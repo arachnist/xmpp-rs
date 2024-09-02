@@ -454,7 +454,7 @@ impl<Io: AsyncWrite + Unpin, T: FromXml + AsXml> XmlStream<Io, T> {
     }
 }
 
-impl<'x, Io: AsyncWrite, T: FromXml + AsXml> Sink<&'x T> for XmlStream<Io, T> {
+impl<'x, Io: AsyncWrite, T: FromXml + AsXml, U: AsXml> Sink<&'x U> for XmlStream<Io, T> {
     type Error = io::Error;
 
     fn poll_ready(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
@@ -475,7 +475,7 @@ impl<'x, Io: AsyncWrite, T: FromXml + AsXml> Sink<&'x T> for XmlStream<Io, T> {
         this.inner.poll_close(cx)
     }
 
-    fn start_send(self: Pin<&mut Self>, item: &'x T) -> Result<(), Self::Error> {
+    fn start_send(self: Pin<&mut Self>, item: &'x U) -> Result<(), Self::Error> {
         let this = self.project();
         this.write_state.check_writable()?;
         this.inner.start_send_xso(item)

@@ -5,7 +5,7 @@ use crate::{
     client::{login::client_login, stream::ClientState},
     connect::ServerConnector,
     error::Error,
-    xmlstream::Timeouts,
+    xmlstream::{Timeouts, XmppStream, XmppStreamElement},
     Stanza,
 };
 
@@ -75,7 +75,9 @@ impl<C: ServerConnector> Client<C> {
     /// Make sure to disable reconnect.
     pub async fn send_end(&mut self) -> Result<(), Error> {
         match self.state {
-            ClientState::Connected { ref mut stream, .. } => Ok(stream.close().await?),
+            ClientState::Connected { ref mut stream, .. } => {
+                Ok(<XmppStream<C::Stream> as SinkExt<&XmppStreamElement>>::close(stream).await?)
+            }
             ClientState::Connecting { .. } => {
                 self.state = ClientState::Disconnected;
                 Ok(())

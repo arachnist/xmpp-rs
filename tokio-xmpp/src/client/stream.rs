@@ -97,7 +97,10 @@ impl<C: ServerConnector> Stream for Client<C> {
                 bound_jid,
             } => {
                 // Poll sink
-                match Pin::new(&mut stream).poll_ready(cx) {
+                match <XmppStream<C::Stream> as Sink<&XmppStreamElement>>::poll_ready(
+                    Pin::new(&mut stream),
+                    cx,
+                ) {
                     Poll::Pending => (),
                     Poll::Ready(Ok(())) => (),
                     Poll::Ready(Err(e)) => {
@@ -195,36 +198,45 @@ impl<C: ServerConnector> Sink<Stanza> for Client<C> {
 
     fn start_send(mut self: Pin<&mut Self>, item: Stanza) -> Result<(), Self::Error> {
         match self.state {
-            ClientState::Connected { ref mut stream, .. } => Pin::new(stream)
-                .start_send(&item.into())
-                .map_err(|e| e.into()),
+            ClientState::Connected { ref mut stream, .. } => {
+                Pin::new(stream).start_send(&item).map_err(|e| e.into())
+            }
             _ => Err(Error::InvalidState),
         }
     }
 
     fn poll_ready(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Result<(), Self::Error>> {
         match self.state {
-            ClientState::Connected { ref mut stream, .. } => {
-                Pin::new(stream).poll_ready(cx).map_err(|e| e.into())
-            }
+            ClientState::Connected { ref mut stream, .. } => <XmppStream<C::Stream> as Sink<
+                &XmppStreamElement,
+            >>::poll_ready(
+                Pin::new(stream), cx
+            )
+            .map_err(|e| e.into()),
             _ => Poll::Pending,
         }
     }
 
     fn poll_flush(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Result<(), Self::Error>> {
         match self.state {
-            ClientState::Connected { ref mut stream, .. } => {
-                Pin::new(stream).poll_flush(cx).map_err(|e| e.into())
-            }
+            ClientState::Connected { ref mut stream, .. } => <XmppStream<C::Stream> as Sink<
+                &XmppStreamElement,
+            >>::poll_flush(
+                Pin::new(stream), cx
+            )
+            .map_err(|e| e.into()),
             _ => Poll::Pending,
         }
     }
 
     fn poll_close(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Result<(), Self::Error>> {
         match self.state {
-            ClientState::Connected { ref mut stream, .. } => {
-                Pin::new(stream).poll_close(cx).map_err(|e| e.into())
-            }
+            ClientState::Connected { ref mut stream, .. } => <XmppStream<C::Stream> as Sink<
+                &XmppStreamElement,
+            >>::poll_close(
+                Pin::new(stream), cx
+            )
+            .map_err(|e| e.into()),
             _ => Poll::Pending,
         }
     }

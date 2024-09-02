@@ -6,6 +6,7 @@
 
 use rand::{thread_rng, Rng};
 use xmpp_parsers::{iq::Iq, jid::Jid, message::Message, presence::Presence};
+use xso::{AsXml, FromXml};
 
 use crate::xmlstream::XmppStreamElement;
 use crate::Error;
@@ -16,15 +17,19 @@ fn make_id() -> String {
 }
 
 /// A stanza sent/received over the stream.
-#[derive(Debug)]
+#[derive(FromXml, AsXml, Debug)]
+#[xml()]
 pub enum Stanza {
     /// IQ stanza
+    #[xml(transparent)]
     Iq(Iq),
 
     /// Message stanza
+    #[xml(transparent)]
     Message(Message),
 
     /// Presence stanza
+    #[xml(transparent)]
     Presence(Presence),
 }
 

@@ -158,7 +158,7 @@ async fn test_clean_shutdown() {
         )
         .await?;
         let (_, mut stream) = stream.recv_features::<Data>().await?;
-        stream.close().await?;
+        SinkExt::<&Data>::close(&mut stream).await?;
         match stream.next().await {
             Some(Err(ReadError::StreamFooterReceived)) => (),
             other => panic!("unexpected stream message: {:?}", other),
@@ -181,7 +181,7 @@ async fn test_clean_shutdown() {
             Some(Err(ReadError::StreamFooterReceived)) => (),
             other => panic!("unexpected stream message: {:?}", other),
         }
-        stream.close().await?;
+        SinkExt::<&Data>::close(&mut stream).await?;
         Ok::<_, io::Error>(())
     });
 
@@ -229,7 +229,7 @@ async fn test_exchange_data_stream_reset_and_shutdown() {
                 contents: "once more".to_owned(),
             })
             .await?;
-        stream.close().await?;
+        SinkExt::<&Data>::close(&mut stream).await?;
         match stream.next().await {
             Some(Ok(Data { contents })) => assert_eq!(contents, "hello world!"),
             other => panic!("unexpected stream message: {:?}", other),
@@ -283,7 +283,7 @@ async fn test_exchange_data_stream_reset_and_shutdown() {
             Some(Ok(Data { contents })) => assert_eq!(contents, "once more"),
             other => panic!("unexpected stream message: {:?}", other),
         }
-        stream.close().await?;
+        SinkExt::<&Data>::close(&mut stream).await?;
         match stream.next().await {
             Some(Err(ReadError::StreamFooterReceived)) => (),
             other => panic!("unexpected stream message: {:?}", other),
@@ -427,7 +427,7 @@ async fn test_can_receive_after_shutdown() {
                 contents: "world!".to_owned(),
             })
             .await?;
-        stream.close().await?;
+        <XmlStream<_, _> as SinkExt<&Data>>::close(&mut stream).await?;
         Ok::<_, io::Error>(())
     });
 

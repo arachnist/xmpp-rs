@@ -6,7 +6,10 @@ use std::pin::Pin;
 use std::task::Context;
 
 use crate::{
-    component::Component, connect::ServerConnector, xmlstream::XmppStreamElement, Error, Stanza,
+    component::Component,
+    connect::ServerConnector,
+    xmlstream::{XmppStream, XmppStreamElement},
+    Error, Stanza,
 };
 
 impl<C: ServerConnector> Stream for Component<C> {
@@ -42,25 +45,31 @@ impl<C: ServerConnector> Sink<Stanza> for Component<C> {
 
     fn start_send(mut self: Pin<&mut Self>, item: Stanza) -> Result<(), Self::Error> {
         Pin::new(&mut self.stream)
-            .start_send(&item.into())
+            .start_send(&item)
             .map_err(|e| e.into())
     }
 
     fn poll_ready(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Result<(), Self::Error>> {
-        Pin::new(&mut self.stream)
-            .poll_ready(cx)
-            .map_err(|e| e.into())
+        <XmppStream<C::Stream> as Sink<&XmppStreamElement>>::poll_ready(
+            Pin::new(&mut self.stream),
+            cx,
+        )
+        .map_err(|e| e.into())
     }
 
     fn poll_flush(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Result<(), Self::Error>> {
-        Pin::new(&mut self.stream)
-            .poll_flush(cx)
-            .map_err(|e| e.into())
+        <XmppStream<C::Stream> as Sink<&XmppStreamElement>>::poll_flush(
+            Pin::new(&mut self.stream),
+            cx,
+        )
+        .map_err(|e| e.into())
     }
 
     fn poll_close(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Result<(), Self::Error>> {
-        Pin::new(&mut self.stream)
-            .poll_close(cx)
-            .map_err(|e| e.into())
+        <XmppStream<C::Stream> as Sink<&XmppStreamElement>>::poll_close(
+            Pin::new(&mut self.stream),
+            cx,
+        )
+        .map_err(|e| e.into())
     }
 }
