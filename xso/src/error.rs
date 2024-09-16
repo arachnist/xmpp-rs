@@ -183,7 +183,7 @@ pub enum FromElementError {
     /// Contains the original `Element` unmodified.
     Mismatch(minidom::Element),
 
-    /// During processing of the element, an (unrecoverable) error occured.
+    /// During processing of the element, an (unrecoverable) error occurred.
     Invalid(Error),
 }
 

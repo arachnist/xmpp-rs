@@ -149,7 +149,7 @@ pub trait TextCodec<T> {
     /// content by stripping it.
     // NOTE: The bound on T is needed because any given type A may implement
     // TextCodec for any number of types. If we pass T down to the `Filtered`
-    // struct, rustc can do type inferrence on which `TextCodec`
+    // struct, rustc can do type inference on which `TextCodec`
     // implementation the `filtered` method is supposed to have been called
     // on.
     fn filtered<F: TextFilter>(self, filter: F) -> Filtered<F, Self, T>

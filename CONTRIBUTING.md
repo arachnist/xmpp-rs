@@ -2,7 +2,7 @@
 
 Thank you (again) for your interest in the project!
 
-## Talk to us before commiting to a change
+## Talk to us before committing to a change
 
 We recommend you come and talk to us in the channel and/or open an issue
 before you start working on a feature, to **see if it aligns with our goals**.

@@ -24,6 +24,7 @@ XXXX-YY-ZZ RELEASER <admin@example.com>
         nothing so far uses it for anything but this message.  We can always
         change it again once any other specification allows e.g. presences or
         iqs.
+      - Module `jingle_thumnails` renamed to `jingle_thumbnails`.
     * New parsers/serialisers:
         - Stream Features (RFC 6120) (!400)
         - Extensible SASL Profile (XEP-0388)

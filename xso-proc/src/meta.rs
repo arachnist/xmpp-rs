@@ -475,7 +475,7 @@ impl XmlCompoundMeta {
 /// in case parsing the type path does then fail.
 fn maybe_type_path(p: parse::ParseStream<'_>) -> (bool, Option<Span>) {
     // ParseStream cursors do not advance the stream, but they are also rather
-    // unwieldly to use. Prepare for a lot of `let .. = ..`.
+    // unwieldy to use. Prepare for a lot of `let .. = ..`.
 
     let cursor = if p.peek(token::PathSep) {
         // If we have a path separator, we need to skip that initially. We

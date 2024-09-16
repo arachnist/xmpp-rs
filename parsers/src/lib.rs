@@ -196,7 +196,7 @@ pub mod jingle_s5b;
 pub mod jingle_ibb;
 
 /// XEP-0264: Jingle Content Thumbnails
-pub mod jingle_thumnails;
+pub mod jingle_thumbnails;
 
 /// XEP-0280: Message Carbons
 pub mod carbons;

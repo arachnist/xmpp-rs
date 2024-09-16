@@ -299,7 +299,7 @@ pub(crate) fn as_xml_text_fn(ty: Type) -> Expr {
 }
 
 /// Construct a [`syn::Path`] referring to `::xso::TextCodec::<#for_ty>`,
-/// returing the span of `for_ty` alongside it.
+/// returning the span of `for_ty` alongside it.
 fn text_codec_of(for_ty: Type) -> (Span, Path) {
     let span = for_ty.span();
     (

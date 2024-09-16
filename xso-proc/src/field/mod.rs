@@ -235,7 +235,7 @@ fn default_name(span: Span, name: Option<NameRef>, field_ident: Option<&Ident>) 
 /// `field_ident` is, for some field types, used to infer an XML name if
 /// it is not specified explicitly.
 ///
-/// `field_ty` is needed for type inferrence on extracted fields.
+/// `field_ty` is needed for type inference on extracted fields.
 ///
 /// `container_namespace` is used in some cases to insert a default
 /// namespace.

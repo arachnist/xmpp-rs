@@ -309,7 +309,7 @@ mod tests {
     }
 
     #[test]
-    fn fallible_builder_missmatch_passthrough() {
+    fn fallible_builder_mismatch_passthrough() {
         match Result::<AlwaysMismatch, Error>::from_events(qname(), attrs()) {
             Err(FromEventsError::Mismatch { .. }) => (),
             other => panic!("unexpected result: {:?}", other),

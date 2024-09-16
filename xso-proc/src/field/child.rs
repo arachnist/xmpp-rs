@@ -338,7 +338,7 @@ impl ExtractDef {
             // thing no matter whether the extracted field is of type
             // `Option<T>` or `T`.
             //
-            // And then, type inferrence does the rest: There is ambiguity
+            // And then, type inference does the rest: There is ambiguity
             // there, of course, if we call `.into()` on a value of type
             // `Option<T>`: Should Rust wrap it into another layer of
             // `Option`, or should it just move the value? The answer lies in

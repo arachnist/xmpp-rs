@@ -33,7 +33,7 @@ pub struct Thumbnail {
 
 #[cfg(test)]
 mod tests {
-    use crate::jingle_thumnails::Thumbnail;
+    use crate::jingle_thumbnails::Thumbnail;
     use minidom::Element;
 
     #[test]

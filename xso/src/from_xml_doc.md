@@ -199,7 +199,7 @@ Dynamic enum variants are completely independent of one another and thus use
 the same meta structure as structs. See [Struct meta](#struct-meta) for
 details.
 
-The `builder`, `iterator` and `debug` keys cannot be used on dynmaic enum
+The `builder`, `iterator` and `debug` keys cannot be used on dynamic enum
 variants.
 
 #### Example
@@ -527,7 +527,7 @@ in regard of the specific serialisation of a field: it is possible to exchange
 a nested child element for an attribute without changing the Rust interface
 of the struct.
 
-On the other hand, `extract` meta declarations can quickly become unwieldly
+On the other hand, `extract` meta declarations can quickly become unwieldy
 and they may not support all configuration options which may in the future be
 added on structs (such as configuring handling of undeclared attributes) and
 they cannot be used for enumerations.

@@ -61,7 +61,7 @@ impl<S: ScramProvider> Scram<S> {
     }
 
     /// Sets extension data to be inserted into the client's first message.
-    /// Extension data must be in the format of a comma seperated list of SCRAM extensions to be used e.g. `foo=true,bar=baz`
+    /// Extension data must be in the format of a comma separated list of SCRAM extensions to be used e.g. `foo=true,bar=baz`
     /// If not called, no extensions will be used for the clients first message.
     pub fn with_first_extensions(mut self, extensions: String) -> Self {
         self.client_first_extensions = extensions;
@@ -69,7 +69,7 @@ impl<S: ScramProvider> Scram<S> {
     }
 
     /// Sets extension data to be inserted into the client's final message.
-    /// Extension data must be in the format of a comma seperated list of SCRAM extensions to be used e.g. `foo=true,bar=baz`
+    /// Extension data must be in the format of a comma separated list of SCRAM extensions to be used e.g. `foo=true,bar=baz`
     /// If not called, no extensions will be used for the clients final message.
     pub fn with_final_extensions(mut self, extensions: String) -> Self {
         self.client_final_extensions = extensions;

@@ -306,7 +306,7 @@ mod tests_minidom {
         assert_eq!(items.len(), 1);
         match items[0] {
             Item::XmlDeclaration(XmlVersion::V1_0) => (),
-            ref other => panic!("unexected item in position 0: {:?}", other),
+            ref other => panic!("unexpected item in position 0: {:?}", other),
         };
     }
 
@@ -327,15 +327,15 @@ mod tests_minidom {
                 assert_eq!(&**ns, Namespace::none());
                 assert_eq!(&**name, "elem");
             }
-            ref other => panic!("unexected item in position 0: {:?}", other),
+            ref other => panic!("unexpected item in position 0: {:?}", other),
         };
         match items[1] {
             Item::ElementHeadEnd => (),
-            ref other => panic!("unexected item in position 1: {:?}", other),
+            ref other => panic!("unexpected item in position 1: {:?}", other),
         };
         match items[2] {
             Item::ElementFoot => (),
-            ref other => panic!("unexected item in position 2: {:?}", other),
+            ref other => panic!("unexpected item in position 2: {:?}", other),
         };
     }
 
@@ -362,7 +362,7 @@ mod tests_minidom {
                 assert_eq!(&**ns, Namespace::none());
                 assert_eq!(&**name, "elem");
             }
-            ref other => panic!("unexected item in position 0: {:?}", other),
+            ref other => panic!("unexpected item in position 0: {:?}", other),
         };
         match items[1] {
             Item::Attribute(ref ns, ref name, ref value) => {
@@ -370,15 +370,15 @@ mod tests_minidom {
                 assert_eq!(&**name, "attr");
                 assert_eq!(&**value, "value");
             }
-            ref other => panic!("unexected item in position 1: {:?}", other),
+            ref other => panic!("unexpected item in position 1: {:?}", other),
         };
         match items[2] {
             Item::ElementHeadEnd => (),
-            ref other => panic!("unexected item in position 2: {:?}", other),
+            ref other => panic!("unexpected item in position 2: {:?}", other),
         };
         match items[3] {
             Item::ElementFoot => (),
-            ref other => panic!("unexected item in position 3: {:?}", other),
+            ref other => panic!("unexpected item in position 3: {:?}", other),
         };
     }
 
@@ -400,21 +400,21 @@ mod tests_minidom {
                 assert_eq!(&**ns, Namespace::none());
                 assert_eq!(&**name, "elem");
             }
-            ref other => panic!("unexected item in position 0: {:?}", other),
+            ref other => panic!("unexpected item in position 0: {:?}", other),
         };
         match items[1] {
             Item::ElementHeadEnd => (),
-            ref other => panic!("unexected item in position 1: {:?}", other),
+            ref other => panic!("unexpected item in position 1: {:?}", other),
         };
         match items[2] {
             Item::Text(ref value) => {
                 assert_eq!(value, "Hello World!");
             }
-            ref other => panic!("unexected item in position 2: {:?}", other),
+            ref other => panic!("unexpected item in position 2: {:?}", other),
         };
         match items[3] {
             Item::ElementFoot => (),
-            ref other => panic!("unexected item in position 3: {:?}", other),
+            ref other => panic!("unexpected item in position 3: {:?}", other),
         };
     }
 }
@@ -446,7 +446,7 @@ mod tests {
         assert_eq!(events.len(), 1);
         match events[0] {
             Event::XmlDeclaration(_, XmlVersion::V1_0) => (),
-            ref other => panic!("unexected event in position 0: {:?}", other),
+            ref other => panic!("unexpected event in position 0: {:?}", other),
         };
     }
 
@@ -465,11 +465,11 @@ mod tests {
                 assert_eq!(ns, Namespace::none());
                 assert_eq!(name, "elem");
             }
-            ref other => panic!("unexected event in position 0: {:?}", other),
+            ref other => panic!("unexpected event in position 0: {:?}", other),
         };
         match events[1] {
             Event::EndElement(_) => (),
-            ref other => panic!("unexected event in position 1: {:?}", other),
+            ref other => panic!("unexpected event in position 1: {:?}", other),
         };
     }
 
@@ -487,11 +487,11 @@ mod tests {
                 assert_eq!(ns, Namespace::none());
                 assert_eq!(name, "elem");
             }
-            ref other => panic!("unexected event in position 0: {:?}", other),
+            ref other => panic!("unexpected event in position 0: {:?}", other),
         };
         match events[1] {
             Event::EndElement(_) => (),
-            ref other => panic!("unexected event in position 1: {:?}", other),
+            ref other => panic!("unexpected event in position 1: {:?}", other),
         };
     }
 
@@ -511,17 +511,17 @@ mod tests {
                 assert_eq!(ns, Namespace::none());
                 assert_eq!(name, "elem");
             }
-            ref other => panic!("unexected event in position 0: {:?}", other),
+            ref other => panic!("unexpected event in position 0: {:?}", other),
         };
         match events[1] {
             Event::Text(_, ref value) => {
                 assert_eq!(value, "Hello World!");
             }
-            ref other => panic!("unexected event in position 1: {:?}", other),
+            ref other => panic!("unexpected event in position 1: {:?}", other),
         };
         match events[2] {
             Event::EndElement(_) => (),
-            ref other => panic!("unexected event in position 2: {:?}", other),
+            ref other => panic!("unexpected event in position 2: {:?}", other),
         };
     }
 
@@ -549,11 +549,11 @@ mod tests {
                     Some("value")
                 );
             }
-            ref other => panic!("unexected event in position 0: {:?}", other),
+            ref other => panic!("unexpected event in position 0: {:?}", other),
         };
         match events[1] {
             Event::EndElement(_) => (),
-            ref other => panic!("unexected event in position 2: {:?}", other),
+            ref other => panic!("unexpected event in position 2: {:?}", other),
         };
     }
 }

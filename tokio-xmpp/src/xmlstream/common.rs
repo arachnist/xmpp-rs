@@ -32,7 +32,7 @@ use xmpp_parsers::ns::STREAM as XML_STREAM_NS;
 /// Configuration for timeouts on an XML stream.
 ///
 /// The defaults are tuned toward common desktop/laptop use and may not hold
-/// up to extreme conditions (arctic sattelite link, mobile internet on a
+/// up to extreme conditions (arctic satellite link, mobile internet on a
 /// train in Brandenburg, Germany, and similar) and may be inefficient in
 /// other conditions (stable server link, localhost communication).
 #[derive(Debug, Clone, Copy)]
