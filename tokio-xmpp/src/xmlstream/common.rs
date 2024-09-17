@@ -729,7 +729,7 @@ where
 }
 
 /// Contains metadata from an XML stream header
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct StreamHeader<'x> {
     /// The optional `from` attribute.
     pub from: Option<Cow<'x, str>>,
