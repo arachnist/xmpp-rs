@@ -180,6 +180,27 @@ pub enum ReadError {
     StreamFooterReceived,
 }
 
+impl fmt::Display for ReadError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ReadError::SoftTimeout => write!(f, "soft timeout"),
+            ReadError::HardError(e) => write!(f, "hard error: {}", e),
+            ReadError::ParseError(e) => write!(f, "parse error: {}", e),
+            ReadError::StreamFooterReceived => write!(f, "stream footer received"),
+        }
+    }
+}
+
+impl core::error::Error for ReadError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            ReadError::HardError(e) => Some(e),
+            ReadError::ParseError(e) => Some(e),
+            _ => None,
+        }
+    }
+}
+
 enum WriteState {
     Open,
     SendElementFoot,
