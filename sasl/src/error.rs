@@ -1,3 +1,4 @@
+use alloc::string::String;
 #[cfg(feature = "scram")]
 use getrandom::Error as RngError;
 

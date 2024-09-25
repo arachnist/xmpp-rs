@@ -1,5 +1,8 @@
 #[cfg(feature = "scram")]
 use crate::common::scram::DeriveError;
+use alloc::borrow::ToOwned;
+use alloc::string::String;
+use alloc::vec::Vec;
 
 pub trait Secret {}
 

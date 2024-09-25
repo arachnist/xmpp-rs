@@ -2,6 +2,8 @@
 
 use crate::client::{Mechanism, MechanismError};
 use crate::common::{Credentials, Identity, Password, Secret};
+use alloc::string::String;
+use alloc::vec::Vec;
 
 /// A struct for the SASL PLAIN mechanism.
 pub struct Plain {

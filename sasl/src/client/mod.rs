@@ -1,4 +1,5 @@
-use std::fmt;
+use alloc::vec::Vec;
+use core::fmt;
 
 use crate::common::Credentials;
 
@@ -84,7 +85,7 @@ impl fmt::Display for MechanismError {
     }
 }
 
-impl std::error::Error for MechanismError {}
+impl core::error::Error for MechanismError {}
 
 /// A trait which defines SASL mechanisms.
 pub trait Mechanism {

@@ -8,7 +8,10 @@ use crate::common::{parse_frame, xor, ChannelBinding, Credentials, Identity, Pas
 
 use crate::error::Error;
 
-use std::marker::PhantomData;
+use alloc::format;
+use alloc::string::String;
+use alloc::vec::Vec;
+use core::marker::PhantomData;
 
 enum ScramState {
     Init,
@@ -226,6 +229,8 @@ mod tests {
     use crate::client::mechanisms::Scram;
     use crate::client::Mechanism;
     use crate::common::scram::{Sha1, Sha256};
+    use alloc::borrow::ToOwned;
+    use alloc::string::String;
 
     #[test]
     fn scram_sha1_works() {
@@ -293,13 +298,13 @@ mod tests {
                 .with_first_extensions("tokenauth=true".to_owned());
         let init = mechanism.initial();
         assert_eq!(
-            std::str::from_utf8(&init).unwrap(),
-            std::str::from_utf8(client_init).unwrap()
+            core::str::from_utf8(&init).unwrap(),
+            core::str::from_utf8(client_init).unwrap()
         ); // depends on ordering…
         let resp = mechanism.response(server_init).unwrap();
         assert_eq!(
-            std::str::from_utf8(&resp).unwrap(),
-            std::str::from_utf8(client_final).unwrap()
+            core::str::from_utf8(&resp).unwrap(),
+            core::str::from_utf8(client_final).unwrap()
         ); // again, depends on ordering…
         mechanism.success(server_final).unwrap();
     }
@@ -318,13 +323,13 @@ mod tests {
                 .with_final_extensions("foo=true".to_owned());
         let init = mechanism.initial();
         assert_eq!(
-            std::str::from_utf8(&init).unwrap(),
-            std::str::from_utf8(client_init).unwrap()
+            core::str::from_utf8(&init).unwrap(),
+            core::str::from_utf8(client_init).unwrap()
         ); // depends on ordering…
         let resp = mechanism.response(server_init).unwrap();
         assert_eq!(
-            std::str::from_utf8(&resp).unwrap(),
-            std::str::from_utf8(client_final).unwrap()
+            core::str::from_utf8(&resp).unwrap(),
+            core::str::from_utf8(client_final).unwrap()
         ); // again, depends on ordering…
     }
 }

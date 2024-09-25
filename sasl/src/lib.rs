@@ -1,7 +1,10 @@
 //#![deny(missing_docs)]
+#![no_std]
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
 
 //! This crate provides a framework for SASL authentication and a few authentication mechanisms.
+//!
+//! It can be used in `no_std` environments.
 //!
 //! # Examples
 //!
@@ -183,6 +186,8 @@
 //! ```toml
 //! sasl = "*"
 //! ```
+
+extern crate alloc;
 
 mod error;
 

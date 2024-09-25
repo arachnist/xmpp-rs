@@ -1,6 +1,8 @@
 use crate::common::Identity;
 use crate::secret::Secret;
-use std::fmt;
+use alloc::vec::Vec;
+use core::error::Error;
+use core::fmt;
 
 #[cfg(feature = "scram")]
 use crate::common::scram::DeriveError;
@@ -171,7 +173,6 @@ impl Error for ProviderError {}
 
 impl Error for ValidatorError {}
 
-use std::error::Error;
 impl Error for MechanismError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {

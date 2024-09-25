@@ -1,4 +1,8 @@
-use std::marker::PhantomData;
+use alloc::borrow::ToOwned;
+use alloc::format;
+use alloc::string::{String, ToString};
+use alloc::vec::Vec;
+use core::marker::PhantomData;
 
 use base64::{engine::general_purpose::STANDARD as Base64, Engine};
 

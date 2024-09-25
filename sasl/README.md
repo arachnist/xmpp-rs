@@ -6,6 +6,8 @@ What's this?
 
 A crate which handles SASL authentication. Still unstable until 1.0.0.
 
+It can be used in `no_std` environments.
+
 Can I see an example?
 ---------------------
 

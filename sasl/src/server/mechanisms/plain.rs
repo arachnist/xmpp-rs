@@ -1,6 +1,8 @@
 use crate::common::Identity;
 use crate::secret;
 use crate::server::{Mechanism, MechanismError, Response, Validator};
+use alloc::string::String;
+use alloc::vec::Vec;
 
 pub struct Plain<V: Validator<secret::Plain>> {
     validator: V,

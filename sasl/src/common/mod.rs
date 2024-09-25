@@ -1,5 +1,7 @@
-use std::collections::BTreeMap;
-use std::string::FromUtf8Error;
+use alloc::borrow::ToOwned;
+use alloc::collections::BTreeMap;
+use alloc::string::{FromUtf8Error, String};
+use alloc::vec::Vec;
 
 #[cfg(feature = "scram")]
 pub mod scram;

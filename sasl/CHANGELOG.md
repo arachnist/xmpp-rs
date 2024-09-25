@@ -1,3 +1,7 @@
+Version NEXT, released 20??-??-??:
+	* Improvements
+		- This crate is now `no_std`, you can use it even on platforms which don’t provide the `std` crate.
+
 Version 0.5.2, released 2024-07-22:
 	* Improvements
 		- Add SCRAM client extensions support (thanks to Lucas Kent)

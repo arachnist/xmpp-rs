@@ -1,3 +1,7 @@
+use alloc::string::{String, ToString};
+use alloc::vec;
+use alloc::vec::Vec;
+use core::fmt;
 use getrandom::{getrandom, Error as RngError};
 use hmac::{digest::InvalidLength, Hmac, Mac};
 use pbkdf2::pbkdf2;
@@ -25,8 +29,8 @@ pub enum DeriveError {
     IncompatibleIterationCount(u32, u32),
 }
 
-impl std::fmt::Display for DeriveError {
-    fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl fmt::Display for DeriveError {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         match self {
             DeriveError::IncompatibleHashingMethod(one, two) => {
                 write!(fmt, "incompatible hashing method, {} is not {}", one, two)
@@ -40,7 +44,7 @@ impl std::fmt::Display for DeriveError {
     }
 }
 
-impl std::error::Error for DeriveError {}
+impl core::error::Error for DeriveError {}
 
 impl From<hmac::digest::InvalidLength> for DeriveError {
     fn from(_err: hmac::digest::InvalidLength) -> DeriveError {
