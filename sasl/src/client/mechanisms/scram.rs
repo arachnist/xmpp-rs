@@ -153,9 +153,9 @@ impl<S: ScramProvider> Mechanism for Scram<S> {
             } => {
                 let frame =
                     parse_frame(challenge).map_err(|_| MechanismError::CannotDecodeChallenge)?;
-                let server_nonce = frame.get("r");
-                let salt = frame.get("s").and_then(|v| Base64.decode(v).ok());
-                let iterations = frame.get("i").and_then(|v| v.parse().ok());
+                let server_nonce = frame.get(&'r');
+                let salt = frame.get(&'s').and_then(|v| Base64.decode(v).ok());
+                let iterations = frame.get(&'i').and_then(|v| v.parse().ok());
                 let server_nonce = server_nonce.ok_or(MechanismError::NoServerNonce)?;
                 let salt = salt.ok_or(MechanismError::NoServerSalt)?;
                 let iterations = iterations.ok_or(MechanismError::NoServerIterations)?;
@@ -206,7 +206,7 @@ impl<S: ScramProvider> Mechanism for Scram<S> {
             ScramState::GotServerData {
                 ref server_signature,
             } => {
-                if let Some(sig) = frame.get("v").and_then(|v| Base64.decode(v).ok()) {
+                if let Some(sig) = frame.get(&'v').and_then(|v| Base64.decode(v).ok()) {
                     if sig == *server_signature {
                         Ok(())
                     } else {

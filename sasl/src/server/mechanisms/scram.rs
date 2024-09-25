@@ -108,9 +108,9 @@ where
                 }
                 let frame =
                     parse_frame(&rest).map_err(|_| MechanismError::CannotDecodeInitialMessage)?;
-                let username = frame.get("n").ok_or(MechanismError::NoUsername)?;
+                let username = frame.get(&'n').ok_or(MechanismError::NoUsername)?;
                 let identity = Identity::Username(username.to_owned());
-                let client_nonce = frame.get("r").ok_or(MechanismError::NoNonce)?;
+                let client_nonce = frame.get(&'r').ok_or(MechanismError::NoNonce)?;
                 let mut server_nonce = String::new();
                 server_nonce += client_nonce;
                 server_nonce +=
@@ -162,7 +162,7 @@ where
                 let stored_key = S::hash(&client_key);
                 let client_signature = S::hmac(&auth_message, &stored_key)?;
                 let client_proof = xor(&client_key, &client_signature);
-                let sent_proof = frame.get("p").ok_or(MechanismError::NoProof)?;
+                let sent_proof = frame.get(&'p').ok_or(MechanismError::NoProof)?;
                 let sent_proof = Base64
                     .decode(sent_proof)
                     .map_err(|_| MechanismError::CannotDecodeProof)?;

@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::string::FromUtf8Error;
 
 #[cfg(feature = "scram")]
@@ -141,15 +141,17 @@ pub fn xor(a: &[u8], b: &[u8]) -> Vec<u8> {
 }
 
 #[doc(hidden)]
-pub fn parse_frame(frame: &[u8]) -> Result<HashMap<String, String>, FromUtf8Error> {
+pub fn parse_frame(frame: &[u8]) -> Result<BTreeMap<char, String>, FromUtf8Error> {
     let inner = String::from_utf8(frame.to_owned())?;
-    let mut ret = HashMap::new();
+    let mut ret = BTreeMap::new();
     for s in inner.split(',') {
         let mut tmp = s.splitn(2, '=');
         let key = tmp.next();
         let val = tmp.next();
         if let (Some(k), Some(v)) = (key, val) {
-            ret.insert(k.to_owned(), v.to_owned());
+            if let Some(k) = k.chars().next() {
+                ret.insert(k, v.to_owned());
+            }
         }
     }
     Ok(ret)
