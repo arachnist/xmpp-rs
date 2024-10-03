@@ -353,6 +353,10 @@ pub(crate) struct XmlCompoundMeta {
     /// any.
     pub(crate) on_unknown_attribute: Option<Ident>,
 
+    /// The value assigned to `on_unknown_child` inside `#[xml(..)]`, if
+    /// any.
+    pub(crate) on_unknown_child: Option<Ident>,
+
     /// The exhaustive flag.
     pub(crate) exhaustive: Flag,
 
@@ -370,6 +374,7 @@ impl XmlCompoundMeta {
         let mut builder = None;
         let mut iterator = None;
         let mut on_unknown_attribute = None;
+        let mut on_unknown_child = None;
         let mut debug = Flag::Absent;
         let mut exhaustive = Flag::Absent;
         let mut transparent = Flag::Absent;
@@ -402,6 +407,15 @@ impl XmlCompoundMeta {
                 }
                 on_unknown_attribute = Some(meta.value()?.parse()?);
                 Ok(())
+            } else if meta.path.is_ident("on_unknown_child") {
+                if on_unknown_child.is_some() {
+                    return Err(Error::new_spanned(
+                        meta.path,
+                        "duplicate `on_unknown_child` key",
+                    ));
+                }
+                on_unknown_child = Some(meta.value()?.parse()?);
+                Ok(())
             } else if meta.path.is_ident("exhaustive") {
                 if exhaustive.is_set() {
                     return Err(Error::new_spanned(meta.path, "duplicate `exhaustive` key"));
@@ -429,6 +443,7 @@ impl XmlCompoundMeta {
             builder,
             iterator,
             on_unknown_attribute,
+            on_unknown_child,
             exhaustive,
             transparent,
         })

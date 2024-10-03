@@ -70,6 +70,7 @@ impl StructInner {
             builder,
             iterator,
             on_unknown_attribute,
+            on_unknown_child,
             transparent,
         } = meta;
 
@@ -86,6 +87,7 @@ impl StructInner {
             reject_key!(namespace not on "transparent structs");
             reject_key!(name not on "transparent structs");
             reject_key!(on_unknown_attribute not on "transparent structs");
+            reject_key!(on_unknown_child not on "transparent structs");
 
             let fields_span = fields.span();
             let fields = match fields {
@@ -145,7 +147,12 @@ impl StructInner {
             };
 
             Ok(Self::Compound {
-                inner: Compound::from_fields(fields, &xml_namespace, on_unknown_attribute)?,
+                inner: Compound::from_fields(
+                    fields,
+                    &xml_namespace,
+                    on_unknown_attribute,
+                    on_unknown_child,
+                )?,
                 xml_namespace,
                 xml_name,
             })

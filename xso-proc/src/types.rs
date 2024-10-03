@@ -841,3 +841,52 @@ pub(crate) fn unknown_attribute_policy_path(span: Span) -> Path {
         .collect(),
     }
 }
+
+/// Construct a [`syn::Path`] referring to `::xso::UnknownChildPolicy`.
+pub(crate) fn unknown_child_policy_path(span: Span) -> Path {
+    Path {
+        leading_colon: Some(syn::token::PathSep {
+            spans: [span, span],
+        }),
+        segments: [
+            PathSegment {
+                ident: Ident::new("xso", span),
+                arguments: PathArguments::None,
+            },
+            PathSegment {
+                ident: Ident::new("UnknownChildPolicy", span),
+                arguments: PathArguments::None,
+            },
+        ]
+        .into_iter()
+        .collect(),
+    }
+}
+
+/// Construct a [`syn::Type`] referring to `::xso::fromxml::Discard`.
+pub(crate) fn discard_builder_ty(span: Span) -> Type {
+    Type::Path(TypePath {
+        qself: None,
+        path: Path {
+            leading_colon: Some(syn::token::PathSep {
+                spans: [span, span],
+            }),
+            segments: [
+                PathSegment {
+                    ident: Ident::new("xso", span),
+                    arguments: PathArguments::None,
+                },
+                PathSegment {
+                    ident: Ident::new("fromxml", span),
+                    arguments: PathArguments::None,
+                },
+                PathSegment {
+                    ident: Ident::new("Discard", span),
+                    arguments: PathArguments::None,
+                },
+            ]
+            .into_iter()
+            .collect(),
+        },
+    })
+}

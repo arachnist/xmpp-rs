@@ -69,6 +69,7 @@ The following keys are defined on structs:
 | `builder` | optional *ident* | The name to use for the generated builder type. |
 | `iterator` | optional *ident* | The name to use for the generated iterator type. |
 | `on_unknown_attribute` | *identifier* | Name of an [`UnknownAttributePolicy`] member, controlling how unknown attributes are handled. |
+| `on_unknown_child` | *identifier* | Name of an [`UnknownChildPolicy`] member, controlling how unknown children are handled. |
 
 Note that the `name` value must be a valid XML element name, without colons.
 The namespace prefix, if any, is assigned automatically at serialisation time
@@ -149,6 +150,7 @@ documentation above.
 | --- | --- | --- |
 | `name` | *string literal* or *path* | The XML element name to match for this variant. If it is a *path*, it must point at a `&'static NcNameStr`. |
 | `on_unknown_attribute` | *identifier* | Name of an [`UnknownAttributePolicy`] member, controlling how unknown attributes are handled. |
+| `on_unknown_child` | *identifier* | Name of an [`UnknownChildPolicy`] member, controlling how unknown children are handled. |
 
 Note that the `name` value must be a valid XML element name, without colons.
 The namespace prefix, if any, is assigned automatically at serialisation time

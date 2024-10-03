@@ -16,8 +16,8 @@ use crate::meta::NamespaceRef;
 use crate::scope::{mangle_member, AsItemsScope, FromEventsScope};
 use crate::state::{AsItemsSubmachine, FromEventsSubmachine, State};
 use crate::types::{
-    default_fn, feed_fn, namespace_ty, ncnamestr_cow_ty, phantom_lifetime_ty, ref_ty,
-    unknown_attribute_policy_path,
+    default_fn, discard_builder_ty, feed_fn, namespace_ty, ncnamestr_cow_ty, phantom_lifetime_ty,
+    ref_ty, unknown_attribute_policy_path, unknown_child_policy_path,
 };
 
 fn resolve_policy(policy: Option<Ident>, mut enum_ref: Path) -> Expr {
@@ -52,6 +52,9 @@ pub(crate) struct Compound {
 
     /// Policy defining how to handle unknown attributes.
     unknown_attribute_policy: Expr,
+
+    /// Policy defining how to handle unknown children.
+    unknown_child_policy: Expr,
 }
 
 impl Compound {
@@ -59,10 +62,15 @@ impl Compound {
     pub(crate) fn from_field_defs<I: IntoIterator<Item = Result<FieldDef>>>(
         compound_fields: I,
         unknown_attribute_policy: Option<Ident>,
+        unknown_child_policy: Option<Ident>,
     ) -> Result<Self> {
         let unknown_attribute_policy = resolve_policy(
             unknown_attribute_policy,
             unknown_attribute_policy_path(Span::call_site()),
+        );
+        let unknown_child_policy = resolve_policy(
+            unknown_child_policy,
+            unknown_child_policy_path(Span::call_site()),
         );
         let compound_fields = compound_fields.into_iter();
         let size_hint = compound_fields.size_hint();
@@ -91,6 +99,7 @@ impl Compound {
         Ok(Self {
             fields,
             unknown_attribute_policy,
+            unknown_child_policy,
         })
     }
 
@@ -99,6 +108,7 @@ impl Compound {
         compound_fields: &Fields,
         container_namespace: &NamespaceRef,
         unknown_attribute_policy: Option<Ident>,
+        unknown_child_policy: Option<Ident>,
     ) -> Result<Self> {
         Self::from_field_defs(
             compound_fields.iter().enumerate().map(|(i, field)| {
@@ -116,6 +126,7 @@ impl Compound {
                 FieldDef::from_field(field, index, container_namespace)
             }),
             unknown_attribute_policy,
+            unknown_child_policy,
         )
     }
 
@@ -141,6 +152,7 @@ impl Compound {
         } = scope;
 
         let default_state_ident = quote::format_ident!("{}Default", state_prefix);
+        let discard_state_ident = quote::format_ident!("{}Discard", state_prefix);
         let builder_data_ty: Type = TypePath {
             qself: None,
             path: quote::format_ident!("{}Data{}", state_ty_ident, state_prefix).into(),
@@ -334,6 +346,7 @@ impl Compound {
 
         let unknown_attr_err = format!("Unknown attribute in {}.", output_name);
         let unknown_child_err = format!("Unknown child in {}.", output_name);
+        let unknown_child_policy = &self.unknown_child_policy;
 
         let output_cons = match output_name {
             ParentRef::Named(ref path) => {
@@ -348,13 +361,42 @@ impl Compound {
             }
         };
 
+        let discard_builder_ty = discard_builder_ty(Span::call_site());
+        let discard_feed = feed_fn(discard_builder_ty.clone());
         let child_fallback = match fallback_child_matcher {
             Some((_, matcher)) => matcher,
             None => quote! {
                 let _ = (name, attrs);
-                ::core::result::Result::Err(::xso::error::Error::Other(#unknown_child_err))
+                let _: () = #unknown_child_policy.apply_policy(#unknown_child_err)?;
+                ::core::result::Result::Ok(::core::ops::ControlFlow::Break(Self::#discard_state_ident {
+                    #builder_data_ident,
+                    #substate_data: #discard_builder_ty::new(),
+                }))
             },
         };
+
+        states.push(State::new_with_builder(
+            discard_state_ident.clone(),
+            &builder_data_ident,
+            &builder_data_ty,
+        ).with_field(
+            substate_data,
+            &discard_builder_ty,
+        ).with_mut(substate_data).with_impl(quote! {
+            match #discard_feed(&mut #substate_data, ev)? {
+                ::core::option::Option::Some(#substate_result) => {
+                    ::core::result::Result::Ok(::core::ops::ControlFlow::Break(Self::#default_state_ident {
+                        #builder_data_ident,
+                    }))
+                }
+                ::core::option::Option::None => {
+                    ::core::result::Result::Ok(::core::ops::ControlFlow::Break(Self::#discard_state_ident {
+                        #builder_data_ident,
+                        #substate_data,
+                    }))
+                }
+            }
+        }));
 
         states.push(State::new_with_builder(
             default_state_ident.clone(),

@@ -229,6 +229,44 @@ impl<T: FromXml, E: From<Error>> FromXml for Result<T, E> {
     }
 }
 
+/// Builder which discards an entire child tree without inspecting the
+/// contents.
+#[derive(Debug)]
+pub struct Discard {
+    depth: usize,
+}
+
+impl Discard {
+    /// Create a new discarding builder.
+    pub fn new() -> Self {
+        Self { depth: 0 }
+    }
+}
+
+impl FromEventsBuilder for Discard {
+    type Output = ();
+
+    fn feed(&mut self, ev: rxml::Event) -> Result<Option<Self::Output>, Error> {
+        match ev {
+            rxml::Event::StartElement(..) => {
+                self.depth = match self.depth.checked_add(1) {
+                    Some(v) => v,
+                    None => return Err(Error::Other("maximum XML nesting depth exceeded")),
+                };
+                Ok(None)
+            }
+            rxml::Event::EndElement(..) => match self.depth.checked_sub(1) {
+                None => Ok(Some(())),
+                Some(v) => {
+                    self.depth = v;
+                    Ok(None)
+                }
+            },
+            _ => Ok(None),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

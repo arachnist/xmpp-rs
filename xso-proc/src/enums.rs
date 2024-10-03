@@ -47,6 +47,7 @@ impl NameVariant {
             builder,
             iterator,
             on_unknown_attribute,
+            on_unknown_child,
             transparent,
         } = XmlCompoundMeta::parse_from_attributes(&decl.attrs)?;
 
@@ -64,7 +65,12 @@ impl NameVariant {
         Ok(Self {
             name,
             ident: decl.ident.clone(),
-            inner: Compound::from_fields(&decl.fields, enum_namespace, on_unknown_attribute)?,
+            inner: Compound::from_fields(
+                &decl.fields,
+                enum_namespace,
+                on_unknown_attribute,
+                on_unknown_child,
+            )?,
         })
     }
 
@@ -267,6 +273,7 @@ impl DynamicVariant {
             ref builder,
             ref iterator,
             on_unknown_attribute: _, // used by StructInner
+            on_unknown_child: _,     // used by StructInner
             transparent: _,          // used by StructInner
         } = meta;
 
@@ -382,6 +389,7 @@ impl EnumInner {
             builder,
             iterator,
             on_unknown_attribute,
+            on_unknown_child,
             transparent,
         } = meta;
 
@@ -395,6 +403,7 @@ impl EnumInner {
         reject_key!(name not on "enums" only on "their variants");
         reject_key!(transparent flag not on "enums" only on "structs");
         reject_key!(on_unknown_attribute not on "enums" only on "enum variants and structs");
+        reject_key!(on_unknown_child not on "enums" only on "enum variants and structs");
 
         if let Some(namespace) = namespace {
             Ok(Self::NameSwitched(NameSwitchedEnum::new(

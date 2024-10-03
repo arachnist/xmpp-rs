@@ -366,7 +366,7 @@ fn new_field(
                     &xml_namespace,
                 ));
             }
-            let parts = Compound::from_field_defs(field_defs, None)?;
+            let parts = Compound::from_field_defs(field_defs, None, None)?;
 
             Ok(Box::new(ChildField {
                 default_,

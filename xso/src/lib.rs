@@ -323,6 +323,38 @@ impl UnknownAttributePolicy {
     }
 }
 
+/// Control how unknown children are handled.
+///
+/// The variants of this enum are referenced in the
+/// `#[xml(on_unknown_child = ..)]` which can be used on structs and
+/// enum variants. The specified variant controls how children, which are not
+/// handled by any member of the compound, are handled during parsing.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Default)]
+pub enum UnknownChildPolicy {
+    /// All unknown children are discarded.
+    Discard,
+
+    /// The first unknown child which is encountered generates a fatal
+    /// parsing error.
+    ///
+    /// This is the default policy.
+    #[default]
+    Fail,
+}
+
+impl UnknownChildPolicy {
+    #[doc(hidden)]
+    /// Implementation of the policy.
+    ///
+    /// This is an internal API and not subject to semver versioning.
+    pub fn apply_policy(&self, msg: &'static str) -> Result<(), self::error::Error> {
+        match self {
+            Self::Fail => Err(self::error::Error::Other(msg)),
+            Self::Discard => Ok(()),
+        }
+    }
+}
+
 /// Attempt to transform a type implementing [`AsXml`] into another
 /// type which implements [`FromXml`].
 pub fn transform<T: FromXml, F: AsXml>(from: F) -> Result<T, self::error::Error> {
