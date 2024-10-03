@@ -416,6 +416,35 @@ pub fn from_bytes<T: FromXml>(mut buf: &[u8]) -> Result<T, self::error::Error> {
     Err(self::error::Error::XmlError(rxml::Error::InvalidEof(None)))
 }
 
+/// Attempt to parse a type implementing [`FromXml`] from a reader.
+pub fn from_reader<T: FromXml, R: io::BufRead>(r: R) -> io::Result<T> {
+    let mut reader = rxml::Reader::new(r);
+    let (name, attrs) =
+        read_start_event(&mut reader).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+    let mut builder = match T::from_events(name, attrs) {
+        Ok(v) => v,
+        Err(self::error::FromEventsError::Mismatch { .. }) => {
+            return Err(self::error::Error::TypeMismatch)
+                .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
+        }
+        Err(self::error::FromEventsError::Invalid(e)) => {
+            return Err(e).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
+        }
+    };
+    for ev in reader {
+        if let Some(v) = builder
+            .feed(ev?)
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?
+        {
+            return Ok(v);
+        }
+    }
+    Err(io::Error::new(
+        io::ErrorKind::UnexpectedEof,
+        self::error::Error::XmlError(rxml::Error::InvalidEof(None)),
+    ))
+}
+
 /// Attempt to serialise a type implementing [`AsXml`] to a vector of bytes.
 pub fn to_vec<T: AsXml>(xso: &T) -> Result<Vec<u8>, self::error::Error> {
     let iter = xso.as_xml_iter()?;
