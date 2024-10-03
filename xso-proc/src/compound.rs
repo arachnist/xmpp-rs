@@ -15,19 +15,55 @@ use crate::field::{FieldBuilderPart, FieldDef, FieldIteratorPart, FieldTempInit,
 use crate::meta::NamespaceRef;
 use crate::scope::{mangle_member, AsItemsScope, FromEventsScope};
 use crate::state::{AsItemsSubmachine, FromEventsSubmachine, State};
-use crate::types::{feed_fn, namespace_ty, ncnamestr_cow_ty, phantom_lifetime_ty, ref_ty};
+use crate::types::{
+    default_fn, feed_fn, namespace_ty, ncnamestr_cow_ty, phantom_lifetime_ty, ref_ty,
+    unknown_attribute_policy_path,
+};
+
+fn resolve_policy(policy: Option<Ident>, mut enum_ref: Path) -> Expr {
+    match policy {
+        Some(ident) => {
+            enum_ref.segments.push(ident.into());
+            Expr::Path(ExprPath {
+                attrs: Vec::new(),
+                qself: None,
+                path: enum_ref,
+            })
+        }
+        None => {
+            let default_fn = default_fn(Type::Path(TypePath {
+                qself: None,
+                path: enum_ref,
+            }));
+            Expr::Call(ExprCall {
+                attrs: Vec::new(),
+                func: Box::new(default_fn),
+                paren_token: token::Paren::default(),
+                args: punctuated::Punctuated::new(),
+            })
+        }
+    }
+}
 
 /// A struct or enum variant's contents.
 pub(crate) struct Compound {
     /// The fields of this compound.
     fields: Vec<FieldDef>,
+
+    /// Policy defining how to handle unknown attributes.
+    unknown_attribute_policy: Expr,
 }
 
 impl Compound {
     /// Construct a compound from processed field definitions.
     pub(crate) fn from_field_defs<I: IntoIterator<Item = Result<FieldDef>>>(
         compound_fields: I,
+        unknown_attribute_policy: Option<Ident>,
     ) -> Result<Self> {
+        let unknown_attribute_policy = resolve_policy(
+            unknown_attribute_policy,
+            unknown_attribute_policy_path(Span::call_site()),
+        );
         let compound_fields = compound_fields.into_iter();
         let size_hint = compound_fields.size_hint();
         let mut fields = Vec::with_capacity(size_hint.1.unwrap_or(size_hint.0));
@@ -52,28 +88,35 @@ impl Compound {
 
             fields.push(field);
         }
-        Ok(Self { fields })
+        Ok(Self {
+            fields,
+            unknown_attribute_policy,
+        })
     }
 
     /// Construct a compound from fields.
     pub(crate) fn from_fields(
         compound_fields: &Fields,
         container_namespace: &NamespaceRef,
+        unknown_attribute_policy: Option<Ident>,
     ) -> Result<Self> {
-        Self::from_field_defs(compound_fields.iter().enumerate().map(|(i, field)| {
-            let index = match i.try_into() {
-                Ok(v) => v,
-                // we are converting to u32, are you crazy?!
-                // (u32, because syn::Member::Index needs that.)
-                Err(_) => {
-                    return Err(Error::new_spanned(
-                        field,
-                        "okay, mate, that are way too many fields. get your life together.",
-                    ))
-                }
-            };
-            FieldDef::from_field(field, index, container_namespace)
-        }))
+        Self::from_field_defs(
+            compound_fields.iter().enumerate().map(|(i, field)| {
+                let index = match i.try_into() {
+                    Ok(v) => v,
+                    // we are converting to u32, are you crazy?!
+                    // (u32, because syn::Member::Index needs that.)
+                    Err(_) => {
+                        return Err(Error::new_spanned(
+                            field,
+                            "okay, mate, that are way too many fields. get your life together.",
+                        ))
+                    }
+                };
+                FieldDef::from_field(field, index, container_namespace)
+            }),
+            unknown_attribute_policy,
+        )
     }
 
     /// Make and return a set of states which is used to construct the target
@@ -342,6 +385,8 @@ impl Compound {
             }
         }));
 
+        let unknown_attribute_policy = &self.unknown_attribute_policy;
+
         Ok(FromEventsSubmachine {
             defs: quote! {
                 #extra_defs
@@ -356,9 +401,7 @@ impl Compound {
                     #builder_data_init
                 };
                 if #attrs.len() > 0 {
-                    return ::core::result::Result::Err(::xso::error::Error::Other(
-                        #unknown_attr_err,
-                    ).into());
+                    let _: () = #unknown_attribute_policy.apply_policy(#unknown_attr_err)?;
                 }
                 ::core::result::Result::Ok(#state_ty_ident::#default_state_ident { #builder_data_ident })
             },

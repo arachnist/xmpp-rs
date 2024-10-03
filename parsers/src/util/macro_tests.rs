@@ -1779,3 +1779,45 @@ fn extract_tuple_to_map_roundtrip() {
         "<parent xmlns='urn:example:ns1'><text>hello world</text><text xml:lang='de'>hallo welt</text></parent>",
     );
 }
+
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = NS1, name = "foo", on_unknown_attribute = Discard)]
+struct IgnoreUnknownAttributes;
+
+#[test]
+fn ignore_unknown_attributes_empty_roundtrip() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<IgnoreUnknownAttributes>("<foo xmlns='urn:example:ns1'/>");
+}
+
+#[test]
+fn ignore_unknown_attributes_positive() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    match parse_str::<IgnoreUnknownAttributes>("<foo xmlns='urn:example:ns1' fnord='bar'/>") {
+        Ok(IgnoreUnknownAttributes) => (),
+        other => panic!("unexpected result: {:?}", other),
+    }
+}
+
+#[test]
+fn ignore_unknown_attributes_negative_unexpected_child() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    match parse_str::<IgnoreUnknownAttributes>("<foo xmlns='urn:example:ns1'><coucou/></foo>") {
+        Err(xso::error::FromElementError::Invalid(xso::error::Error::Other(e))) => {
+            assert_eq!(e, "Unknown child in IgnoreUnknownAttributes element.");
+        }
+        other => panic!("unexpected result: {:?}", other),
+    }
+}

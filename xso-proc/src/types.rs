@@ -820,3 +820,24 @@ pub(crate) fn element_ty(span: Span) -> Type {
         },
     })
 }
+
+/// Construct a [`syn::Path`] referring to `::xso::UnknownAttributePolicy`.
+pub(crate) fn unknown_attribute_policy_path(span: Span) -> Path {
+    Path {
+        leading_colon: Some(syn::token::PathSep {
+            spans: [span, span],
+        }),
+        segments: [
+            PathSegment {
+                ident: Ident::new("xso", span),
+                arguments: PathArguments::None,
+            },
+            PathSegment {
+                ident: Ident::new("UnknownAttributePolicy", span),
+                arguments: PathArguments::None,
+            },
+        ]
+        .into_iter()
+        .collect(),
+    }
+}

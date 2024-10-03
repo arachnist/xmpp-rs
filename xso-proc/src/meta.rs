@@ -349,6 +349,10 @@ pub(crate) struct XmlCompoundMeta {
     /// The value assigned to `iterator` inside `#[xml(..)]`, if any.
     pub(crate) iterator: Option<Ident>,
 
+    /// The value assigned to `on_unknown_attribute` inside `#[xml(..)]`, if
+    /// any.
+    pub(crate) on_unknown_attribute: Option<Ident>,
+
     /// The exhaustive flag.
     pub(crate) exhaustive: Flag,
 
@@ -365,6 +369,7 @@ impl XmlCompoundMeta {
         let mut qname = QNameRef::default();
         let mut builder = None;
         let mut iterator = None;
+        let mut on_unknown_attribute = None;
         let mut debug = Flag::Absent;
         let mut exhaustive = Flag::Absent;
         let mut transparent = Flag::Absent;
@@ -387,6 +392,15 @@ impl XmlCompoundMeta {
                     return Err(Error::new_spanned(meta.path, "duplicate `iterator` key"));
                 }
                 iterator = Some(meta.value()?.parse()?);
+                Ok(())
+            } else if meta.path.is_ident("on_unknown_attribute") {
+                if on_unknown_attribute.is_some() {
+                    return Err(Error::new_spanned(
+                        meta.path,
+                        "duplicate `on_unknown_attribute` key",
+                    ));
+                }
+                on_unknown_attribute = Some(meta.value()?.parse()?);
                 Ok(())
             } else if meta.path.is_ident("exhaustive") {
                 if exhaustive.is_set() {
@@ -414,6 +428,7 @@ impl XmlCompoundMeta {
             debug,
             builder,
             iterator,
+            on_unknown_attribute,
             exhaustive,
             transparent,
         })

@@ -47,6 +47,7 @@ such:
 
 - *path*: A Rust path, like `some_crate::foo::Bar`. Note that `foo` on its own
   is also a path.
+- *identifier*: A single Rust identifier.
 - *string literal*: A string literal, like `"hello world!"`.
 - *type*: A Rust type.
 - *expression*: A Rust expression.
@@ -67,6 +68,7 @@ The following keys are defined on structs:
 | `transparent` | *flag* | If present, declares the struct as *transparent* struct (see below) |
 | `builder` | optional *ident* | The name to use for the generated builder type. |
 | `iterator` | optional *ident* | The name to use for the generated iterator type. |
+| `on_unknown_attribute` | *identifier* | Name of an [`UnknownAttributePolicy`] member, controlling how unknown attributes are handled. |
 
 Note that the `name` value must be a valid XML element name, without colons.
 The namespace prefix, if any, is assigned automatically at serialisation time
@@ -146,6 +148,7 @@ documentation above.
 | Key | Value type | Description |
 | --- | --- | --- |
 | `name` | *string literal* or *path* | The XML element name to match for this variant. If it is a *path*, it must point at a `&'static NcNameStr`. |
+| `on_unknown_attribute` | *identifier* | Name of an [`UnknownAttributePolicy`] member, controlling how unknown attributes are handled. |
 
 Note that the `name` value must be a valid XML element name, without colons.
 The namespace prefix, if any, is assigned automatically at serialisation time
