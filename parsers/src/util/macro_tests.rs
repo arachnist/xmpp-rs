@@ -1863,3 +1863,39 @@ fn ignore_unknown_children_negative_unexpected_attribute() {
         other => panic!("unexpected result: {:?}", other),
     }
 }
+
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = NS1, name = "parent")]
+struct ExtractIgnoreUnknownStuff {
+    #[xml(extract(namespace = NS1, name = "child", on_unknown_attribute = Discard, on_unknown_child = Discard, fields(
+        extract(namespace = NS1, name = "grandchild", fields(text))
+    )))]
+    contents: String,
+}
+
+#[test]
+fn extract_ignore_unknown_stuff_positive() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    match parse_str::<ExtractIgnoreUnknownStuff>(
+        "<parent xmlns='urn:example:ns1'><child foo='bar'><quak/><grandchild>hello world</grandchild></child></parent>",
+    ) {
+        Ok(ExtractIgnoreUnknownStuff { contents }) => {
+            assert_eq!(contents, "hello world");
+        }
+        other => panic!("unexpected result: {:?}", other),
+    }
+}
+
+#[test]
+fn extract_ignore_unknown_stuff_roundtrip() {
+    #[allow(unused_imports)]
+    use std::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<ExtractIgnoreUnknownStuff>("<parent xmlns='urn:example:ns1'><child><grandchild>hello world</grandchild></child></parent>")
+}

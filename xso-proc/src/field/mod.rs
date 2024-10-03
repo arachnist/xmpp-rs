@@ -319,6 +319,8 @@ fn new_field(
             qname: QNameRef { namespace, name },
             amount,
             fields,
+            on_unknown_attribute,
+            on_unknown_child,
         } => {
             let xml_namespace = namespace.unwrap_or_else(|| container_namespace.clone());
             let xml_name = default_name(span, name, field_ident)?;
@@ -366,7 +368,8 @@ fn new_field(
                     &xml_namespace,
                 ));
             }
-            let parts = Compound::from_field_defs(field_defs, None, None)?;
+            let parts =
+                Compound::from_field_defs(field_defs, on_unknown_attribute, on_unknown_child)?;
 
             Ok(Box::new(ChildField {
                 default_,

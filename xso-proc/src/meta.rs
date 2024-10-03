@@ -737,6 +737,12 @@ pub(crate) enum XmlFieldMeta {
 
         /// The `fields` nested meta.
         fields: Vec<XmlFieldMeta>,
+
+        /// The `on_unknown_attribute` value.
+        on_unknown_attribute: Option<Ident>,
+
+        /// The `on_unknown_child` value.
+        on_unknown_child: Option<Ident>,
     },
 
     /// `#[xml(element)]`
@@ -925,6 +931,8 @@ impl XmlFieldMeta {
         let mut qname = QNameRef::default();
         let mut fields = None;
         let mut amount = None;
+        let mut on_unknown_attribute = None;
+        let mut on_unknown_child = None;
         let mut default_ = Flag::Absent;
         meta.parse_nested_meta(|meta| {
             if meta.path.is_ident("default") {
@@ -952,6 +960,24 @@ impl XmlFieldMeta {
                 }
                 amount = Some(meta.value()?.parse()?);
                 Ok(())
+            } else if meta.path.is_ident("on_unknown_attribute") {
+                if on_unknown_attribute.is_some() {
+                    return Err(Error::new_spanned(
+                        meta.path,
+                        "duplicate `on_unknown_attribute` key",
+                    ));
+                }
+                on_unknown_attribute = Some(meta.value()?.parse()?);
+                Ok(())
+            } else if meta.path.is_ident("on_unknown_child") {
+                if on_unknown_child.is_some() {
+                    return Err(Error::new_spanned(
+                        meta.path,
+                        "duplicate `on_unknown_child` key",
+                    ));
+                }
+                on_unknown_child = Some(meta.value()?.parse()?);
+                Ok(())
             } else {
                 match qname.parse_incremental_from_meta(meta)? {
                     None => Ok(()),
@@ -966,6 +992,8 @@ impl XmlFieldMeta {
             qname,
             fields,
             amount,
+            on_unknown_attribute,
+            on_unknown_child,
         })
     }
 

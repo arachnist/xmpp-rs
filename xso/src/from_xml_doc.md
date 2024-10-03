@@ -474,6 +474,8 @@ The following keys can be used inside the `#[xml(extract(..))]` meta:
 | `default` | flag | If present, an absent child will substitute the default value instead of raising an error. |
 | `n` | `1` or `..` | If `1`, a single element is parsed. If `..`, a collection is parsed. Defaults to `1`. |
 | `fields` | *nested* | A list of [field meta](#field-meta) which describe the contents of the child element. |
+| `on_unknown_attribute` | *identifier* | Name of an [`UnknownAttributePolicy`] member, controlling how unknown attributes are handled. |
+| `on_unknown_child` | *identifier* | Name of an [`UnknownChildPolicy`] member, controlling how unknown children are handled. |
 
 If the `name` key contains a namespace prefix, it must be one of the prefixes
 defined as built-in in the XML specifications. That prefix will then be
