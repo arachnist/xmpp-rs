@@ -59,6 +59,7 @@ syntax-highlighting = ["syntect"]
 serde = [ "xmpp-parsers/serde" ]
 # Required by starttls, and used by insecure-tcp by default
 dns = [ "hickory-resolver", "idna" ]
+component = ["xmpp-parsers/component", "insecure-tcp"]
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(xmpprs_doc_build)'] }
