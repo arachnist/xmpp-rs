@@ -9,8 +9,6 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 use core::fmt;
-#[cfg(feature = "std")]
-use std::error::Error as StdError;
 
 /// An error that signifies that a `Jid` cannot be parsed from a string.
 #[derive(Debug, PartialEq, Eq)]
@@ -50,8 +48,7 @@ pub enum Error {
     ResourceInBareJid,
 }
 
-#[cfg(feature = "std")]
-impl StdError for Error {}
+impl core::error::Error for Error {}
 
 impl fmt::Display for Error {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {

@@ -34,7 +34,7 @@
 
 extern crate alloc;
 
-#[cfg(any(feature = "std", test))]
+#[cfg(test)]
 extern crate std;
 
 use alloc::borrow::Cow;
