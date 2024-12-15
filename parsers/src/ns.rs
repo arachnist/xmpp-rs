@@ -308,6 +308,9 @@ pub const STREAM_LIMITS: &str = "urn:xmpp:stream-limits:0";
 /// XEP-0484: Fast Authentication Streamlining Tokens
 pub const FAST: &str = "urn:xmpp:fast:0";
 
+/// XEP-0490: Message Displayed Synchronization
+pub const MDS: &str = "urn:xmpp:mds:displayed:0";
+
 /// Alias for the main namespace of the stream, that is "jabber:client" when
 /// the component feature isn’t enabled.
 #[cfg(not(feature = "component"))]

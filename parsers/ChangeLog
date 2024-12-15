@@ -30,6 +30,7 @@ XXXX-YY-ZZ RELEASER <admin@example.com>
         - Extensible SASL Profile (XEP-0388)
         - SASL Channel-Binding Type Capability (XEP-0440)
         - Stream Limits Advertisement (XEP-0478)
+        - Message Displayed Synchronization (XEP-0490)
         - RFC 6120 stream errors
     * Improvements:
         - Add support for `<optional/> in XEP-0198 feature advertisment

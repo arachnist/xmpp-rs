@@ -290,3 +290,6 @@ pub mod stream_limits;
 
 /// XEP-0484: Fast Authentication Streamlining Tokens
 pub mod fast;
+
+/// XEP-0490: Message Displayed Synchronization
+pub mod message_displayed;
