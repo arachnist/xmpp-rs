@@ -124,12 +124,6 @@ pub fn compute_disco(disco: &DiscoInfoResult) -> Result<Vec<u8>, Error> {
     Ok(final_string)
 }
 
-fn get_hash_vec(hash: &[u8]) -> Vec<u8> {
-    let mut vec = Vec::with_capacity(hash.len());
-    vec.extend_from_slice(hash);
-    vec
-}
-
 /// Hashes the result of [compute_disco()] with one of the supported [hash
 /// algorithms](../hashes/enum.Algo.html).
 pub fn hash_ecaps2(data: &[u8], algo: Algo) -> Result<Hash, Error> {
@@ -137,19 +131,19 @@ pub fn hash_ecaps2(data: &[u8], algo: Algo) -> Result<Hash, Error> {
         hash: match algo {
             Algo::Sha_256 => {
                 let hash = Sha256::digest(data);
-                get_hash_vec(hash.as_slice())
+                hash.to_vec()
             }
             Algo::Sha_512 => {
                 let hash = Sha512::digest(data);
-                get_hash_vec(hash.as_slice())
+                hash.to_vec()
             }
             Algo::Sha3_256 => {
                 let hash = Sha3_256::digest(data);
-                get_hash_vec(hash.as_slice())
+                hash.to_vec()
             }
             Algo::Sha3_512 => {
                 let hash = Sha3_512::digest(data);
-                get_hash_vec(hash.as_slice())
+                hash.to_vec()
             }
             Algo::Blake2b_256 => {
                 let mut hasher = Blake2bVar::new(32).unwrap();

@@ -110,9 +110,7 @@ fn compute_identities(identities: &[Identity]) -> Vec<u8> {
         let lang = identity.lang.clone().unwrap_or_default();
         let name = identity.name.clone().unwrap_or_default();
         let string = format!("{}/{}/{}/{}", identity.category, identity.type_, lang, name);
-        let bytes = string.as_bytes();
-        let mut vec = Vec::with_capacity(bytes.len());
-        vec.extend_from_slice(bytes);
+        let mut vec = string.as_bytes().to_vec();
         vec.push(b'<');
         vec
     })
@@ -120,11 +118,12 @@ fn compute_identities(identities: &[Identity]) -> Vec<u8> {
 
 fn compute_extensions(extensions: &[DataForm]) -> Vec<u8> {
     compute_items(extensions, |extension| {
-        let mut bytes = vec![];
         // TODO: maybe handle the error case?
-        if let Some(ref form_type) = extension.form_type {
-            bytes.extend_from_slice(form_type.as_bytes());
-        }
+        let mut bytes = if let Some(ref form_type) = extension.form_type {
+            form_type.as_bytes().to_vec()
+        } else {
+            vec![]
+        };
         bytes.push(b'<');
         for field in extension.fields.clone() {
             if field.var.as_deref() == Some("FORM_TYPE") {
@@ -159,10 +158,6 @@ pub fn compute_disco(disco: &DiscoInfoResult) -> Vec<u8> {
     final_string
 }
 
-fn get_hash_vec(hash: &[u8]) -> Vec<u8> {
-    hash.to_vec()
-}
-
 /// Hashes the result of [compute_disco()] with one of the supported [hash
 /// algorithms](../hashes/enum.Algo.html).
 pub fn hash_caps(data: &[u8], algo: Algo) -> Result<Hash, String> {
@@ -170,23 +165,23 @@ pub fn hash_caps(data: &[u8], algo: Algo) -> Result<Hash, String> {
         hash: match algo {
             Algo::Sha_1 => {
                 let hash = Sha1::digest(data);
-                get_hash_vec(hash.as_slice())
+                hash.to_vec()
             }
             Algo::Sha_256 => {
                 let hash = Sha256::digest(data);
-                get_hash_vec(hash.as_slice())
+                hash.to_vec()
             }
             Algo::Sha_512 => {
                 let hash = Sha512::digest(data);
-                get_hash_vec(hash.as_slice())
+                hash.to_vec()
             }
             Algo::Sha3_256 => {
                 let hash = Sha3_256::digest(data);
-                get_hash_vec(hash.as_slice())
+                hash.to_vec()
             }
             Algo::Sha3_512 => {
                 let hash = Sha3_512::digest(data);
-                get_hash_vec(hash.as_slice())
+                hash.to_vec()
             }
             Algo::Blake2b_256 => {
                 let mut hasher = Blake2bVar::new(32).unwrap();
@@ -281,9 +276,7 @@ mod tests {
         .parse()
         .unwrap();
 
-        let data = b"client/pc//Exodus 0.9.1<http://jabber.org/protocol/caps<http://jabber.org/protocol/disco#info<http://jabber.org/protocol/disco#items<http://jabber.org/protocol/muc<";
-        let mut expected = Vec::with_capacity(data.len());
-        expected.extend_from_slice(data);
+        let expected = b"client/pc//Exodus 0.9.1<http://jabber.org/protocol/caps<http://jabber.org/protocol/disco#info<http://jabber.org/protocol/disco#items<http://jabber.org/protocol/muc<".to_vec();
         let disco = DiscoInfoResult::try_from(elem).unwrap();
         let caps = caps::compute_disco(&disco);
         assert_eq!(caps, expected);
