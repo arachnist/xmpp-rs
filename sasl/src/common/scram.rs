@@ -82,19 +82,14 @@ impl ScramProvider for Sha1 {
 
     fn hash(data: &[u8]) -> Vec<u8> {
         let hash = Sha1_hash::digest(data);
-        let mut vec = Vec::with_capacity(Sha1_hash::output_size());
-        vec.extend_from_slice(hash.as_slice());
-        vec
+        hash.to_vec()
     }
 
     fn hmac(data: &[u8], key: &[u8]) -> Result<Vec<u8>, InvalidLength> {
         type HmacSha1 = Hmac<Sha1_hash>;
         let mut mac = HmacSha1::new_from_slice(key)?;
         mac.update(data);
-        let result = mac.finalize();
-        let mut vec = Vec::with_capacity(Sha1_hash::output_size());
-        vec.extend_from_slice(result.into_bytes().as_slice());
-        Ok(vec)
+        Ok(mac.finalize().into_bytes().to_vec())
     }
 
     fn derive(password: &Password, salt: &[u8], iterations: u32) -> Result<Vec<u8>, DeriveError> {
@@ -142,19 +137,14 @@ impl ScramProvider for Sha256 {
 
     fn hash(data: &[u8]) -> Vec<u8> {
         let hash = Sha256_hash::digest(data);
-        let mut vec = Vec::with_capacity(Sha256_hash::output_size());
-        vec.extend_from_slice(hash.as_slice());
-        vec
+        hash.to_vec()
     }
 
     fn hmac(data: &[u8], key: &[u8]) -> Result<Vec<u8>, InvalidLength> {
         type HmacSha256 = Hmac<Sha256_hash>;
         let mut mac = HmacSha256::new_from_slice(key)?;
         mac.update(data);
-        let result = mac.finalize();
-        let mut vec = Vec::with_capacity(Sha256_hash::output_size());
-        vec.extend_from_slice(result.into_bytes().as_slice());
-        Ok(vec)
+        Ok(mac.finalize().into_bytes().to_vec())
     }
 
     fn derive(password: &Password, salt: &[u8], iterations: u32) -> Result<Vec<u8>, DeriveError> {
