@@ -463,4 +463,18 @@ mod tests {
         assert_eq!(query.items[1].node, Some(String::from("test")));
         assert_eq!(query.items[1].name, Some(String::from("A component")));
     }
+
+    // WORKAROUND FOR PROSODY BUG 1664, DO NOT REMOVE BEFORE 2028-12-17 (5 YEARS AFTER FIX)
+    // https://issues.prosody.im/1664
+    // See also:
+    // https://gitlab.com/xmpp-rs/xmpp-rs/-/issues/128
+    // https://gitlab.com/xmpp-rs/xmpp-rs/-/merge_requests/302
+    #[test]
+    fn test_missing_disco_info_feature_workaround() {
+        let elem: Element = "<query xmlns='http://jabber.org/protocol/disco#info'><identity category='client' type='pc'/><feature var='http://jabber.org/protocol/muc#user'/></query>".parse().unwrap();
+        let query = DiscoInfoResult::try_from(elem).unwrap();
+        assert_eq!(query.identities.len(), 1);
+        assert_eq!(query.features.len(), 1);
+        assert!(query.extensions.is_empty());
+    }
 }
