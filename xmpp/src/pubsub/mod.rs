@@ -12,10 +12,8 @@ use tokio_xmpp::{
     jid::{BareJid, Jid},
     minidom::Element,
     parsers::{
-        bookmarks2::{self, Autojoin},
-        ns,
-        pubsub::event::PubSubEvent,
-        pubsub::pubsub::PubSub,
+        bookmarks2, ns,
+        pubsub::{event::PubSubEvent, pubsub::PubSub},
     },
 };
 
@@ -47,7 +45,7 @@ pub(crate) async fn handle_event<C: ServerConnector>(
                     let payload = item.payload.clone().unwrap();
                     match bookmarks2::Conference::try_from(payload) {
                         Ok(conference) => {
-                            if conference.autojoin == Autojoin::True {
+                            if conference.autojoin {
                                 events.push(Event::JoinRoom(jid, conference));
                             } else {
                                 events.push(Event::LeaveRoom(jid));
@@ -110,7 +108,7 @@ pub(crate) fn handle_iq_result(
                     let payload = item.payload.clone().unwrap();
                     match bookmarks2::Conference::try_from(payload) {
                         Ok(conference) => {
-                            if let Autojoin::True = conference.autojoin {
+                            if conference.autojoin {
                                 events.push(Event::JoinRoom(jid, conference));
                             }
                         }
