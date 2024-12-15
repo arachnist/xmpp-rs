@@ -41,7 +41,10 @@ impl<'x, T: Iterator<Item = Result<Item<'x>, Error>>> Iterator for OptionAsXml<T
 /// Emits the contents of `Some(.)` unchanged if present and nothing
 /// otherwise.
 impl<T: AsXml> AsXml for Option<T> {
-    type ItemIter<'x> = OptionAsXml<T::ItemIter<'x>> where T: 'x;
+    type ItemIter<'x>
+        = OptionAsXml<T::ItemIter<'x>>
+    where
+        T: 'x;
 
     fn as_xml_iter(&self) -> Result<Self::ItemIter<'_>, Error> {
         match self {
@@ -64,7 +67,10 @@ impl<'x, T: Iterator<Item = Result<Item<'x>, Error>>> Iterator for BoxAsXml<T> {
 
 /// Emits the contents of `T` unchanged.
 impl<T: AsXml> AsXml for Box<T> {
-    type ItemIter<'x> = BoxAsXml<T::ItemIter<'x>> where T: 'x;
+    type ItemIter<'x>
+        = BoxAsXml<T::ItemIter<'x>>
+    where
+        T: 'x;
 
     fn as_xml_iter(&self) -> Result<Self::ItemIter<'_>, Error> {
         Ok(BoxAsXml(Box::new(T::as_xml_iter(&self)?)))
@@ -76,7 +82,10 @@ impl<T: AsXml, E> AsXml for Result<T, E>
 where
     for<'a> Error: From<&'a E>,
 {
-    type ItemIter<'x> = T::ItemIter<'x> where Self: 'x;
+    type ItemIter<'x>
+        = T::ItemIter<'x>
+    where
+        Self: 'x;
 
     fn as_xml_iter(&self) -> Result<Self::ItemIter<'_>, Error> {
         match self {
