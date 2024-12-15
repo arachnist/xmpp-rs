@@ -14,13 +14,6 @@ macro_rules! get_attr {
             value.parse().map_err(xso::error::Error::text_parse_error)?
         )
     };
-    ($elem:ident, $attr:tt, OptionEmpty, $value:ident, $func:expr) => {
-        match $elem.attr($attr) {
-            Some("") => None,
-            Some($value) => Some($func),
-            None => None,
-        }
-    };
     ($elem:ident, $attr:tt, Option, $value:ident, $func:expr) => {
         match $elem.attr($attr) {
             Some($value) => Some($func),
@@ -29,23 +22,6 @@ macro_rules! get_attr {
     };
     ($elem:ident, $attr:tt, Required, $value:ident, $func:expr) => {
         match $elem.attr($attr) {
-            Some($value) => $func,
-            None => {
-                return Err(xso::error::Error::Other(
-                    concat!("Required attribute '", $attr, "' missing.").into(),
-                )
-                .into());
-            }
-        }
-    };
-    ($elem:ident, $attr:tt, RequiredNonEmpty, $value:ident, $func:expr) => {
-        match $elem.attr($attr) {
-            Some("") => {
-                return Err(xso::error::Error::Other(
-                    concat!("Required attribute '", $attr, "' must not be empty.").into(),
-                )
-                .into());
-            }
             Some($value) => $func,
             None => {
                 return Err(xso::error::Error::Other(
