@@ -198,6 +198,17 @@ impl<T: FromXmlText> FromXmlText for Box<T> {
 
 /// Trait to convert a value to an XML text string.
 ///
+/// Implementing this trait for a type allows it to be used both for XML
+/// character data within elements and for XML attributes. For XML attributes,
+/// the behaviour is defined by [`AsXmlText::as_optional_xml_text`], while
+/// XML element text content uses [`AsXmlText::as_xml_text`]. Implementing
+/// [`AsXmlText`] automatically provides an implementation of
+/// [`AsOptionalXmlText`].
+///
+/// If your type should only be used in XML attributes and has no correct
+/// serialisation in XML text, you should *only* implement
+/// [`AsOptionalXmlText`] and omit the [`AsXmlText`] implementation.
+///
 /// This trait is implemented for many standard library types implementing
 /// [`core::fmt::Display`]. In addition, the following feature flags can enable
 /// more implementations:
@@ -263,13 +274,15 @@ impl<T: AsXmlText> AsXmlText for &T {
 
 /// Specialized variant of [`AsXmlText`].
 ///
-/// Do **not** implement this unless you cannot implement [`AsXmlText`]:
-/// implementing [`AsXmlText`] is more versatile and an
-/// [`AsOptionalXmlText`] implementation is automatically provided.
+/// Normally, it should not be necessary to implement this trait as it is
+/// automatically implemented for all types implementing [`AsXmlText`].
+/// However, if your type can only be serialised as an XML attribute (for
+/// example because an absent value has a particular meaning), it is correct
+/// to implement [`AsOptionalXmlText`] **instead of** [`AsXmlText`].
 ///
-/// If you need to customize the behaviour of the [`AsOptionalXmlText`]
-/// blanket implementation, implement a custom
-/// [`AsXmlText::as_optional_xml_text`] instead.
+/// If your type can be serialised as both (text and attribute) but needs
+/// special handling in attributes, implement [`AsXmlText`] but provide a
+/// custom implementation of [`AsXmlText::as_optional_xml_text`].
 pub trait AsOptionalXmlText {
     /// Convert the value to an XML string in a context where an absent value
     /// can be represented.
