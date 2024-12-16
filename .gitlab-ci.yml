@@ -68,6 +68,26 @@ rustfmt:
     - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
     - if: $CI_PIPELINE_SOURCE == 'push' && $CI_COMMIT_REF_NAME == 'main'
 
+changelog-update:
+  stage: lint
+  image: alpine:latest
+  # Check in the commit message for "skip.?changelog", if not present
+  # then check for changes in changelogs.
+  # XXX: It looks like $CI_COMMIT_MESSAGE mangles newlines so it's not
+  # possible to require the "skip.?changelog" string to be on its own line,
+  # that means it would also trigger within a wall of text. Not so obvious.
+  # TODO: Check the whole MR for updates in changelogs, not just the last
+  # commit.
+  script:
+    - apk add --no-cache python3 git
+    - python3 --version
+    - git version
+    - git log --oneline "${CI_MERGE_REQUEST_DIFF_BASE_SHA}.." --
+    - python3 .forgejo/workflows/check-changelog.py
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+    - if: $CI_PIPELINE_SOURCE == 'push' && $CI_COMMIT_REF_NAME == 'main'
+
 stable-test:
   extends:
     - .test
