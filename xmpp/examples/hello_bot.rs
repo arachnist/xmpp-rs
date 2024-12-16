@@ -7,7 +7,7 @@
 use std::env::args;
 use std::str::FromStr;
 use tokio_xmpp::jid::BareJid;
-use xmpp::muc::room::RoomMessageSettings;
+use xmpp::muc::room::{JoinRoomSettings, RoomMessageSettings};
 use xmpp::{ClientBuilder, ClientFeature, ClientType, Event};
 
 #[tokio::main]
@@ -15,13 +15,29 @@ async fn main() -> Result<(), Option<()>> {
     env_logger::init();
 
     let args: Vec<String> = args().collect();
-    if args.len() != 3 {
-        println!("Usage: {} <jid> <password>", args[0]);
+    if args.len() < 3 {
+        println!("Usage: {} <jid> <password> [ROOM...]", args[0]);
         return Err(None);
     }
 
     let jid = BareJid::from_str(&args[1]).expect(&format!("Invalid JID: {}", &args[1]));
     let password = &args[2];
+
+    // Figure out which rooms to join to say hello
+    let mut rooms: Vec<BareJid> = Vec::new();
+    let mut counter = 3;
+    if args.len() > 3 {
+        while counter < args.len() {
+            match BareJid::from_str(&args[counter]) {
+                Ok(jid) => rooms.push(jid),
+                Err(e) => {
+                    log::error!("Requested room {} is not a valid JID: {e}", args[counter]);
+                    std::process::exit(1);
+                }
+            }
+            counter += 1;
+        }
+    }
 
     // Client instance
     let mut client = ClientBuilder::new(jid, password)
@@ -32,11 +48,24 @@ async fn main() -> Result<(), Option<()>> {
         .enable_feature(ClientFeature::JoinRooms)
         .build();
 
+    log::info!("Connecting...");
+
     loop {
         for event in client.wait_for_events().await {
             match event {
                 Event::Online => {
                     log::info!("Online.");
+                    for room in &rooms {
+                        log::info!("Joining room {} from CLI argument…", room);
+                        client
+                            .join_room(JoinRoomSettings {
+                                room: room.clone(),
+                                nick: None,
+                                password: None,
+                                status: Some(("en", "Yet another bot!")),
+                            })
+                            .await;
+                    }
                 }
                 Event::Disconnected(e) => {
                     log::info!("Disconnected: {}.", e);

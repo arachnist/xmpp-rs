@@ -181,6 +181,11 @@ impl<'a> RoomMessageSettings<'a> {
             lang: None,
         }
     }
+
+    pub fn with_lang(mut self, lang: &'a str) -> Self {
+        self.lang = Some(lang);
+        self
+    }
 }
 
 pub async fn send_room_message<'a, C: ServerConnector>(
