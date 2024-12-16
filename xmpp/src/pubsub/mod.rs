@@ -5,7 +5,10 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 use super::Agent;
-use crate::Event;
+use crate::{
+    muc::room::{JoinRoomSettings, LeaveRoomSettings},
+    Event,
+};
 use std::str::FromStr;
 use tokio_xmpp::{
     connect::ServerConnector,
@@ -52,18 +55,17 @@ pub(crate) async fn handle_event<C: ServerConnector>(
                             if conference.autojoin {
                                 if !agent.rooms_joined.contains_key(&jid) {
                                     agent
-                                        .join_room(
-                                            jid.clone(),
-                                            conference.nick,
-                                            conference.password,
-                                            "",
-                                            "",
-                                        )
+                                        .join_room(JoinRoomSettings {
+                                            room: jid,
+                                            nick: conference.nick,
+                                            password: conference.password,
+                                            status: None,
+                                        })
                                         .await;
                                 }
                             } else {
                                 // So maybe another client of ours left the room... let's leave it too
-                                agent.leave_room(jid.clone(), "", "").await;
+                                agent.leave_room(LeaveRoomSettings::new(jid)).await;
                             }
                         }
                         Err(err) => println!("not bookmark: {}", err),
@@ -80,7 +82,7 @@ pub(crate) async fn handle_event<C: ServerConnector>(
                     let item = items.clone().pop().unwrap();
                     let jid = BareJid::from_str(&item.0).unwrap();
 
-                    agent.leave_room(jid.clone(), "", "").await;
+                    agent.leave_room(LeaveRoomSettings::new(jid)).await;
                 }
                 ref node => unimplemented!("node {}", node),
             }
@@ -136,18 +138,17 @@ pub(crate) async fn handle_iq_result<C: ServerConnector>(
                             if conference.autojoin {
                                 if !agent.rooms_joined.contains_key(&jid) {
                                     agent
-                                        .join_room(
-                                            jid.clone(),
-                                            conference.nick,
-                                            conference.password,
-                                            "",
-                                            "",
-                                        )
+                                        .join_room(JoinRoomSettings {
+                                            room: jid,
+                                            nick: conference.nick,
+                                            password: conference.password,
+                                            status: None,
+                                        })
                                         .await;
                                 }
                             } else {
                                 // Leave the room that is no longer autojoin
-                                agent.leave_room(jid.clone(), "", "").await;
+                                agent.leave_room(LeaveRoomSettings::new(jid)).await;
                             }
                         }
                         Err(err) => {
@@ -165,7 +166,7 @@ pub(crate) async fn handle_iq_result<C: ServerConnector>(
                 }
 
                 for room in rooms_to_leave {
-                    agent.leave_room(room, "", "").await;
+                    agent.leave_room(LeaveRoomSettings::new(room)).await;
                 }
             }
             _ => unimplemented!(),

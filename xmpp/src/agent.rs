@@ -38,35 +38,16 @@ impl<C: ServerConnector> Agent<C> {
         self.client.send_end().await
     }
 
-    pub async fn join_room(
-        &mut self,
-        room: BareJid,
-        nick: Option<String>,
-        password: Option<String>,
-        lang: &str,
-        status: &str,
-    ) {
-        muc::room::join_room(self, room, nick, password, lang, status).await
+    pub async fn join_room<'a>(&mut self, settings: muc::room::JoinRoomSettings<'a>) {
+        muc::room::join_room(self, settings).await
     }
 
     /// Request to leave a chatroom.
     ///
     /// If successful, an [Event::RoomLeft] event will be produced. This method does not remove the room
     /// from bookmarks nor remove the autojoin flag. See [muc::room::leave_room] for more information.
-    ///
-    /// # Arguments
-    ///
-    /// * `room_jid`: The JID of the room to leave.
-    /// * `nickname`: The nickname to use in the room.
-    /// * `lang`: The language of the status message (empty string when unknown).
-    /// * `status`: The status message to send.
-    pub async fn leave_room(
-        &mut self,
-        room_jid: BareJid,
-        lang: impl Into<String>,
-        status: impl Into<String>,
-    ) {
-        muc::room::leave_room(self, room_jid, lang, status).await
+    pub async fn leave_room<'a>(&mut self, settings: muc::room::LeaveRoomSettings<'a>) {
+        muc::room::leave_room(self, settings).await
     }
 
     pub async fn send_message(
@@ -77,6 +58,10 @@ impl<C: ServerConnector> Agent<C> {
         text: &str,
     ) {
         message::send::send_message(self, recipient, type_, lang, text).await
+    }
+
+    pub async fn send_room_message<'a>(&mut self, settings: muc::room::RoomMessageSettings<'a>) {
+        muc::room::send_room_message(self, settings).await
     }
 
     pub async fn send_room_private_message(

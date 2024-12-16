@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use crate::parsers::message::MessageType;
 use tokio_xmpp::connect::ServerConnector;
 use tokio_xmpp::{
     jid::BareJid,
@@ -15,14 +16,52 @@ use tokio_xmpp::{
 
 use crate::Agent;
 
-pub async fn join_room<C: ServerConnector>(
+#[derive(Clone, Debug)]
+pub struct JoinRoomSettings<'a> {
+    pub room: BareJid,
+    pub nick: Option<String>,
+    pub password: Option<String>,
+    pub status: Option<(&'a str, &'a str)>,
+}
+
+impl<'a> JoinRoomSettings<'a> {
+    pub fn new(room: BareJid) -> Self {
+        Self {
+            room,
+            nick: None,
+            password: None,
+            status: None,
+        }
+    }
+
+    pub fn with_nick(mut self, nick: impl AsRef<str>) -> Self {
+        self.nick = Some(nick.as_ref().into());
+        self
+    }
+
+    pub fn with_password(mut self, password: impl AsRef<str>) -> Self {
+        self.password = Some(password.as_ref().into());
+        self
+    }
+
+    pub fn with_status(mut self, lang: &'a str, content: &'a str) -> Self {
+        self.status = Some((lang, content));
+        self
+    }
+}
+
+/// TODO: this method should add bookmark and ensure autojoin is true
+pub async fn join_room<'a, C: ServerConnector>(
     agent: &mut Agent<C>,
-    room: BareJid,
-    nick: Option<String>,
-    password: Option<String>,
-    lang: &str,
-    status: &str,
+    settings: JoinRoomSettings<'a>,
 ) {
+    let JoinRoomSettings {
+        room,
+        nick,
+        password,
+        status,
+    } = settings;
+
     if agent.rooms_joining.contains_key(&room) {
         // We are already joining
         warn!("Requesting to join again room {room} which is already joining...");
@@ -49,10 +88,30 @@ pub async fn join_room<C: ServerConnector>(
     let room_jid = room.with_resource_str(&nick).unwrap();
     let mut presence = Presence::new(PresenceType::None).with_to(room_jid);
     presence.add_payload(muc);
+
+    let (lang, status) = status.unwrap_or(("", ""));
     presence.set_status(String::from(lang), String::from(status));
+
     let _ = agent.client.send_stanza(presence.into()).await;
 
     agent.rooms_joining.insert(room, nick);
+}
+
+#[derive(Clone, Debug)]
+pub struct LeaveRoomSettings<'a> {
+    pub room: BareJid,
+    pub status: Option<(&'a str, &'a str)>,
+}
+
+impl<'a> LeaveRoomSettings<'a> {
+    pub fn new(room: BareJid) -> Self {
+        Self { room, status: None }
+    }
+
+    pub fn with_status(mut self, lang: &'a str, content: &'a str) -> Self {
+        self.status = Some((lang, content));
+        self
+    }
 }
 
 /// Send a "leave room" request to the server (specifically, an "unavailable" presence stanza).
@@ -62,23 +121,13 @@ pub async fn join_room<C: ServerConnector>(
 ///
 /// If successful, a `RoomLeft` event should be received later as a confirmation. See [XEP-0045](https://xmpp.org/extensions/xep-0045.html#exit).
 ///
-/// Note that this method does NOT remove the room from the auto-join list; the latter
-/// is more a list of bookmarks that the account knows about and that have a flag set
-/// to indicate that they should be joined automatically after connecting (see the JoinRoom event).
-///
-/// Regarding the latter, see the these [ModernXMPP minutes about auto-join behavior](https://docs.modernxmpp.org/meetings/2019-01-brussels/#bookmarks).
-///
-/// # Arguments
-///
-/// * `room_jid`: The JID of the room to leave.
-/// * `lang`: The language of the status message.
-/// * `status`: The status message to send.
-pub async fn leave_room<C: ServerConnector>(
+/// TODO: this method should set autojoin false on bookmark
+pub async fn leave_room<'a, C: ServerConnector>(
     agent: &mut Agent<C>,
-    room: BareJid,
-    lang: impl Into<String>,
-    status: impl Into<String>,
+    settings: LeaveRoomSettings<'a>,
 ) {
+    let LeaveRoomSettings { room, status } = settings;
+
     if agent.rooms_leaving.contains_key(&room) {
         // We are already leaving
         warn!("Requesting to leave again room {room} which is already leaving...");
@@ -97,14 +146,16 @@ pub async fn leave_room<C: ServerConnector>(
     // XEP-0045 specifies that, to leave a room, the client must send a presence stanza
     // with type="unavailable".
     let mut presence = Presence::new(PresenceType::Unavailable).with_to(
-        room.with_resource_str(nickname)
+        room.with_resource_str(nickname.as_str())
             .expect("Invalid room JID after adding resource part."),
     );
 
     // Optionally, the client may include a status message in the presence stanza.
     // TODO: Should this be optional? The XEP says "MAY", but the method signature requires the arguments.
     // XEP-0045: "The occupant MAY include normal <status/> information in the unavailable presence stanzas"
-    presence.set_status(lang, status);
+    if let Some((lang, content)) = status {
+        presence.set_status(lang, content);
+    }
 
     // Send the presence stanza.
     if let Err(e) = agent.client.send_stanza(presence.into()).await {
@@ -113,4 +164,41 @@ pub async fn leave_room<C: ServerConnector>(
     }
 
     agent.rooms_leaving.insert(room, nickname.to_string());
+}
+
+#[derive(Clone, Debug)]
+pub struct RoomMessageSettings<'a> {
+    pub room: BareJid,
+    pub message: &'a str,
+    pub lang: Option<&'a str>,
+}
+
+impl<'a> RoomMessageSettings<'a> {
+    pub fn new(room: BareJid, message: &'a str) -> Self {
+        Self {
+            room,
+            message,
+            lang: None,
+        }
+    }
+}
+
+pub async fn send_room_message<'a, C: ServerConnector>(
+    agent: &mut Agent<C>,
+    settings: RoomMessageSettings<'a>,
+) {
+    let RoomMessageSettings {
+        room,
+        message,
+        lang,
+    } = settings;
+
+    agent
+        .send_message(
+            room.into(),
+            MessageType::Groupchat,
+            lang.unwrap_or(""),
+            message,
+        )
+        .await;
 }

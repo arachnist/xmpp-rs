@@ -6,8 +6,8 @@
 
 use std::env::args;
 use std::str::FromStr;
-use tokio_xmpp::jid::{BareJid, Jid};
-use tokio_xmpp::parsers::message::MessageType;
+use tokio_xmpp::jid::BareJid;
+use xmpp::muc::room::RoomMessageSettings;
 use xmpp::{ClientBuilder, ClientFeature, ClientType, Event};
 
 #[tokio::main]
@@ -28,7 +28,6 @@ async fn main() -> Result<(), Option<()>> {
         .set_client(ClientType::Bot, "xmpp-rs")
         .set_website("https://gitlab.com/xmpp-rs/xmpp-rs")
         .set_default_nick("bot")
-        .enable_feature(ClientFeature::Avatars)
         .enable_feature(ClientFeature::ContactList)
         .enable_feature(ClientFeature::JoinRooms)
         .build();
@@ -37,32 +36,24 @@ async fn main() -> Result<(), Option<()>> {
         for event in client.wait_for_events().await {
             match event {
                 Event::Online => {
-                    println!("Online.");
+                    log::info!("Online.");
                 }
                 Event::Disconnected(e) => {
-                    println!("Disconnected because of {}.", e);
-                    return Err(None);
-                }
-                Event::ContactAdded(contact) => {
-                    println!("Contact {} added.", contact.jid);
-                }
-                Event::ContactRemoved(contact) => {
-                    println!("Contact {} removed.", contact.jid);
-                }
-                Event::ContactChanged(contact) => {
-                    println!("Contact {} changed.", contact.jid);
+                    log::info!("Disconnected: {}.", e);
                 }
                 Event::ChatMessage(_id, jid, body, time_info) => {
-                    println!("Message from {} at {}: {}", jid, time_info.received, body.0);
+                    log::info!(
+                        "{} {}: {}",
+                        time_info.received.time().format("%H:%M"),
+                        jid,
+                        body.0
+                    );
                 }
                 Event::RoomJoined(jid) => {
-                    println!("Joined room {}.", jid);
+                    log::info!("Joined room {}.", jid);
                     client
-                        .send_message(Jid::from(jid), MessageType::Groupchat, "en", "Hello world!")
+                        .send_room_message(RoomMessageSettings::new(jid, "Hello world!"))
                         .await;
-                }
-                Event::RoomLeft(jid) => {
-                    println!("Left room {}.", jid);
                 }
                 Event::RoomMessage(_id, jid, nick, body, time_info) => {
                     println!(
@@ -70,10 +61,9 @@ async fn main() -> Result<(), Option<()>> {
                         jid, nick, time_info.received, body.0
                     );
                 }
-                Event::AvatarRetrieved(jid, path) => {
-                    println!("Received avatar for {} in {}.", jid, path);
+                _ => {
+                    log::debug!("Unimplemented event:\n{:#?}", event);
                 }
-                _ => (),
             }
         }
     }

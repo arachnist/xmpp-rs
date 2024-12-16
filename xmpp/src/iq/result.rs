@@ -11,7 +11,7 @@ use tokio_xmpp::{
     parsers::{disco::DiscoInfoResult, ns, private::Query as PrivateXMLQuery, roster::Roster},
 };
 
-use crate::{disco, pubsub, upload, Agent, Event};
+use crate::{disco, muc::room::JoinRoomSettings, pubsub, upload, Agent, Event};
 
 pub async fn handle_iq_result<C: ServerConnector>(
     agent: &mut Agent<C>,
@@ -39,7 +39,14 @@ pub async fn handle_iq_result<C: ServerConnector>(
             Ok(query) => {
                 for conf in query.storage.conferences {
                     let (jid, room) = conf.into_bookmarks2();
-                    agent.join_room(jid, room.nick, room.password, "", "").await;
+                    agent
+                        .join_room(JoinRoomSettings {
+                            room: jid,
+                            nick: room.nick,
+                            password: room.password,
+                            status: None,
+                        })
+                        .await;
                 }
             }
             Err(e) => {
