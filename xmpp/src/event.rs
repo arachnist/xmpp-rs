@@ -7,7 +7,7 @@
 use tokio_xmpp::jid::BareJid;
 #[cfg(feature = "avatars")]
 use tokio_xmpp::jid::Jid;
-use tokio_xmpp::parsers::{bookmarks2, message::Body, roster::Item as RosterItem};
+use tokio_xmpp::parsers::{message::Body, roster::Item as RosterItem};
 
 use crate::{delay::StanzaTimeInfo, Error, Id, RoomNick};
 
@@ -26,9 +26,6 @@ pub enum Event {
     /// - The [`Body`] is the message body.
     /// - The [`StanzaTimeInfo`] about when message was received, and when the message was claimed sent.
     ChatMessage(Id, BareJid, Body, StanzaTimeInfo),
-    JoinRoom(BareJid, bookmarks2::Conference),
-    LeaveRoom(BareJid),
-    LeaveAllRooms,
     RoomJoined(BareJid),
     RoomLeft(BareJid),
     RoomMessage(Id, BareJid, RoomNick, Body, StanzaTimeInfo),

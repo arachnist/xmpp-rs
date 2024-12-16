@@ -25,7 +25,11 @@ pub(crate) async fn handle_event<C: ServerConnector>(
     elem: Element,
     #[cfg_attr(not(feature = "avatars"), allow(unused_variables))] agent: &mut Agent<C>,
 ) -> Vec<Event> {
+    // We allow the useless mut warning for no-default-features,
+    // since for now only avatars pushes events here.
+    #[allow(unused_mut)]
     let mut events = Vec::new();
+
     let event = PubSubEvent::try_from(elem);
     trace!("PubSub event: {:#?}", event);
     match event {
@@ -46,9 +50,20 @@ pub(crate) async fn handle_event<C: ServerConnector>(
                     match bookmarks2::Conference::try_from(payload) {
                         Ok(conference) => {
                             if conference.autojoin {
-                                events.push(Event::JoinRoom(jid, conference));
+                                if !agent.rooms_joined.contains_key(&jid) {
+                                    agent
+                                        .join_room(
+                                            jid.clone(),
+                                            conference.nick,
+                                            conference.password,
+                                            "",
+                                            "",
+                                        )
+                                        .await;
+                                }
                             } else {
-                                events.push(Event::LeaveRoom(jid));
+                                // So maybe another client of ours left the room... let's leave it too
+                                agent.leave_room(jid.clone(), "", "").await;
                             }
                         }
                         Err(err) => println!("not bookmark: {}", err),
@@ -64,20 +79,18 @@ pub(crate) async fn handle_event<C: ServerConnector>(
                     assert_eq!(items.len(), 1);
                     let item = items.clone().pop().unwrap();
                     let jid = BareJid::from_str(&item.0).unwrap();
-                    events.push(Event::LeaveRoom(jid));
+
+                    agent.leave_room(jid.clone(), "", "").await;
                 }
                 ref node => unimplemented!("node {}", node),
             }
         }
-        Ok(PubSubEvent::Purge { node }) => {
-            match node.0 {
-                ref node if node == ns::BOOKMARKS2 => {
-                    // TODO: Check that our bare JID is the sender.
-                    events.push(Event::LeaveAllRooms);
-                }
-                ref node => unimplemented!("node {}", node),
+        Ok(PubSubEvent::Purge { node }) => match node.0 {
+            ref node if node == ns::BOOKMARKS2 => {
+                warn!("The bookmarks2 PEP node was deleted!");
             }
-        }
+            ref node => unimplemented!("node {}", node),
+        },
         Err(e) => {
             error!("Error parsing PubSub event: {}", e);
         }
@@ -86,11 +99,16 @@ pub(crate) async fn handle_event<C: ServerConnector>(
     events
 }
 
-pub(crate) fn handle_iq_result(
+pub(crate) async fn handle_iq_result<C: ServerConnector>(
     #[cfg_attr(not(feature = "avatars"), allow(unused_variables))] from: &Jid,
     elem: Element,
+    agent: &mut Agent<C>,
 ) -> impl IntoIterator<Item = Event> {
+    // We allow the useless mut warning for no-default-features,
+    // since for now only avatars pushes events here.
+    #[allow(unused_mut)]
     let mut events = Vec::new();
+
     let pubsub = PubSub::try_from(elem).unwrap();
     trace!("PubSub: {:#?}", pubsub);
     if let PubSub::Items(items) = pubsub {
@@ -101,19 +119,53 @@ pub(crate) fn handle_iq_result(
                 events.extend(new_events);
             }
             ref node if node == ns::BOOKMARKS2 => {
-                events.push(Event::LeaveAllRooms);
+                // Keep track of the new added/removed rooms in the bookmarks2 list.
+                // The rooms we joined which are no longer in the list should be left ASAP.
+                let mut new_room_list: Vec<BareJid> = Vec::new();
+
                 for item in items.items {
                     let item = item.0;
                     let jid = BareJid::from_str(&item.id.clone().unwrap().0).unwrap();
                     let payload = item.payload.clone().unwrap();
                     match bookmarks2::Conference::try_from(payload) {
                         Ok(conference) => {
+                            // This room was either marked for join or leave, but it was still in the bookmarks.
+                            // Keep track in new_room_list.
+                            new_room_list.push(jid.clone());
+
                             if conference.autojoin {
-                                events.push(Event::JoinRoom(jid, conference));
+                                if !agent.rooms_joined.contains_key(&jid) {
+                                    agent
+                                        .join_room(
+                                            jid.clone(),
+                                            conference.nick,
+                                            conference.password,
+                                            "",
+                                            "",
+                                        )
+                                        .await;
+                                }
+                            } else {
+                                // Leave the room that is no longer autojoin
+                                agent.leave_room(jid.clone(), "", "").await;
                             }
                         }
-                        Err(err) => panic!("Wrong payload type in bookmarks 2 item: {}", err),
+                        Err(err) => {
+                            warn!("Wrong payload type in bookmarks2 item: {}", err);
+                        }
                     }
+                }
+
+                // Now we leave the rooms that are no longer in the bookmarks
+                let mut rooms_to_leave: Vec<BareJid> = Vec::new();
+                for (room, _nick) in &agent.rooms_joined {
+                    if !new_room_list.contains(&room) {
+                        rooms_to_leave.push(room.clone());
+                    }
+                }
+
+                for room in rooms_to_leave {
+                    agent.leave_room(room, "", "").await;
                 }
             }
             _ => unimplemented!(),

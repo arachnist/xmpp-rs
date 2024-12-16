@@ -1,5 +1,8 @@
 Version NEXT
 XXXX-YY-ZZ [ RELEASER <admin@localhost> ]
+    * Breaking chagnes:
+      - Event::LeaveRoom, Event::LeaveAllRooms, and Event::JoinRooms have been removed.
+        Agent now handles MUC connection states internally. (!481)
     * Fixes:
       - Use tokio::sync::RwLock not std::sync::RwLock (!432)
       - Agent::wait_for_events now return Vec<Event> and sets inner tokio_xmpp Client

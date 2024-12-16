@@ -14,14 +14,14 @@ use crate::{Agent, Event};
 
 /// Translate a `Presence` stanza into a list of higher-level `Event`s.
 pub async fn handle_presence<C: ServerConnector>(
-    _agent: &mut Agent<C>,
+    agent: &mut Agent<C>,
     presence: Presence,
 ) -> Vec<Event> {
     // Allocate an empty vector to store the events.
     let mut events = vec![];
 
     // Extract the JID of the sender (i.e. the one whose presence is being sent).
-    let from = presence.from.unwrap().to_bare();
+    let from = presence.from.clone().unwrap().to_bare();
 
     // Search through the payloads for a MUC user status.
 
@@ -38,10 +38,22 @@ pub async fn handle_presence<C: ServerConnector>(
             match presence.type_ {
                 PresenceType::None => {
                     // According to https://xmpp.org/extensions/xep-0045.html#enter-pres, no type should be seen as "available".
+                    if let Some(nick) = agent.rooms_joining.get(&from) {
+                        agent.rooms_joined.insert(from.clone(), nick.to_string());
+                        agent.rooms_joining.remove(&from);
+                    } else {
+                        warn!("Received self-presence from {} while the room was not marked as joining.", presence.from.unwrap());
+                    }
                     events.push(Event::RoomJoined(from.clone()));
                 }
                 PresenceType::Unavailable => {
                     // According to https://xmpp.org/extensions/xep-0045.html#exit, the server will use type "unavailable" to notify the client that it has left the room/
+                    if agent.rooms_leaving.contains_key(&from) {
+                        agent.rooms_joined.remove(&from);
+                        agent.rooms_leaving.remove(&from);
+                    } else {
+                        warn!("Received self-presence unavailable from {} while the room was not marked as leaving.", presence.from.unwrap());
+                    }
                     events.push(Event::RoomLeft(from.clone()));
                 }
                 _ => unimplemented!("Presence type {:?}", presence.type_), // TODO: What to do here?

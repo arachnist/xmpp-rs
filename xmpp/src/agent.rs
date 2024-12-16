@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -26,6 +27,10 @@ pub struct Agent<C: ServerConnector> {
     pub(crate) node: String,
     pub(crate) uploads: Vec<(String, Jid, PathBuf)>,
     pub(crate) awaiting_disco_bookmarks_type: bool,
+    // Mapping of room->nick
+    pub(crate) rooms_joined: HashMap<BareJid, String>,
+    pub(crate) rooms_joining: HashMap<BareJid, String>,
+    pub(crate) rooms_leaving: HashMap<BareJid, String>,
 }
 
 impl<C: ServerConnector> Agent<C> {
@@ -58,11 +63,10 @@ impl<C: ServerConnector> Agent<C> {
     pub async fn leave_room(
         &mut self,
         room_jid: BareJid,
-        nickname: RoomNick,
         lang: impl Into<String>,
         status: impl Into<String>,
     ) {
-        muc::room::leave_room(self, room_jid, nickname, lang, status).await
+        muc::room::leave_room(self, room_jid, lang, status).await
     }
 
     pub async fn send_message(

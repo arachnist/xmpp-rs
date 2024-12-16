@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 #[cfg(any(feature = "starttls-rust", feature = "starttls-native"))]
@@ -181,6 +182,9 @@ impl<C: ServerConnector> ClientBuilder<'_, C> {
             node,
             uploads: Vec::new(),
             awaiting_disco_bookmarks_type: false,
+            rooms_joined: HashMap::new(),
+            rooms_joining: HashMap::new(),
+            rooms_leaving: HashMap::new(),
         }
     }
 }

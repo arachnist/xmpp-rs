@@ -55,24 +55,6 @@ async fn main() -> Result<(), Option<()>> {
                 Event::ChatMessage(_id, jid, body, time_info) => {
                     println!("Message from {} at {}: {}", jid, time_info.received, body.0);
                 }
-                Event::JoinRoom(jid, conference) => {
-                    println!("Joining room {} ({:?})…", jid, conference.name);
-                    client
-                        .join_room(
-                            jid,
-                            conference.nick,
-                            conference.password,
-                            "en",
-                            "Yet another bot!",
-                        )
-                        .await;
-                }
-                Event::LeaveRoom(jid) => {
-                    println!("Leaving room {}…", jid);
-                }
-                Event::LeaveAllRooms => {
-                    println!("Leaving all rooms…");
-                }
                 Event::RoomJoined(jid) => {
                     println!("Joined room {}.", jid);
                     client

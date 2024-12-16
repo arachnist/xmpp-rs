@@ -29,7 +29,7 @@ pub async fn handle_iq_result<C: ServerConnector>(
             events.push(Event::ContactAdded(item));
         }
     } else if payload.is("pubsub", ns::PUBSUB) {
-        let new_events = pubsub::handle_iq_result(&from, payload);
+        let new_events = pubsub::handle_iq_result(&from, payload, agent).await;
         events.extend(new_events);
     } else if payload.is("slot", ns::HTTP_UPLOAD) {
         let new_events = upload::receive::handle_upload_result(&from, id, payload, agent).await;
@@ -39,7 +39,7 @@ pub async fn handle_iq_result<C: ServerConnector>(
             Ok(query) => {
                 for conf in query.storage.conferences {
                     let (jid, room) = conf.into_bookmarks2();
-                    events.push(Event::JoinRoom(jid, room));
+                    agent.join_room(jid, room.nick, room.password, "", "").await;
                 }
             }
             Err(e) => {
