@@ -4,12 +4,12 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use tokio_xmpp::jid::BareJid;
 #[cfg(feature = "avatars")]
 use tokio_xmpp::jid::Jid;
+use tokio_xmpp::jid::{BareJid, ResourcePart};
 use tokio_xmpp::parsers::{message::Body, roster::Item as RosterItem};
 
-use crate::{delay::StanzaTimeInfo, Error, Id, RoomNick};
+use crate::{delay::StanzaTimeInfo, Error, Id};
 
 #[derive(Debug)]
 pub enum Event {
@@ -28,15 +28,15 @@ pub enum Event {
     ChatMessage(Id, BareJid, Body, StanzaTimeInfo),
     RoomJoined(BareJid),
     RoomLeft(BareJid),
-    RoomMessage(Id, BareJid, RoomNick, Body, StanzaTimeInfo),
+    RoomMessage(Id, BareJid, ResourcePart, Body, StanzaTimeInfo),
     /// The subject of a room was received.
     /// - The BareJid is the room's address.
     /// - The RoomNick is the nickname of the room member who set the subject.
     /// - The String is the new subject.
-    RoomSubject(BareJid, Option<RoomNick>, String, StanzaTimeInfo),
+    RoomSubject(BareJid, Option<ResourcePart>, String, StanzaTimeInfo),
     /// A private message received from a room, containing the message ID, the room's BareJid,
     /// the sender's nickname, and the message body.
-    RoomPrivateMessage(Id, BareJid, RoomNick, Body, StanzaTimeInfo),
+    RoomPrivateMessage(Id, BareJid, ResourcePart, Body, StanzaTimeInfo),
     ServiceMessage(Id, BareJid, Body, StanzaTimeInfo),
     HttpUploadedFile(String),
 }

@@ -38,7 +38,7 @@ pub async fn handle_message_chat(
                     Ok(full) => Event::RoomPrivateMessage(
                         message.id.clone(),
                         full.to_bare(),
-                        full.resource().to_string(),
+                        full.resource().into(),
                         body.clone(),
                         time_info.clone(),
                     ),

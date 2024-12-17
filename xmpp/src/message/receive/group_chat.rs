@@ -20,7 +20,7 @@ pub async fn handle_message_group_chat(
     if let Some((_lang, subject)) = message.get_best_subject(langs.clone()) {
         events.push(Event::RoomSubject(
             from.to_bare(),
-            from.resource().map(|x| x.to_string()),
+            from.resource().map(Into::into),
             subject.0.clone(),
             time_info.clone(),
         ));
@@ -31,7 +31,7 @@ pub async fn handle_message_group_chat(
             Ok(full) => Event::RoomMessage(
                 message.id.clone(),
                 from.to_bare(),
-                full.resource().to_string(),
+                full.resource().into(),
                 body.clone(),
                 time_info,
             ),

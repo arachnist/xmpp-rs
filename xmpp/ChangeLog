@@ -8,6 +8,8 @@ XXXX-YY-ZZ [ RELEASER <admin@localhost> ]
       - builder::ClientBuilder::set_default_nick no longer takes a &str, but
         any type that implements AsRef<jid::ResourceRef>, such as produced
         by ResourcePart::new (!485)
+      - Event::RoomMessage, Event::RoomPrivateMessage, and Event::RoomSubject now
+        use ResourcePart as sender nickname (!485)
     * Added:
       - Agent::send_room_message takes RoomMessageSettings argument (!483)
     * Fixes:
