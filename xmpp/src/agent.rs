@@ -16,7 +16,7 @@ pub use tokio_xmpp::{
     Client as TokioXmppClient,
 };
 
-use crate::{event_loop, message, muc, upload, Error, Event, RoomNick};
+use crate::{event_loop, message, muc, upload, Error, Event};
 
 pub struct Agent {
     pub(crate) client: TokioXmppClient,
@@ -63,14 +63,11 @@ impl Agent {
         muc::room::send_room_message(self, settings).await
     }
 
-    pub async fn send_room_private_message(
+    pub async fn send_room_private_message<'a>(
         &mut self,
-        room: BareJid,
-        recipient: RoomNick,
-        lang: &str,
-        text: &str,
+        settings: muc::private_message::RoomPrivateMessageSettings<'a>,
     ) {
-        muc::private_message::send_room_private_message(self, room, recipient, lang, text).await
+        muc::private_message::send_room_private_message(self, settings).await
     }
 
     /// Wait for new events, or Error::Disconnected when connection is closed and will not reconnect.

@@ -11,6 +11,7 @@ XXXX-YY-ZZ [ RELEASER <admin@localhost> ]
       - Event::RoomMessage, Event::RoomPrivateMessage, and Event::RoomSubject now
         use RoomNick as sender nickname; previously RoomNick was an alias for String
         now it's a newtype wrapper around ResourcePart (!485)
+      - Agent::send_room_private_message now takes RoomPrivateMessageSettings (!487)
     * Added:
       - Agent::send_room_message takes RoomMessageSettings argument (!483)
     * Fixes:
