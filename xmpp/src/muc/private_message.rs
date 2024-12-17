@@ -5,10 +5,8 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 use crate::{
-    parsers::{
-        message::{Body, Message, MessageType},
-        muc::user::MucUser,
-    },
+    message::send::RawMessageSettings,
+    parsers::{message::MessageType, muc::user::MucUser},
     tokio_xmpp::jid::{BareJid, Jid},
     Agent, RoomNick,
 };
@@ -50,10 +48,11 @@ pub async fn send_room_private_message<'a>(
 
     // TODO: check that room is in agent.joined_rooms
     let recipient: Jid = room.with_resource(recipient.as_ref()).into();
-    let mut stanza = Message::new(recipient).with_payload(MucUser::new());
-    stanza.type_ = MessageType::Chat;
-    stanza
-        .bodies
-        .insert(lang.unwrap_or("").to_string(), Body(String::from(message)));
-    agent.client.send_stanza(stanza.into()).await.unwrap();
+    agent
+        .send_raw_message(
+            RawMessageSettings::new(recipient, MessageType::Chat, message)
+                .with_payload(MucUser::new())
+                .with_lang_option(lang),
+        )
+        .await;
 }

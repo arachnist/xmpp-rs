@@ -37,6 +37,11 @@ impl<'a> RawMessageSettings<'a> {
         self
     }
 
+    pub fn with_lang_option(mut self, lang: Option<&'a str>) -> Self {
+        self.lang = lang;
+        self
+    }
+
     pub fn with_payload(mut self, payload: impl MessagePayload) -> Self {
         self.payloads.push(payload.into());
         self
@@ -94,12 +99,11 @@ pub async fn send_message<'a>(agent: &mut Agent, settings: MessageSettings<'a>) 
         lang,
     } = settings;
 
-    // TODO: check that recipient may receive normal chat message, eg is not a MUC chatroom
-
-    let mut stanza = Message::new(Some(recipient.into()));
-    stanza.type_ = MessageType::Chat;
-    stanza
-        .bodies
-        .insert(lang.unwrap_or("").to_string(), Body(String::from(message)));
-    agent.client.send_stanza(stanza.into()).await.unwrap();
+    // TODO: check that recipient is not in agent.joined_rooms
+    agent
+        .send_raw_message(
+            RawMessageSettings::new(recipient.into(), MessageType::Chat, message)
+                .with_lang_option(lang),
+        )
+        .await;
 }
