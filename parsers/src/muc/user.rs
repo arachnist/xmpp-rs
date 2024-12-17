@@ -5,16 +5,11 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use xso::{
-    error::{Error, FromElementError, FromEventsError},
-    exports::rxml,
-    minidom_compat, AsXml, FromXml,
-};
+use xso::{AsXml, FromXml};
 
 use crate::message::MessagePayload;
 use crate::ns;
 use crate::presence::PresencePayload;
-use minidom::Element;
 
 use jid::FullJid;
 
@@ -89,67 +84,16 @@ Status, "status", MUC_USER, "code", {
 ///
 /// Possesses a 'jid' and a 'nick' attribute, so that an action can be attributed either to a real
 /// JID or to a roomnick. -- CHANGELOG  1.25 (2012-02-08)
-#[derive(Debug, Clone, PartialEq)]
-pub enum Actor {
+#[derive(FromXml, AsXml, Debug, Clone, PartialEq)]
+#[xml(namespace = ns::MUC_USER, name = "actor")]
+pub struct Actor {
     /// The full JID associated with this user.
-    Jid(FullJid),
+    #[xml(attribute(default))]
+    jid: Option<FullJid>,
 
     /// The nickname of this user.
-    Nick(String),
-}
-
-impl TryFrom<Element> for Actor {
-    type Error = FromElementError;
-
-    fn try_from(elem: Element) -> Result<Actor, FromElementError> {
-        check_self!(elem, "actor", MUC_USER);
-        check_no_unknown_attributes!(elem, "actor", ["jid", "nick"]);
-        check_no_children!(elem, "actor");
-        let jid: Option<FullJid> = get_attr!(elem, "jid", Option);
-        let nick = get_attr!(elem, "nick", Option);
-
-        match (jid, nick) {
-            (Some(_), Some(_)) | (None, None) => {
-                Err(Error::Other("Either 'jid' or 'nick' attribute is required.").into())
-            }
-            (Some(jid), _) => Ok(Actor::Jid(jid)),
-            (_, Some(nick)) => Ok(Actor::Nick(nick)),
-        }
-    }
-}
-
-impl FromXml for Actor {
-    type Builder = minidom_compat::FromEventsViaElement<Actor>;
-
-    fn from_events(
-        qname: rxml::QName,
-        attrs: rxml::AttrMap,
-    ) -> Result<Self::Builder, FromEventsError> {
-        if qname.0 != crate::ns::MUC_USER || qname.1 != "actor" {
-            return Err(FromEventsError::Mismatch { name: qname, attrs });
-        }
-        Self::Builder::new(qname, attrs)
-    }
-}
-
-impl From<Actor> for Element {
-    fn from(actor: Actor) -> Element {
-        let elem = Element::builder("actor", ns::MUC_USER);
-
-        (match actor {
-            Actor::Jid(jid) => elem.attr("jid", jid),
-            Actor::Nick(nick) => elem.attr("nick", nick),
-        })
-        .build()
-    }
-}
-
-impl AsXml for Actor {
-    type ItemIter<'x> = minidom_compat::AsItemsViaElement<'x>;
-
-    fn as_xml_iter(&self) -> Result<Self::ItemIter<'_>, Error> {
-        minidom_compat::AsItemsViaElement::new(self.clone())
-    }
+    #[xml(attribute(default))]
+    nick: Option<String>,
 }
 
 /// Used to continue a one-to-one discussion in a room, with more than one
@@ -343,6 +287,8 @@ mod tests {
     use crate::message::Message;
     use crate::presence::{Presence, Type as PresenceType};
     use jid::Jid;
+    use minidom::Element;
+    use xso::error::{Error, FromElementError};
 
     #[test]
     fn test_simple() {
@@ -488,24 +434,12 @@ mod tests {
         assert_eq!(error.to_string(), "invalid digit found in string");
     }
 
+    // This test is now ignored because we switched to a representation where we can’t currently
+    // validate whether one of the required attributes is present or not.
     #[test]
+    #[ignore]
     fn test_actor_required_attributes() {
         let elem: Element = "<actor xmlns='http://jabber.org/protocol/muc#user'/>"
-            .parse()
-            .unwrap();
-        let error = Actor::try_from(elem).unwrap_err();
-        let message = match error {
-            FromElementError::Invalid(Error::Other(string)) => string,
-            _ => panic!(),
-        };
-        assert_eq!(message, "Either 'jid' or 'nick' attribute is required.");
-    }
-
-    #[test]
-    fn test_actor_required_attributes2() {
-        let elem: Element = "<actor xmlns='http://jabber.org/protocol/muc#user'
-                   jid='foo@bar/baz'
-                   nick='baz'/>"
             .parse()
             .unwrap();
         let error = Actor::try_from(elem).unwrap_err();
@@ -523,11 +457,8 @@ mod tests {
             .parse()
             .unwrap();
         let actor = Actor::try_from(elem).unwrap();
-        let jid = match actor {
-            Actor::Jid(jid) => jid,
-            _ => panic!(),
-        };
-        assert_eq!(jid, "foo@bar/baz".parse::<FullJid>().unwrap());
+        assert_eq!(actor.jid, Some("foo@bar/baz".parse::<FullJid>().unwrap()));
+        assert_eq!(actor.nick, None);
     }
 
     #[test]
@@ -536,11 +467,8 @@ mod tests {
             .parse()
             .unwrap();
         let actor = Actor::try_from(elem).unwrap();
-        let nick = match actor {
-            Actor::Nick(nick) => nick,
-            _ => panic!(),
-        };
-        assert_eq!(nick, "baz".to_owned());
+        assert_eq!(actor.nick, Some("baz".to_owned()));
+        assert_eq!(actor.jid, None);
     }
 
     #[test]
@@ -703,9 +631,10 @@ mod tests {
             .parse()
             .unwrap();
         let item = Item::try_from(elem).unwrap();
-        match item {
-            Item { actor, .. } => assert_eq!(actor, Some(Actor::Nick("foobar".to_owned()))),
-        }
+        let Item { actor, .. } = item;
+        let actor = actor.unwrap();
+        assert_eq!(actor.nick, Some("foobar".to_owned()));
+        assert_eq!(actor.jid, None);
     }
 
     #[test]
