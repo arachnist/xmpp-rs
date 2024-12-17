@@ -493,11 +493,33 @@ pub fn from_bytes<T: FromXml>(mut buf: &[u8]) -> Result<T, self::error::Error> {
     Err(self::error::Error::XmlError(rxml::Error::InvalidEof(None)))
 }
 
+fn read_start_event_io<I: std::io::BufRead>(
+    r: &mut rxml::Reader<I>,
+) -> io::Result<(rxml::QName, rxml::AttrMap)> {
+    for ev in r {
+        match ev? {
+            rxml::Event::XmlDeclaration(_, rxml::XmlVersion::V1_0) => (),
+            rxml::Event::StartElement(_, name, attrs) => return Ok((name, attrs)),
+            _ => {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    self::error::Error::Other("Unexpected event at start of document"),
+                ))
+            }
+        }
+    }
+    Err(io::Error::new(
+        io::ErrorKind::InvalidData,
+        self::error::Error::XmlError(rxml::Error::InvalidEof(Some(
+            rxml::error::ErrorContext::DocumentBegin,
+        ))),
+    ))
+}
+
 /// Attempt to parse a type implementing [`FromXml`] from a reader.
 pub fn from_reader<T: FromXml, R: io::BufRead>(r: R) -> io::Result<T> {
     let mut reader = rxml::Reader::new(r);
-    let (name, attrs) =
-        read_start_event(&mut reader).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+    let (name, attrs) = read_start_event_io(&mut reader)?;
     let mut builder = match T::from_events(name, attrs) {
         Ok(v) => v,
         Err(self::error::FromEventsError::Mismatch { .. }) => {
