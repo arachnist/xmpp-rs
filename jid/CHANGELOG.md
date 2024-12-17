@@ -32,6 +32,9 @@ Version 0.11.1, release 2024-07-23:
     - Improve perfs of comparison operators (#123)
     - Add more test cases
     - Fix clippy lints, cargo doc, and other warnings
+    - xso::FromXmlText and xso::AsXmlText are now implemented for NodePart,
+      DomainPart, and ResourcePart (!485)
+
 
 Version 0.11.0, release 2024-07-23 [YANKED]
 

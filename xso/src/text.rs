@@ -117,6 +117,12 @@ convert_via_fromstr_and_display! {
     jid::FullJid,
     #[cfg(feature = "jid")]
     jid::BareJid,
+    #[cfg(feature = "jid")]
+    jid::NodePart,
+    #[cfg(feature = "jid")]
+    jid::DomainPart,
+    #[cfg(feature = "jid")]
+    jid::ResourcePart,
 }
 
 /// Represent a way to encode/decode text data into a Rust type.
