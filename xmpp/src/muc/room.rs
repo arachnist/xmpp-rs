@@ -6,7 +6,7 @@
 
 use crate::parsers::message::MessageType;
 use tokio_xmpp::{
-    jid::BareJid,
+    jid::{BareJid, ResourcePart, ResourceRef},
     parsers::{
         muc::Muc,
         presence::{Presence, Type as PresenceType},
@@ -18,7 +18,7 @@ use crate::Agent;
 #[derive(Clone, Debug)]
 pub struct JoinRoomSettings<'a> {
     pub room: BareJid,
-    pub nick: Option<String>,
+    pub nick: Option<ResourcePart>,
     pub password: Option<String>,
     pub status: Option<(&'a str, &'a str)>,
 }
@@ -33,7 +33,7 @@ impl<'a> JoinRoomSettings<'a> {
         }
     }
 
-    pub fn with_nick(mut self, nick: impl AsRef<str>) -> Self {
+    pub fn with_nick(mut self, nick: impl AsRef<ResourceRef>) -> Self {
         self.nick = Some(nick.as_ref().into());
         self
     }
@@ -81,7 +81,7 @@ pub async fn join_room<'a>(agent: &mut Agent, settings: JoinRoomSettings<'a>) {
         agent.default_nick.read().await.clone()
     };
 
-    let room_jid = room.with_resource_str(&nick).unwrap();
+    let room_jid = room.with_resource(&nick);
     let mut presence = Presence::new(PresenceType::None).with_to(room_jid);
     presence.add_payload(muc);
 
@@ -156,7 +156,7 @@ pub async fn leave_room<'a>(agent: &mut Agent, settings: LeaveRoomSettings<'a>) 
         error!("Failed to send leave room presence: {}", e);
     }
 
-    agent.rooms_leaving.insert(room, nickname.to_string());
+    agent.rooms_leaving.insert(room, nickname.clone());
 }
 
 #[derive(Clone, Debug)]

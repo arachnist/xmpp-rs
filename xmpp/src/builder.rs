@@ -11,7 +11,7 @@ use tokio::sync::RwLock;
 use tokio_xmpp::connect::{DnsConfig, StartTlsServerConnector};
 use tokio_xmpp::{
     connect::ServerConnector,
-    jid::{BareJid, Jid},
+    jid::{BareJid, Jid, ResourcePart, ResourceRef},
     parsers::{
         disco::{DiscoInfoResult, Feature, Identity},
         ns,
@@ -48,7 +48,7 @@ pub struct ClientBuilder<'a, C: ServerConnector> {
     password: &'a str,
     server_connector: C,
     website: String,
-    default_nick: String,
+    default_nick: ResourcePart,
     lang: Vec<String>,
     disco: (ClientType, String),
     features: Vec<ClientFeature>,
@@ -78,7 +78,7 @@ impl<C: ServerConnector> ClientBuilder<'_, C> {
             password,
             server_connector,
             website: String::from("https://gitlab.com/xmpp-rs/tokio-xmpp"),
-            default_nick: String::from("xmpp-rs"),
+            default_nick: ResourcePart::new("xmpp-rs").unwrap().into(),
             lang: vec![String::from("en")],
             disco: (ClientType::default(), String::from("tokio-xmpp")),
             features: vec![],
@@ -103,8 +103,8 @@ impl<C: ServerConnector> ClientBuilder<'_, C> {
         self
     }
 
-    pub fn set_default_nick(mut self, nick: &str) -> Self {
-        self.default_nick = String::from(nick);
+    pub fn set_default_nick(mut self, nick: impl AsRef<ResourceRef>) -> Self {
+        self.default_nick = nick.as_ref().to_owned();
         self
     }
 

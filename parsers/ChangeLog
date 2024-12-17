@@ -34,6 +34,8 @@ XXXX-YY-ZZ RELEASER <admin@example.com>
         use them just like normal booleans. The following structs are deprecated:
         pubsub::pubsub::Notify, bookmarks2::Autojoin, extdisco::Restricted,
         fast::Tls0Rtt, legacy_omemo::IsPreKey, mam::Complete, sm::ResumeAttr (!476)
+      - bookmarks::Conference and bookmarks2::Conference use ResourcePart to store
+        the optional nickname instead of a String (!485)
     * Improvements:
       - Keep unsupported vCard elements as `minidom::Element`, so that they
         get serialized back instead of being dropped.  We now also test for

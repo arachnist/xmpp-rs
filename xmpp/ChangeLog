@@ -5,6 +5,9 @@ XXXX-YY-ZZ [ RELEASER <admin@localhost> ]
         Agent now handles MUC connection states internally. (!481)
       - Agent::leave_room now takes LeaveRoomSettings argument (!483)
       - Agent::join_room now takes JoinRoomSettings argument (!483)
+      - builder::ClientBuilder::set_default_nick no longer takes a &str, but
+        any type that implements AsRef<jid::ResourceRef>, such as produced
+        by ResourcePart::new (!485)
     * Added:
       - Agent::send_room_message takes RoomMessageSettings argument (!483)
     * Fixes:

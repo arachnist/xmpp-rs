@@ -44,7 +44,7 @@ pub type RoomNick = String;
 /*
 #[cfg(all(test, any(feature = "starttls-rust", feature = "starttls-native")))]
 mod tests {
-    use super::jid::BareJid;
+    use super::jid::{BareJid, ResourcePart};
     use super::{ClientBuilder, ClientFeature, ClientType, Event};
     use std::str::FromStr;
     use tokio_xmpp::Client as TokioXmppClient;
@@ -52,6 +52,7 @@ mod tests {
     #[tokio::test]
     async fn test_simple() {
         let jid = BareJid::from_str("foo@bar").unwrap();
+        let nick = ResourcePart::new("bot").unwrap();
 
         let client = TokioXmppClient::new(jid.clone(), "meh");
 
@@ -59,7 +60,7 @@ mod tests {
         let client_builder = ClientBuilder::new(jid, "meh")
             .set_client(ClientType::Bot, "xmpp-rs")
             .set_website("https://gitlab.com/xmpp-rs/xmpp-rs")
-            .set_default_nick("bot")
+            .set_default_nick(nick)
             .enable_feature(ClientFeature::ContactList);
 
         #[cfg(feature = "avatars")]

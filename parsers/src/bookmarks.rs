@@ -19,6 +19,7 @@ use xso::{AsXml, FromXml};
 use jid::BareJid;
 
 pub use crate::bookmarks2;
+use crate::jid::ResourcePart;
 use crate::ns;
 
 /// A conference bookmark.
@@ -38,8 +39,8 @@ pub struct Conference {
     pub name: Option<String>,
 
     /// The nick the user will use to join this conference.
-    #[xml(extract(default, fields(text(type_ = String))))]
-    pub nick: Option<String>,
+    #[xml(extract(default, fields(text(type_ = ResourcePart))))]
+    pub nick: Option<ResourcePart>,
 
     /// The password required to join this conference.
     #[xml(extract(default, fields(text(type_ = String))))]
@@ -130,6 +131,18 @@ mod tests {
     }
 
     #[test]
+    fn wrong_resource() {
+        // This emoji is not valid according to Resource prep
+        let elem: Element = "<storage xmlns='storage:bookmarks'><url name='Example' url='https://example.com/'/><conference autojoin='true' jid='foo@muc.localhost' name='TEST'><nick>Whatever\u{1F469}\u{1F3FE}\u{200D}\u{2764}\u{FE0F}\u{200D}\u{1F469}\u{1F3FC}</nick></conference></storage>".parse().unwrap();
+        let res = Storage::try_from(elem);
+        assert!(res.is_err());
+        assert_eq!(
+            res.unwrap_err().to_string().as_str(),
+            "text parse error: resource doesn’t pass resourceprep validation"
+        );
+    }
+
+    #[test]
     fn complete() {
         let elem: Element = "<storage xmlns='storage:bookmarks'><url name='Example' url='https://example.org/'/><conference autojoin='true' jid='test-muc@muc.localhost' name='Test MUC'><nick>Coucou</nick><password>secret</password></conference></storage>".parse().unwrap();
         let storage = Storage::try_from(elem).unwrap();
@@ -143,7 +156,10 @@ mod tests {
             BareJid::new("test-muc@muc.localhost").unwrap()
         );
         assert_eq!(storage.conferences[0].clone().name.unwrap(), "Test MUC");
-        assert_eq!(storage.conferences[0].clone().nick.unwrap(), "Coucou");
+        assert_eq!(
+            storage.conferences[0].clone().nick.unwrap().as_str(),
+            "Coucou"
+        );
         assert_eq!(storage.conferences[0].clone().password.unwrap(), "secret");
     }
 }

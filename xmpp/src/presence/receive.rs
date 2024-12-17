@@ -35,7 +35,7 @@ pub async fn handle_presence(agent: &mut Agent, presence: Presence) -> Vec<Event
                 PresenceType::None => {
                     // According to https://xmpp.org/extensions/xep-0045.html#enter-pres, no type should be seen as "available".
                     if let Some(nick) = agent.rooms_joining.get(&from) {
-                        agent.rooms_joined.insert(from.clone(), nick.to_string());
+                        agent.rooms_joined.insert(from.clone(), nick.clone());
                         agent.rooms_joining.remove(&from);
                     } else {
                         warn!("Received self-presence from {} while the room was not marked as joining.", presence.from.unwrap());

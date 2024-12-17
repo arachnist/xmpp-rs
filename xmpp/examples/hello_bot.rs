@@ -6,7 +6,7 @@
 
 use std::env::args;
 use std::str::FromStr;
-use tokio_xmpp::jid::BareJid;
+use tokio_xmpp::jid::{BareJid, ResourcePart};
 use xmpp::muc::room::{JoinRoomSettings, RoomMessageSettings};
 use xmpp::{ClientBuilder, ClientFeature, ClientType, Event};
 
@@ -39,11 +39,13 @@ async fn main() -> Result<(), Option<()>> {
         }
     }
 
+    let nick = ResourcePart::new("bot").unwrap();
+
     // Client instance
     let mut client = ClientBuilder::new(jid, password)
         .set_client(ClientType::Bot, "xmpp-rs")
         .set_website("https://gitlab.com/xmpp-rs/xmpp-rs")
-        .set_default_nick("bot")
+        .set_default_nick(nick)
         .enable_feature(ClientFeature::ContactList)
         .enable_feature(ClientFeature::JoinRooms)
         .build();

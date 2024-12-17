@@ -14,6 +14,7 @@
 
 use xso::{AsXml, FromXml};
 
+use crate::jid::ResourcePart;
 use crate::ns;
 use minidom::Element;
 
@@ -39,8 +40,8 @@ pub struct Conference {
     pub name: Option<String>,
 
     /// The nick the user will use to join this conference.
-    #[xml(extract(default, fields(text(type_ = String))))]
-    pub nick: Option<String>,
+    #[xml(extract(default, fields(text(type_ = ResourcePart))))]
+    pub nick: Option<ResourcePart>,
 
     /// The password required to join this conference.
     #[xml(extract(default, fields(text(type_ = String))))]
@@ -92,12 +93,24 @@ mod tests {
     }
 
     #[test]
+    fn wrong_resource() {
+        // This emoji is not valid according to Resource prep
+        let elem: Element = "<conference xmlns='urn:xmpp:bookmarks:1' autojoin='true'><nick>Whatever\u{1F469}\u{1F3FE}\u{200D}\u{2764}\u{FE0F}\u{200D}\u{1F469}\u{1F3FC}</nick></conference>".parse().unwrap();
+        let res = Conference::try_from(elem);
+        assert!(res.is_err());
+        assert_eq!(
+            res.unwrap_err().to_string().as_str(),
+            "text parse error: resource doesn’t pass resourceprep validation"
+        );
+    }
+
+    #[test]
     fn complete() {
         let elem: Element = "<conference xmlns='urn:xmpp:bookmarks:1' autojoin='true' name='Test MUC'><nick>Coucou</nick><password>secret</password><extensions><test xmlns='urn:xmpp:unknown' /></extensions></conference>".parse().unwrap();
         let conference = Conference::try_from(elem).unwrap();
         assert_eq!(conference.autojoin, true);
         assert_eq!(conference.name, Some(String::from("Test MUC")));
-        assert_eq!(conference.clone().nick.unwrap(), "Coucou");
+        assert_eq!(conference.clone().nick.unwrap().as_str(), "Coucou");
         assert_eq!(conference.clone().password.unwrap(), "secret");
         let payloads = conference.clone().extensions.unwrap().payloads;
         assert_eq!(payloads.len(), 1);
@@ -115,7 +128,7 @@ mod tests {
         println!("FOO: conference: {:?}", conference);
         assert_eq!(conference.autojoin, true);
         assert_eq!(conference.name, Some(String::from("Test MUC")));
-        assert_eq!(conference.clone().nick.unwrap(), "Coucou");
+        assert_eq!(conference.clone().nick.unwrap().as_str(), "Coucou");
         assert_eq!(conference.clone().password.unwrap(), "secret");
 
         let elem: Element = "<event xmlns='http://jabber.org/protocol/pubsub#event'><items node='urn:xmpp:bookmarks:1'><item xmlns='http://jabber.org/protocol/pubsub#event' id='test-muc@muc.localhost'><conference xmlns='urn:xmpp:bookmarks:1' autojoin='true' name='Test MUC'><nick>Coucou</nick><password>secret</password></conference></item></items></event>".parse().unwrap();
@@ -132,7 +145,7 @@ mod tests {
         let conference = Conference::try_from(payload).unwrap();
         assert_eq!(conference.autojoin, true);
         assert_eq!(conference.name, Some(String::from("Test MUC")));
-        assert_eq!(conference.clone().nick.unwrap(), "Coucou");
+        assert_eq!(conference.clone().nick.unwrap().as_str(), "Coucou");
         assert_eq!(conference.clone().password.unwrap(), "secret");
     }
 }
