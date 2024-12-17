@@ -5,23 +5,47 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 use tokio_xmpp::{
-    jid::Jid,
+    jid::BareJid,
     parsers::message::{Body, Message, MessageType},
 };
 
 use crate::Agent;
 
-pub async fn send_message(
-    agent: &mut Agent,
-    recipient: Jid,
-    type_: MessageType,
-    lang: &str,
-    text: &str,
-) {
-    let mut message = Message::new(Some(recipient));
-    message.type_ = type_;
-    message
+#[derive(Clone, Debug)]
+pub struct MessageSettings<'a> {
+    pub recipient: BareJid,
+    pub message: &'a str,
+    pub lang: Option<&'a str>,
+}
+
+impl<'a> MessageSettings<'a> {
+    pub fn new(recipient: BareJid, message: &'a str) -> Self {
+        Self {
+            recipient,
+            message,
+            lang: None,
+        }
+    }
+
+    pub fn with_lang(mut self, lang: &'a str) -> Self {
+        self.lang = Some(lang);
+        self
+    }
+}
+
+pub async fn send_message<'a>(agent: &mut Agent, settings: MessageSettings<'a>) {
+    let MessageSettings {
+        recipient,
+        message,
+        lang,
+    } = settings;
+
+    // TODO: check that recipient may receive normal chat message, eg is not a MUC chatroom
+
+    let mut stanza = Message::new(Some(recipient.into()));
+    stanza.type_ = MessageType::Chat;
+    stanza
         .bodies
-        .insert(String::from(lang), Body(String::from(text)));
-    let _ = agent.client.send_stanza(message.into()).await;
+        .insert(lang.unwrap_or("").to_string(), Body(String::from(message)));
+    agent.client.send_stanza(stanza.into()).await.unwrap();
 }

@@ -9,7 +9,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 pub use tokio_xmpp::parsers;
-use tokio_xmpp::parsers::{disco::DiscoInfoResult, message::MessageType};
+use tokio_xmpp::parsers::disco::DiscoInfoResult;
 pub use tokio_xmpp::{
     jid::{BareJid, FullJid, Jid, ResourcePart},
     minidom::Element,
@@ -49,14 +49,8 @@ impl Agent {
         muc::room::leave_room(self, settings).await
     }
 
-    pub async fn send_message(
-        &mut self,
-        recipient: Jid,
-        type_: MessageType,
-        lang: &str,
-        text: &str,
-    ) {
-        message::send::send_message(self, recipient, type_, lang, text).await
+    pub async fn send_message<'a>(&mut self, settings: message::send::MessageSettings<'a>) {
+        message::send::send_message(self, settings).await
     }
 
     pub async fn send_room_message<'a>(&mut self, settings: muc::room::RoomMessageSettings<'a>) {

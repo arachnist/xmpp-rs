@@ -48,6 +48,7 @@ pub async fn send_room_private_message<'a>(
         lang,
     } = settings;
 
+    // TODO: check that room is in agent.joined_rooms
     let recipient: Jid = room.with_resource(recipient.as_ref()).into();
     let mut stanza = Message::new(recipient).with_payload(MucUser::new());
     stanza.type_ = MessageType::Chat;

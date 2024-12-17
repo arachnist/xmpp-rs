@@ -8,6 +8,7 @@ use crate::parsers::message::MessageType;
 use tokio_xmpp::{
     jid::{BareJid, ResourcePart, ResourceRef},
     parsers::{
+        message::{Body, Message},
         muc::Muc,
         presence::{Presence, Type as PresenceType},
     },
@@ -188,12 +189,12 @@ pub async fn send_room_message<'a>(agent: &mut Agent, settings: RoomMessageSetti
         lang,
     } = settings;
 
-    agent
-        .send_message(
-            room.into(),
-            MessageType::Groupchat,
-            lang.unwrap_or(""),
-            message,
-        )
-        .await;
+    // TODO: check that room is in agent.joined_rooms
+
+    let mut stanza = Message::new(Some(room.into()));
+    stanza.type_ = MessageType::Groupchat;
+    stanza
+        .bodies
+        .insert(lang.unwrap_or("").to_string(), Body(String::from(message)));
+    agent.client.send_stanza(stanza.into()).await.unwrap();
 }
