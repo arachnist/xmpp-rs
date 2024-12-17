@@ -49,6 +49,10 @@ impl Agent {
         muc::room::leave_room(self, settings).await
     }
 
+    pub async fn send_raw_message<'a>(&mut self, settings: message::send::RawMessageSettings<'a>) {
+        message::send::send_raw_message(self, settings).await
+    }
+
     pub async fn send_message<'a>(&mut self, settings: message::send::MessageSettings<'a>) {
         message::send::send_message(self, settings).await
     }

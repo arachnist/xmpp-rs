@@ -15,6 +15,7 @@ XXXX-YY-ZZ [ RELEASER <admin@localhost> ]
       - Agent::send_room_private_message now takes RoomPrivateMessageSettings (!487)
     * Added:
       - Agent::send_room_message takes RoomMessageSettings argument (!483)
+      - Agent::send_raw_message takes RawMessageSettings for any message type (!487)
     * Fixes:
       - Use tokio::sync::RwLock not std::sync::RwLock (!432)
       - Agent::wait_for_events now return Vec<Event> and sets inner tokio_xmpp Client
