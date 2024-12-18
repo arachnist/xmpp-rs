@@ -21,7 +21,7 @@ pub async fn send_room_private_message(
     lang: &str,
     text: &str,
 ) {
-    let recipient: Jid = room.with_resource_str(&recipient).unwrap().into();
+    let recipient: Jid = room.with_resource(recipient.as_ref()).into();
     let mut message = Message::new(recipient).with_payload(MucUser::new());
     message.type_ = MessageType::Chat;
     message

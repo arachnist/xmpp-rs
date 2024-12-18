@@ -9,7 +9,7 @@ use tokio_xmpp::{
     parsers::{message::Message, muc::user::MucUser},
 };
 
-use crate::{delay::StanzaTimeInfo, Agent, Event};
+use crate::{delay::StanzaTimeInfo, Agent, Event, RoomNick};
 
 pub async fn handle_message_chat(
     agent: &mut Agent,
@@ -38,7 +38,7 @@ pub async fn handle_message_chat(
                     Ok(full) => Event::RoomPrivateMessage(
                         message.id.clone(),
                         full.to_bare(),
-                        full.resource().into(),
+                        RoomNick::from_resource_ref(full.resource()),
                         body.clone(),
                         time_info.clone(),
                     ),

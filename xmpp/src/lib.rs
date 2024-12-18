@@ -8,11 +8,13 @@
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
 
 pub use tokio_xmpp;
-pub use tokio_xmpp::jid;
+pub use tokio_xmpp::jid::{ResourcePart, ResourceRef};
 pub use tokio_xmpp::minidom;
 pub use tokio_xmpp::parsers;
 #[macro_use]
 extern crate log;
+
+use core::fmt;
 
 pub mod agent;
 pub mod builder;
@@ -36,7 +38,43 @@ pub use feature::ClientFeature;
 
 pub type Error = tokio_xmpp::Error;
 pub type Id = Option<String>;
-pub type RoomNick = String;
+
+/// Nickname for a person in a chatroom.
+///
+/// This nickname is not associated with a specific chatroom, or with a certain
+/// user account.
+///
+// TODO: Introduce RoomMember and track by occupant-id
+#[derive(Clone, Debug)]
+pub struct RoomNick(ResourcePart);
+
+impl RoomNick {
+    pub fn new(nick: ResourcePart) -> Self {
+        Self(nick)
+    }
+
+    pub fn from_resource_ref(nick: &ResourceRef) -> Self {
+        Self(nick.to_owned())
+    }
+}
+
+impl AsRef<ResourceRef> for RoomNick {
+    fn as_ref(&self) -> &ResourceRef {
+        self.0.as_ref()
+    }
+}
+
+impl From<RoomNick> for ResourcePart {
+    fn from(room_nick: RoomNick) -> Self {
+        room_nick.0
+    }
+}
+
+impl fmt::Display for RoomNick {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
 
 // The test below is dysfunctional since we have moved to StanzaStream. The
 // StanzaStream will attempt to connect to foo@bar indefinitely.

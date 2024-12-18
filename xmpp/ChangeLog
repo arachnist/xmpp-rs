@@ -9,7 +9,8 @@ XXXX-YY-ZZ [ RELEASER <admin@localhost> ]
         any type that implements AsRef<jid::ResourceRef>, such as produced
         by ResourcePart::new (!485)
       - Event::RoomMessage, Event::RoomPrivateMessage, and Event::RoomSubject now
-        use ResourcePart as sender nickname (!485)
+        use RoomNick as sender nickname; previously RoomNick was an alias for String
+        now it's a newtype wrapper around ResourcePart (!485)
     * Added:
       - Agent::send_room_message takes RoomMessageSettings argument (!483)
     * Fixes:

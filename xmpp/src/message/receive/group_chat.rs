@@ -6,7 +6,7 @@
 
 use tokio_xmpp::{jid::Jid, parsers::message::Message};
 
-use crate::{delay::StanzaTimeInfo, Agent, Event};
+use crate::{delay::StanzaTimeInfo, Agent, Event, RoomNick};
 
 pub async fn handle_message_group_chat(
     agent: &mut Agent,
@@ -20,7 +20,7 @@ pub async fn handle_message_group_chat(
     if let Some((_lang, subject)) = message.get_best_subject(langs.clone()) {
         events.push(Event::RoomSubject(
             from.to_bare(),
-            from.resource().map(Into::into),
+            from.resource().map(RoomNick::from_resource_ref),
             subject.0.clone(),
             time_info.clone(),
         ));
@@ -31,7 +31,7 @@ pub async fn handle_message_group_chat(
             Ok(full) => Event::RoomMessage(
                 message.id.clone(),
                 from.to_bare(),
-                full.resource().into(),
+                RoomNick::from_resource_ref(full.resource()),
                 body.clone(),
                 time_info,
             ),
