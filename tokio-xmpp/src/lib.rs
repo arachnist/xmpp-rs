@@ -46,28 +46,36 @@ compile_error!(
     "when starttls feature enabled one of tls-native and tls-rust features must be enabled."
 );
 
-mod event;
-pub use event::{Event, Stanza};
-pub mod connect;
-pub mod stanzastream;
-pub mod xmlstream;
+pub use parsers::{jid, minidom};
+pub use xmpp_parsers as parsers;
 
 mod client;
-pub use client::Client;
-
 #[cfg(feature = "insecure-tcp")]
 mod component;
-#[cfg(feature = "insecure-tcp")]
-pub use crate::component::Component;
-
+pub mod connect;
 /// Detailed error types
 pub mod error;
+mod event;
+pub mod stanzastream;
+pub mod xmlstream;
 
 #[doc(inline)]
 /// Generic tokio_xmpp Error
 pub use crate::error::Error;
+pub use client::Client;
+#[cfg(feature = "insecure-tcp")]
+pub use component::Component;
+pub use event::{Event, Stanza};
 
-// Re-exports
-pub use minidom;
-pub use xmpp_parsers as parsers;
-pub use xmpp_parsers::jid;
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn reexports() {
+        #[allow(unused_imports)]
+        use crate::jid;
+        #[allow(unused_imports)]
+        use crate::minidom;
+        #[allow(unused_imports)]
+        use crate::parsers;
+    }
+}

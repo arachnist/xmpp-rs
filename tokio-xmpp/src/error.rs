@@ -9,10 +9,10 @@ use std::io::Error as IoError;
 use std::net::AddrParseError;
 use std::str::Utf8Error;
 
-use xmpp_parsers::sasl::DefinedCondition as SaslDefinedCondition;
-use xmpp_parsers::{jid::Error as JidParseError, Error as ParsersError};
-
-use crate::connect::ServerConnectorError;
+use crate::{
+    connect::ServerConnectorError, jid, minidom,
+    parsers::sasl::DefinedCondition as SaslDefinedCondition,
+};
 
 /// Top-level error type
 #[derive(Debug)]
@@ -20,7 +20,7 @@ pub enum Error {
     /// I/O error
     Io(IoError),
     /// Error parsing Jabber-Id
-    JidParse(JidParseError),
+    JidParse(jid::Error),
     /// Protocol-level error
     Protocol(ProtocolError),
     /// Authentication error
@@ -86,8 +86,8 @@ impl<T: ServerConnectorError + 'static> From<T> for Error {
     }
 }
 
-impl From<JidParseError> for Error {
-    fn from(e: JidParseError) -> Self {
+impl From<jid::Error> for Error {
+    fn from(e: jid::Error) -> Self {
         Error::JidParse(e)
     }
 }
@@ -149,7 +149,7 @@ pub enum ProtocolError {
     /// XML parser error
     Parser(minidom::Error),
     /// Error with expected stanza schema
-    Parsers(ParsersError),
+    Parsers(xso::error::Error),
     /// No TLS available
     NoTls,
     /// Invalid response to resource binding
@@ -197,8 +197,8 @@ impl From<minidom::Error> for Error {
     }
 }
 
-impl From<ParsersError> for ProtocolError {
-    fn from(e: ParsersError) -> Self {
+impl From<xso::error::Error> for ProtocolError {
+    fn from(e: xso::error::Error) -> Self {
         ProtocolError::Parsers(e)
     }
 }

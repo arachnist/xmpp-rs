@@ -293,3 +293,22 @@ pub mod fast;
 
 /// XEP-0490: Message Displayed Synchronization
 pub mod message_displayed;
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn reexports() {
+        #[allow(unused_imports)]
+        use crate::blake2;
+        #[allow(unused_imports)]
+        use crate::jid;
+        #[allow(unused_imports)]
+        use crate::minidom;
+        #[allow(unused_imports)]
+        use crate::sha1;
+        #[allow(unused_imports)]
+        use crate::sha2;
+        #[allow(unused_imports)]
+        use crate::sha3;
+    }
+}

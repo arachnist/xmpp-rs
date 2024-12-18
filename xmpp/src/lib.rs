@@ -8,13 +8,15 @@
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
 
 pub use tokio_xmpp;
-pub use tokio_xmpp::jid::{ResourcePart, ResourceRef};
+pub use tokio_xmpp::jid;
 pub use tokio_xmpp::minidom;
 pub use tokio_xmpp::parsers;
+
 #[macro_use]
 extern crate log;
 
 use core::fmt;
+use jid::{ResourcePart, ResourceRef};
 
 pub mod agent;
 pub mod builder;
@@ -30,7 +32,6 @@ pub mod presence;
 pub mod pubsub;
 pub mod upload;
 
-// Module re-exports
 pub use agent::Agent;
 pub use builder::{ClientBuilder, ClientType};
 pub use event::Event;
@@ -73,6 +74,21 @@ impl From<RoomNick> for ResourcePart {
 impl fmt::Display for RoomNick {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn reexports() {
+        #[allow(unused_imports)]
+        use crate::jid;
+        #[allow(unused_imports)]
+        use crate::minidom;
+        #[allow(unused_imports)]
+        use crate::parsers;
+        #[allow(unused_imports)]
+        use crate::tokio_xmpp;
     }
 }
 

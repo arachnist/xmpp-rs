@@ -65,9 +65,9 @@ use quote::{quote, ToTokens};
 use minidom::{IntoAttributeValue, Node};
 
 mod error;
-pub use crate::error::Error;
-
 mod parts;
+
+pub use crate::error::Error;
 pub use parts::{DomainPart, DomainRef, NodePart, NodeRef, ResourcePart, ResourceRef};
 
 fn length_check(len: usize, error_empty: Error, error_too_long: Error) -> Result<(), Error> {

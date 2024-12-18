@@ -1,8 +1,11 @@
 use futures::{SinkExt, StreamExt};
 use tokio::{self, io, net::TcpSocket};
 
-use tokio_xmpp::parsers::stream_features::StreamFeatures;
-use tokio_xmpp::xmlstream::{accept_stream, StreamHeader, Timeouts};
+use tokio_xmpp::{
+    minidom::Element,
+    parsers::stream_features::StreamFeatures,
+    xmlstream::{accept_stream, StreamHeader, Timeouts},
+};
 
 #[tokio::main]
 async fn main() -> Result<(), io::Error> {
@@ -24,7 +27,7 @@ async fn main() -> Result<(), io::Error> {
         .await?;
         let stream = stream.send_header(StreamHeader::default()).await?;
         let mut stream = stream
-            .send_features::<minidom::Element>(&StreamFeatures::default())
+            .send_features::<Element>(&StreamFeatures::default())
             .await?;
 
         tokio::spawn(async move {
