@@ -5,20 +5,20 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 use crate::{
-    jid::{BareJid, ResourcePart, ResourceRef},
+    jid::{BareJid, ResourceRef},
     message::send::RawMessageSettings,
     parsers::{
         message::MessageType,
         muc::Muc,
         presence::{Presence, Type as PresenceType},
     },
-    Agent,
+    Agent, RoomNick,
 };
 
 #[derive(Clone, Debug)]
 pub struct JoinRoomSettings<'a> {
     pub room: BareJid,
-    pub nick: Option<ResourcePart>,
+    pub nick: Option<RoomNick>,
     pub password: Option<String>,
     pub status: Option<(&'a str, &'a str)>,
 }
@@ -34,7 +34,7 @@ impl<'a> JoinRoomSettings<'a> {
     }
 
     pub fn with_nick(mut self, nick: impl AsRef<ResourceRef>) -> Self {
-        self.nick = Some(nick.as_ref().into());
+        self.nick = Some(RoomNick::from_resource_ref(nick.as_ref()));
         self
     }
 
@@ -81,7 +81,7 @@ pub async fn join_room<'a>(agent: &mut Agent, settings: JoinRoomSettings<'a>) {
         agent.default_nick.read().await.clone()
     };
 
-    let room_jid = room.with_resource(&nick);
+    let room_jid = room.with_resource(nick.as_ref());
     let mut presence = Presence::new(PresenceType::None).with_to(room_jid);
     presence.add_payload(muc);
 
@@ -138,10 +138,8 @@ pub async fn leave_room<'a>(agent: &mut Agent, settings: LeaveRoomSettings<'a>) 
 
     // XEP-0045 specifies that, to leave a room, the client must send a presence stanza
     // with type="unavailable".
-    let mut presence = Presence::new(PresenceType::Unavailable).with_to(
-        room.with_resource_str(nickname.as_str())
-            .expect("Invalid room JID after adding resource part."),
-    );
+    let mut presence =
+        Presence::new(PresenceType::Unavailable).with_to(room.with_resource(nickname.as_ref()));
 
     // Optionally, the client may include a status message in the presence stanza.
     // TODO: Should this be optional? The XEP says "MAY", but the method signature requires the arguments.

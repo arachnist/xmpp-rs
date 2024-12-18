@@ -4,13 +4,14 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use tokio_xmpp::{
+use crate::{
+    disco,
     jid::Jid,
     minidom::Element,
+    muc::room::JoinRoomSettings,
     parsers::{disco::DiscoInfoResult, ns, private::Query as PrivateXMLQuery, roster::Roster},
+    pubsub, upload, Agent, Event, RoomNick,
 };
-
-use crate::{disco, muc::room::JoinRoomSettings, pubsub, upload, Agent, Event};
 
 pub async fn handle_iq_result(
     agent: &mut Agent,
@@ -41,7 +42,7 @@ pub async fn handle_iq_result(
                     agent
                         .join_room(JoinRoomSettings {
                             room: jid,
-                            nick: room.nick,
+                            nick: room.nick.map(RoomNick::new),
                             password: room.password,
                             status: None,
                         })

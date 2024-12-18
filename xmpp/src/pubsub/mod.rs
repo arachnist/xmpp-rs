@@ -4,20 +4,18 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use super::Agent;
 use crate::{
-    muc::room::{JoinRoomSettings, LeaveRoomSettings},
-    Event,
-};
-use std::str::FromStr;
-use tokio_xmpp::{
     jid::{BareJid, Jid},
     minidom::Element,
+    muc::room::{JoinRoomSettings, LeaveRoomSettings},
     parsers::{
         bookmarks2, ns,
         pubsub::{event::PubSubEvent, pubsub::PubSub},
     },
+    Agent, Event, RoomNick,
 };
+
+use std::str::FromStr;
 
 #[cfg(feature = "avatars")]
 pub(crate) mod avatar;
@@ -56,7 +54,7 @@ pub(crate) async fn handle_event(
                                     agent
                                         .join_room(JoinRoomSettings {
                                             room: jid,
-                                            nick: conference.nick,
+                                            nick: conference.nick.map(RoomNick::new),
                                             password: conference.password,
                                             status: None,
                                         })
@@ -139,7 +137,7 @@ pub(crate) async fn handle_iq_result(
                                     agent
                                         .join_room(JoinRoomSettings {
                                             room: jid,
-                                            nick: conference.nick,
+                                            nick: conference.nick.map(RoomNick::new),
                                             password: conference.password,
                                             status: None,
                                         })

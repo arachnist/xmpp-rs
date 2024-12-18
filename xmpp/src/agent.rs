@@ -11,25 +11,25 @@ use tokio::sync::RwLock;
 
 use crate::{
     event_loop,
-    jid::{BareJid, Jid, ResourcePart},
+    jid::{BareJid, Jid},
     message, muc,
     parsers::disco::DiscoInfoResult,
-    upload, Error, Event,
+    upload, Error, Event, RoomNick,
 };
 use tokio_xmpp::Client as TokioXmppClient;
 
 pub struct Agent {
     pub(crate) client: TokioXmppClient,
-    pub(crate) default_nick: Arc<RwLock<ResourcePart>>,
+    pub(crate) default_nick: Arc<RwLock<RoomNick>>,
     pub(crate) lang: Arc<Vec<String>>,
     pub(crate) disco: DiscoInfoResult,
     pub(crate) node: String,
     pub(crate) uploads: Vec<(String, Jid, PathBuf)>,
     pub(crate) awaiting_disco_bookmarks_type: bool,
     // Mapping of room->nick
-    pub(crate) rooms_joined: HashMap<BareJid, ResourcePart>,
-    pub(crate) rooms_joining: HashMap<BareJid, ResourcePart>,
-    pub(crate) rooms_leaving: HashMap<BareJid, ResourcePart>,
+    pub(crate) rooms_joined: HashMap<BareJid, RoomNick>,
+    pub(crate) rooms_joining: HashMap<BareJid, RoomNick>,
+    pub(crate) rooms_leaving: HashMap<BareJid, RoomNick>,
 }
 
 impl Agent {

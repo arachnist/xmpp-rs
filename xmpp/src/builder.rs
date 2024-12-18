@@ -4,23 +4,22 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+#[cfg(any(feature = "starttls-rust", feature = "starttls-native"))]
+use crate::tokio_xmpp::connect::{DnsConfig, StartTlsServerConnector};
 use std::collections::HashMap;
+use std::str::FromStr;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-#[cfg(any(feature = "starttls-rust", feature = "starttls-native"))]
-use tokio_xmpp::connect::{DnsConfig, StartTlsServerConnector};
-use tokio_xmpp::{
-    connect::ServerConnector,
-    jid::{BareJid, Jid, ResourcePart, ResourceRef},
+
+use crate::{
+    jid::{BareJid, Jid, ResourceRef},
     parsers::{
         disco::{DiscoInfoResult, Feature, Identity},
         ns,
     },
-    xmlstream::Timeouts,
-    Client as TokioXmppClient,
+    tokio_xmpp::{connect::ServerConnector, xmlstream::Timeouts, Client as TokioXmppClient},
+    Agent, ClientFeature, RoomNick,
 };
-
-use crate::{Agent, ClientFeature};
 
 #[derive(Debug)]
 pub enum ClientType {
@@ -48,7 +47,7 @@ pub struct ClientBuilder<'a, C: ServerConnector> {
     password: &'a str,
     server_connector: C,
     website: String,
-    default_nick: ResourcePart,
+    default_nick: RoomNick,
     lang: Vec<String>,
     disco: (ClientType, String),
     features: Vec<ClientFeature>,
@@ -78,7 +77,7 @@ impl<C: ServerConnector> ClientBuilder<'_, C> {
             password,
             server_connector,
             website: String::from("https://gitlab.com/xmpp-rs/tokio-xmpp"),
-            default_nick: ResourcePart::new("xmpp-rs").unwrap().into(),
+            default_nick: RoomNick::from_str("xmpp-rs").unwrap(),
             lang: vec![String::from("en")],
             disco: (ClientType::default(), String::from("tokio-xmpp")),
             features: vec![],
@@ -104,7 +103,7 @@ impl<C: ServerConnector> ClientBuilder<'_, C> {
     }
 
     pub fn set_default_nick(mut self, nick: impl AsRef<ResourceRef>) -> Self {
-        self.default_nick = nick.as_ref().to_owned();
+        self.default_nick = RoomNick::from_resource_ref(nick.as_ref());
         self
     }
 

@@ -114,7 +114,7 @@ mod tests {
     #[tokio::test]
     async fn test_simple() {
         let jid = BareJid::from_str("foo@bar").unwrap();
-        let nick = ResourcePart::new("bot").unwrap();
+        let nick = RoomNick::from_str("bot").unwrap();
 
         let client = TokioXmppClient::new(jid.clone(), "meh");
 

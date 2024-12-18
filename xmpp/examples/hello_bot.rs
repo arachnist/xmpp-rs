@@ -4,11 +4,14 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use xmpp::{
+    jid::BareJid,
+    muc::room::{JoinRoomSettings, RoomMessageSettings},
+    ClientBuilder, ClientFeature, ClientType, Event, RoomNick,
+};
+
 use std::env::args;
 use std::str::FromStr;
-use tokio_xmpp::jid::{BareJid, ResourcePart};
-use xmpp::muc::room::{JoinRoomSettings, RoomMessageSettings};
-use xmpp::{ClientBuilder, ClientFeature, ClientType, Event};
 
 #[tokio::main]
 async fn main() -> Result<(), Option<()>> {
@@ -39,7 +42,7 @@ async fn main() -> Result<(), Option<()>> {
         }
     }
 
-    let nick = ResourcePart::new("bot").unwrap();
+    let nick = RoomNick::from_str("bot").unwrap();
 
     // Client instance
     let mut client = ClientBuilder::new(jid, password)
