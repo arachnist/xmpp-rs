@@ -37,12 +37,7 @@ pub trait ServerConnector: Clone + core::fmt::Debug + Send + Unpin + 'static {
         jid: &Jid,
         ns: &'static str,
         timeouts: Timeouts,
-    ) -> impl std::future::Future<Output = Result<PendingFeaturesRecv<Self::Stream>, Error>> + Send;
-
-    /// Return channel binding data if available
-    /// do not fail if channel binding is simply unavailable, just return Ok(None)
-    /// this should only be called after the TLS handshake is finished
-    fn channel_binding(_stream: &Self::Stream) -> Result<ChannelBinding, Error> {
-        Ok(ChannelBinding::None)
-    }
+    ) -> impl std::future::Future<
+        Output = Result<(PendingFeaturesRecv<Self::Stream>, ChannelBinding), Error>,
+    > + Send;
 }

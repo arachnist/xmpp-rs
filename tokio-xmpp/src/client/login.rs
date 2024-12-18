@@ -112,10 +112,8 @@ pub async fn client_auth<C: ServerConnector>(
     let username = jid.node().unwrap().as_str();
     let password = password;
 
-    let xmpp_stream = server.connect(&jid, ns::JABBER_CLIENT, timeouts).await?;
+    let (xmpp_stream, channel_binding) = server.connect(&jid, ns::JABBER_CLIENT, timeouts).await?;
     let (features, xmpp_stream) = xmpp_stream.recv_features().await?;
-
-    let channel_binding = C::channel_binding(xmpp_stream.get_stream())?;
 
     let creds = Credentials::default()
         .with_username(username)

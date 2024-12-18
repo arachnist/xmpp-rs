@@ -16,7 +16,7 @@ pub async fn component_login<C: ServerConnector>(
     timeouts: Timeouts,
 ) -> Result<XmppStream<C::Stream>, Error> {
     let password = password;
-    let mut stream = connector.connect(&jid, ns::COMPONENT, timeouts).await?;
+    let (mut stream, _) = connector.connect(&jid, ns::COMPONENT, timeouts).await?;
     let header = stream.take_header();
     let mut stream = stream.skip_features();
     let stream_id = match header.id {

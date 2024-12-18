@@ -5,7 +5,7 @@ use std::borrow::Cow;
 use tokio::{io::BufStream, net::TcpStream};
 
 use crate::{
-    connect::{DnsConfig, ServerConnector},
+    connect::{ChannelBinding, DnsConfig, ServerConnector},
     xmlstream::{initiate_stream, PendingFeaturesRecv, StreamHeader, Timeouts},
     Client, Component, Error,
 };
@@ -37,18 +37,21 @@ impl ServerConnector for TcpServerConnector {
         jid: &xmpp_parsers::jid::Jid,
         ns: &'static str,
         timeouts: Timeouts,
-    ) -> Result<PendingFeaturesRecv<Self::Stream>, Error> {
+    ) -> Result<(PendingFeaturesRecv<Self::Stream>, ChannelBinding), Error> {
         let stream = BufStream::new(self.0.resolve().await?);
-        Ok(initiate_stream(
-            stream,
-            ns,
-            StreamHeader {
-                to: Some(Cow::Borrowed(jid.domain().as_str())),
-                from: None,
-                id: None,
-            },
-            timeouts,
-        )
-        .await?)
+        Ok((
+            initiate_stream(
+                stream,
+                ns,
+                StreamHeader {
+                    to: Some(Cow::Borrowed(jid.domain().as_str())),
+                    from: None,
+                    id: None,
+                },
+                timeouts,
+            )
+            .await?,
+            ChannelBinding::None,
+        ))
     }
 }
