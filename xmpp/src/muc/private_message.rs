@@ -5,9 +5,9 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 use crate::{
+    jid::{BareJid, Jid},
     message::send::RawMessageSettings,
     parsers::{message::MessageType, muc::user::MucUser},
-    tokio_xmpp::jid::{BareJid, Jid},
     Agent, RoomNick,
 };
 

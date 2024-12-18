@@ -8,15 +8,15 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tokio::sync::RwLock;
-pub use tokio_xmpp::parsers;
-use tokio_xmpp::parsers::disco::DiscoInfoResult;
-pub use tokio_xmpp::{
-    jid::{BareJid, FullJid, Jid, ResourcePart},
-    minidom::Element,
-    Client as TokioXmppClient,
-};
 
-use crate::{event_loop, message, muc, upload, Error, Event};
+use crate::{
+    event_loop,
+    jid::{BareJid, Jid, ResourcePart},
+    message, muc,
+    parsers::disco::DiscoInfoResult,
+    upload, Error, Event,
+};
+use tokio_xmpp::Client as TokioXmppClient;
 
 pub struct Agent {
     pub(crate) client: TokioXmppClient,

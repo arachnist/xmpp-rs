@@ -4,17 +4,16 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use crate::parsers::message::MessageType;
-use tokio_xmpp::{
+use crate::{
     jid::{BareJid, ResourcePart, ResourceRef},
+    message::send::RawMessageSettings,
     parsers::{
+        message::MessageType,
         muc::Muc,
         presence::{Presence, Type as PresenceType},
     },
+    Agent,
 };
-
-use crate::message::send::RawMessageSettings;
-use crate::Agent;
 
 #[derive(Clone, Debug)]
 pub struct JoinRoomSettings<'a> {

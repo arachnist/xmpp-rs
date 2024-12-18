@@ -5,9 +5,9 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 use crate::{
+    jid::{BareJid, Jid},
     minidom::Element,
     parsers::message::{Body, Message, MessagePayload, MessageType},
-    tokio_xmpp::jid::{BareJid, Jid},
 };
 
 use crate::Agent;
