@@ -6,7 +6,10 @@
 
 //! Utilities which may eventually move upstream to the `rxml` crate.
 
-use std::borrow::Cow;
+use alloc::{
+    borrow::{Cow, ToOwned},
+    string::String,
+};
 
 use rxml::{parser::EventMetrics, AttrMap, Event, Namespace, NcName, NcNameStr, XmlVersion};
 
@@ -283,6 +286,8 @@ impl<'x, I: Iterator<Item = Result<Item<'x>, crate::error::Error>>> Iterator for
 mod tests_minidom {
     use super::*;
 
+    use alloc::{string::ToString, vec, vec::Vec};
+
     fn events_to_items<I: Iterator<Item = Event>>(events: I) -> Vec<Item<'static>> {
         let iter = EventToItem {
             inner: events.map(|ev| Ok(ev)),
@@ -422,6 +427,8 @@ mod tests_minidom {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use alloc::{vec, vec::Vec};
 
     fn items_to_events<'x, I: IntoIterator<Item = Item<'x>>>(
         items: I,

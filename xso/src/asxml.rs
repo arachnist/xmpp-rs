@@ -12,6 +12,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use alloc::boxed::Box;
+
 use crate::error::Error;
 use crate::rxml_util::Item;
 use crate::AsXml;
@@ -99,11 +101,11 @@ where
 mod tests {
     use super::*;
 
-    use std::borrow::Cow;
+    use alloc::{borrow::Cow, vec};
 
     #[test]
     fn option_as_xml_terminates_immediately_for_none() {
-        let mut iter = OptionAsXml::<std::iter::Empty<_>>(None);
+        let mut iter = OptionAsXml::<core::iter::Empty<_>>(None);
         match iter.next() {
             None => (),
             other => panic!("unexpected item: {:?}", other),

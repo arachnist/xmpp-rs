@@ -12,6 +12,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use alloc::boxed::Box;
+
 use crate::error::{Error, FromEventsError};
 use crate::{FromEventsBuilder, FromXml};
 
@@ -271,6 +273,7 @@ impl FromEventsBuilder for Discard {
 mod tests {
     use super::*;
 
+    use alloc::borrow::ToOwned;
     use rxml::{parser::EventMetrics, Event, Namespace, NcName};
 
     macro_rules! null_builder {

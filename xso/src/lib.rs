@@ -22,7 +22,11 @@ use of this library in parsing XML streams like specified in RFC 6120.
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use std::io;
+#![no_std]
+
+extern crate alloc;
+#[cfg(feature = "std")]
+extern crate std;
 
 pub mod asxml;
 pub mod error;
@@ -39,7 +43,12 @@ pub mod exports {
     pub use rxml;
 }
 
-use std::borrow::Cow;
+use alloc::{
+    borrow::{Cow, ToOwned},
+    boxed::Box,
+    string::String,
+    vec::Vec,
+};
 
 #[doc(inline)]
 pub use text::TextCodec;
@@ -444,7 +453,8 @@ pub fn try_from_element<T: FromXml>(
     unreachable!("minidom::Element did not produce enough events to complete element")
 }
 
-fn map_nonio_error<T>(r: Result<T, io::Error>) -> Result<T, self::error::Error> {
+#[cfg(feature = "std")]
+fn map_nonio_error<T>(r: Result<T, std::io::Error>) -> Result<T, self::error::Error> {
     match r {
         Ok(v) => Ok(v),
         Err(e) => match e.downcast::<rxml::Error>() {
@@ -454,6 +464,7 @@ fn map_nonio_error<T>(r: Result<T, io::Error>) -> Result<T, self::error::Error> 
     }
 }
 
+#[cfg(feature = "std")]
 fn read_start_event<I: std::io::BufRead>(
     r: &mut rxml::Reader<I>,
 ) -> Result<(rxml::QName, rxml::AttrMap), self::error::Error> {
@@ -475,6 +486,7 @@ fn read_start_event<I: std::io::BufRead>(
 
 /// Attempt to parse a type implementing [`FromXml`] from a byte buffer
 /// containing XML data.
+#[cfg(feature = "std")]
 pub fn from_bytes<T: FromXml>(mut buf: &[u8]) -> Result<T, self::error::Error> {
     let mut reader = rxml::Reader::new(&mut buf);
     let (name, attrs) = read_start_event(&mut reader)?;
@@ -493,23 +505,24 @@ pub fn from_bytes<T: FromXml>(mut buf: &[u8]) -> Result<T, self::error::Error> {
     Err(self::error::Error::XmlError(rxml::Error::InvalidEof(None)))
 }
 
+#[cfg(feature = "std")]
 fn read_start_event_io<I: std::io::BufRead>(
     r: &mut rxml::Reader<I>,
-) -> io::Result<(rxml::QName, rxml::AttrMap)> {
+) -> std::io::Result<(rxml::QName, rxml::AttrMap)> {
     for ev in r {
         match ev? {
             rxml::Event::XmlDeclaration(_, rxml::XmlVersion::V1_0) => (),
             rxml::Event::StartElement(_, name, attrs) => return Ok((name, attrs)),
             _ => {
-                return Err(io::Error::new(
-                    io::ErrorKind::InvalidData,
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
                     self::error::Error::Other("Unexpected event at start of document"),
                 ))
             }
         }
     }
-    Err(io::Error::new(
-        io::ErrorKind::InvalidData,
+    Err(std::io::Error::new(
+        std::io::ErrorKind::InvalidData,
         self::error::Error::XmlError(rxml::Error::InvalidEof(Some(
             rxml::error::ErrorContext::DocumentBegin,
         ))),
@@ -517,29 +530,30 @@ fn read_start_event_io<I: std::io::BufRead>(
 }
 
 /// Attempt to parse a type implementing [`FromXml`] from a reader.
-pub fn from_reader<T: FromXml, R: io::BufRead>(r: R) -> io::Result<T> {
+#[cfg(feature = "std")]
+pub fn from_reader<T: FromXml, R: std::io::BufRead>(r: R) -> std::io::Result<T> {
     let mut reader = rxml::Reader::new(r);
     let (name, attrs) = read_start_event_io(&mut reader)?;
     let mut builder = match T::from_events(name, attrs) {
         Ok(v) => v,
         Err(self::error::FromEventsError::Mismatch { .. }) => {
             return Err(self::error::Error::TypeMismatch)
-                .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
+                .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))
         }
         Err(self::error::FromEventsError::Invalid(e)) => {
-            return Err(e).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
+            return Err(e).map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))
         }
     };
     for ev in reader {
         if let Some(v) = builder
             .feed(ev?)
-            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?
         {
             return Ok(v);
         }
     }
-    Err(io::Error::new(
-        io::ErrorKind::UnexpectedEof,
+    Err(std::io::Error::new(
+        std::io::ErrorKind::UnexpectedEof,
         self::error::Error::XmlError(rxml::Error::InvalidEof(None)),
     ))
 }

@@ -9,6 +9,11 @@ This module contains the error types used throughout the `xso` crate.
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+use alloc::{
+    boxed::Box,
+    string::{String, ToString},
+};
 use core::fmt;
 
 use rxml::Error as XmlError;
@@ -31,7 +36,7 @@ impl fmt::Display for OpaqueError {
     }
 }
 
-impl std::error::Error for OpaqueError {}
+impl core::error::Error for OpaqueError {}
 
 /// Error variants generated while parsing or serialising XML data.
 #[derive(Debug)]
@@ -40,7 +45,7 @@ pub enum Error {
     XmlError(XmlError),
 
     /// Attempt to parse text data failed with the provided nested error.
-    TextParseError(Box<dyn std::error::Error + Send + Sync + 'static>),
+    TextParseError(Box<dyn core::error::Error + Send + Sync + 'static>),
 
     /// Generic, unspecified other error.
     Other(&'static str),
@@ -58,7 +63,7 @@ impl Error {
     ///
     /// This includes the `Box::new(.)` call, making it directly usable as
     /// argument to [`Result::map_err`].
-    pub fn text_parse_error<T: std::error::Error + Send + Sync + 'static>(e: T) -> Self {
+    pub fn text_parse_error<T: core::error::Error + Send + Sync + 'static>(e: T) -> Self {
         Self::TextParseError(Box::new(e))
     }
 }
@@ -90,8 +95,8 @@ impl fmt::Display for Error {
     }
 }
 
-impl std::error::Error for Error {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+impl core::error::Error for Error {
+    fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
         match self {
             Self::XmlError(ref e) => Some(e),
             Self::TextParseError(ref e) => Some(&**e),
@@ -159,8 +164,8 @@ impl fmt::Display for FromEventsError {
     }
 }
 
-impl std::error::Error for FromEventsError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+impl core::error::Error for FromEventsError {
+    fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
         match self {
             Self::Mismatch { .. } => None,
             Self::Invalid(ref e) => Some(e),
@@ -201,8 +206,8 @@ impl fmt::Display for FromElementError {
     }
 }
 
-impl std::error::Error for FromElementError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+impl core::error::Error for FromElementError {
+    fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
         match self {
             Self::Mismatch(_) => None,
             Self::Invalid(ref e) => Some(e),

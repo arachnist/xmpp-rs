@@ -8,7 +8,12 @@
 
 use core::marker::PhantomData;
 
-use std::borrow::Cow;
+use alloc::{
+    borrow::Cow,
+    format,
+    string::{String, ToString},
+    vec::Vec,
+};
 
 use crate::{error::Error, AsXmlText, FromXmlText};
 

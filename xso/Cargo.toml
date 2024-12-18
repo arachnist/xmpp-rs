@@ -25,9 +25,11 @@ uuid = { version = "1", optional = true }
 base64 = { version = "0.22", optional = true }
 
 [features]
+default = [ "std" ]
 macros = [ "dep:xso_proc", "rxml/macros" ]
 minidom = [ "xso_proc/minidom"]
 panicking-into-impl = ["xso_proc/panicking-into-impl"]
+std = []
 
 [package.metadata.docs.rs]
 all-features = true
