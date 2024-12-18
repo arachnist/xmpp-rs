@@ -77,6 +77,14 @@ impl fmt::Display for RoomNick {
     }
 }
 
+impl core::str::FromStr for RoomNick {
+    type Err = crate::jid::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Self::new(ResourcePart::new(s)?.into()))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     #[test]
