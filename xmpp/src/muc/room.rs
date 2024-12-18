@@ -81,7 +81,7 @@ pub async fn join_room<'a>(agent: &mut Agent, settings: JoinRoomSettings<'a>) {
         agent.default_nick.read().await.clone()
     };
 
-    let room_jid = room.with_resource(nick.as_ref());
+    let room_jid = room.with_resource(&nick);
     let mut presence = Presence::new(PresenceType::None).with_to(room_jid);
     presence.add_payload(muc);
 
@@ -139,7 +139,7 @@ pub async fn leave_room<'a>(agent: &mut Agent, settings: LeaveRoomSettings<'a>) 
     // XEP-0045 specifies that, to leave a room, the client must send a presence stanza
     // with type="unavailable".
     let mut presence =
-        Presence::new(PresenceType::Unavailable).with_to(room.with_resource(nickname.as_ref()));
+        Presence::new(PresenceType::Unavailable).with_to(room.with_resource(&nickname));
 
     // Optionally, the client may include a status message in the presence stanza.
     // TODO: Should this be optional? The XEP says "MAY", but the method signature requires the arguments.

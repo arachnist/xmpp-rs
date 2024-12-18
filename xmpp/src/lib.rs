@@ -85,6 +85,14 @@ impl core::str::FromStr for RoomNick {
     }
 }
 
+impl core::ops::Deref for RoomNick {
+    type Target = ResourcePart;
+
+    fn deref(&self) -> &ResourcePart {
+        &self.0
+    }
+}
+
 #[cfg(test)]
 mod tests {
     #[test]
