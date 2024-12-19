@@ -6,10 +6,7 @@
 
 //! Utilities which may eventually move upstream to the `rxml` crate.
 
-use alloc::{
-    borrow::{Cow, ToOwned},
-    string::String,
-};
+use alloc::borrow::{Cow, ToOwned};
 
 use rxml::{parser::EventMetrics, AttrMap, Event, Namespace, NcName, NcNameStr, XmlVersion};
 
@@ -100,7 +97,7 @@ impl Item<'_> {
 #[cfg(feature = "minidom")]
 pub(crate) struct EventToItem<I> {
     inner: I,
-    attributes: Option<rxml::xml_map::IntoIter<String>>,
+    attributes: Option<rxml::xml_map::IntoIter<alloc::string::String>>,
 }
 
 #[cfg(feature = "minidom")]
