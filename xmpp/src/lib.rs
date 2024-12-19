@@ -7,6 +7,8 @@
 #![deny(bare_trait_objects)]
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
 
+extern crate alloc;
+
 pub use tokio_xmpp;
 pub use tokio_xmpp::jid;
 pub use tokio_xmpp::minidom;

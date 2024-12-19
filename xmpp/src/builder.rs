@@ -6,9 +6,9 @@
 
 #[cfg(any(feature = "starttls-rust", feature = "starttls-native"))]
 use crate::tokio_xmpp::connect::{DnsConfig, StartTlsServerConnector};
+use alloc::sync::Arc;
+use core::str::FromStr;
 use std::collections::HashMap;
-use std::str::FromStr;
-use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use crate::{
