@@ -140,7 +140,7 @@ impl NameVariant {
                 quote! {
                     let name = (
                         ::xso::exports::rxml::Namespace::from(#xml_namespace),
-                        ::std::borrow::Cow::Borrowed(#xml_name),
+                        ::alloc::borrow::Cow::Borrowed(#xml_name),
                     );
                     #init
                 }

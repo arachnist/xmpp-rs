@@ -51,7 +51,7 @@ impl Field for TextField {
 
         Ok(FieldBuilderPart::Text {
             value: FieldTempInit {
-                init: quote! { ::std::string::String::new() },
+                init: quote! { ::alloc::string::String::new() },
                 ty: string_ty(Span::call_site()),
             },
             collect: quote! {

@@ -18,6 +18,8 @@ return to `xso` for more information**. The documentation of
 **You have been warned.**
 */
 
+extern crate alloc;
+
 // Wondering about RawTokenStream vs. TokenStream?
 // syn mostly works with proc_macro2, while the proc macros themselves use
 // proc_macro.
