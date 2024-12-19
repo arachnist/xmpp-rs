@@ -183,7 +183,7 @@ impl Message {
         map.iter().map(|(lang, value)| (lang.clone(), value)).next()
     }
 
-    fn get_best_owned<T: ToOwned<Owned = T>>(
+    fn get_best_cloned<T: ToOwned<Owned = T>>(
         map: &BTreeMap<Lang, T>,
         preferred_langs: Vec<&str>,
     ) -> Option<(Lang, T)> {
@@ -205,9 +205,9 @@ impl Message {
         Message::get_best::<Body>(&self.bodies, preferred_langs)
     }
 
-    /// Owned variant of [`Message::get_best_body`]
-    pub fn get_best_body_owned(&self, preferred_langs: Vec<&str>) -> Option<(Lang, Body)> {
-        Message::get_best_owned::<Body>(&self.bodies, preferred_langs)
+    /// Cloned variant of [`Message::get_best_body`]
+    pub fn get_best_body_cloned(&self, preferred_langs: Vec<&str>) -> Option<(Lang, Body)> {
+        Message::get_best_cloned::<Body>(&self.bodies, preferred_langs)
     }
 
     /// Returns the best matching subject from a list of languages.
@@ -221,9 +221,9 @@ impl Message {
         Message::get_best::<Subject>(&self.subjects, preferred_langs)
     }
 
-    /// Owned variant of [`Message::get_best_subject`]
-    pub fn get_best_subject_owned(&self, preferred_langs: Vec<&str>) -> Option<(Lang, Subject)> {
-        Message::get_best_owned::<Subject>(&self.subjects, preferred_langs)
+    /// Cloned variant of [`Message::get_best_subject`]
+    pub fn get_best_subject_cloned(&self, preferred_langs: Vec<&str>) -> Option<(Lang, Subject)> {
+        Message::get_best_cloned::<Subject>(&self.subjects, preferred_langs)
     }
 
     /// Try to extract the given payload type from the message's payloads.
@@ -499,9 +499,9 @@ mod tests {
             assert_eq!(subject, &Subject::from_str("Hello world!").unwrap());
         }
 
-        // Test owned variant.
+        // Test cloned variant.
         {
-            let (lang, subject) = message.get_best_subject_owned(vec!["en"]).unwrap();
+            let (lang, subject) = message.get_best_subject_cloned(vec!["en"]).unwrap();
             assert_eq!(lang, "");
             assert_eq!(subject, Subject::from_str("Hello world!").unwrap());
         }
@@ -546,9 +546,9 @@ mod tests {
             assert_eq!(body, &Body::from_str("Hello world!").unwrap());
         }
 
-        // Test owned variant.
+        // Test cloned variant.
         {
-            let (lang, body) = message.get_best_body_owned(vec!["ja"]).unwrap();
+            let (lang, body) = message.get_best_body_cloned(vec!["ja"]).unwrap();
             assert_eq!(lang, "");
             assert_eq!(body, Body::from_str("Hello world!").unwrap());
         }
