@@ -27,6 +27,8 @@ use of this library in parsing XML streams like specified in RFC 6120.
 extern crate alloc;
 #[cfg(feature = "std")]
 extern crate std;
+#[cfg(feature = "std")]
+use std::io;
 
 pub mod asxml;
 pub mod error;
@@ -454,7 +456,7 @@ pub fn try_from_element<T: FromXml>(
 }
 
 #[cfg(feature = "std")]
-fn map_nonio_error<T>(r: Result<T, std::io::Error>) -> Result<T, self::error::Error> {
+fn map_nonio_error<T>(r: Result<T, io::Error>) -> Result<T, self::error::Error> {
     match r {
         Ok(v) => Ok(v),
         Err(e) => match e.downcast::<rxml::Error>() {
@@ -465,7 +467,7 @@ fn map_nonio_error<T>(r: Result<T, std::io::Error>) -> Result<T, self::error::Er
 }
 
 #[cfg(feature = "std")]
-fn read_start_event<I: std::io::BufRead>(
+fn read_start_event<I: io::BufRead>(
     r: &mut rxml::Reader<I>,
 ) -> Result<(rxml::QName, rxml::AttrMap), self::error::Error> {
     for ev in r {
@@ -506,23 +508,23 @@ pub fn from_bytes<T: FromXml>(mut buf: &[u8]) -> Result<T, self::error::Error> {
 }
 
 #[cfg(feature = "std")]
-fn read_start_event_io<I: std::io::BufRead>(
+fn read_start_event_io<I: io::BufRead>(
     r: &mut rxml::Reader<I>,
-) -> std::io::Result<(rxml::QName, rxml::AttrMap)> {
+) -> io::Result<(rxml::QName, rxml::AttrMap)> {
     for ev in r {
         match ev? {
             rxml::Event::XmlDeclaration(_, rxml::XmlVersion::V1_0) => (),
             rxml::Event::StartElement(_, name, attrs) => return Ok((name, attrs)),
             _ => {
-                return Err(std::io::Error::new(
-                    std::io::ErrorKind::InvalidData,
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
                     self::error::Error::Other("Unexpected event at start of document"),
                 ))
             }
         }
     }
-    Err(std::io::Error::new(
-        std::io::ErrorKind::InvalidData,
+    Err(io::Error::new(
+        io::ErrorKind::InvalidData,
         self::error::Error::XmlError(rxml::Error::InvalidEof(Some(
             rxml::error::ErrorContext::DocumentBegin,
         ))),
@@ -531,29 +533,29 @@ fn read_start_event_io<I: std::io::BufRead>(
 
 /// Attempt to parse a type implementing [`FromXml`] from a reader.
 #[cfg(feature = "std")]
-pub fn from_reader<T: FromXml, R: std::io::BufRead>(r: R) -> std::io::Result<T> {
+pub fn from_reader<T: FromXml, R: io::BufRead>(r: R) -> io::Result<T> {
     let mut reader = rxml::Reader::new(r);
     let (name, attrs) = read_start_event_io(&mut reader)?;
     let mut builder = match T::from_events(name, attrs) {
         Ok(v) => v,
         Err(self::error::FromEventsError::Mismatch { .. }) => {
             return Err(self::error::Error::TypeMismatch)
-                .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))
+                .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
         }
         Err(self::error::FromEventsError::Invalid(e)) => {
-            return Err(e).map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))
+            return Err(e).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
         }
     };
     for ev in reader {
         if let Some(v) = builder
             .feed(ev?)
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?
         {
             return Ok(v);
         }
     }
-    Err(std::io::Error::new(
-        std::io::ErrorKind::UnexpectedEof,
+    Err(io::Error::new(
+        io::ErrorKind::UnexpectedEof,
         self::error::Error::XmlError(rxml::Error::InvalidEof(None)),
     ))
 }
