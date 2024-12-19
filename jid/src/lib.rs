@@ -902,8 +902,10 @@ impl From<BareJid> for Node {
 mod tests {
     use super::*;
 
-    use std::collections::{HashMap, HashSet};
-    use std::vec::Vec;
+    use alloc::{
+        collections::{BTreeMap, BTreeSet},
+        vec::Vec,
+    };
 
     macro_rules! assert_size (
         ($t:ty, $sz:expr) => (
@@ -1036,7 +1038,7 @@ mod tests {
 
     #[test]
     fn hash() {
-        let _map: HashMap<Jid, String> = HashMap::new();
+        let _map: BTreeMap<Jid, String> = BTreeMap::new();
     }
 
     #[test]
@@ -1218,7 +1220,7 @@ mod tests {
 
     #[test]
     fn lookup_jid_by_full_jid() {
-        let mut map: HashSet<Jid> = HashSet::new();
+        let mut map: BTreeSet<Jid> = BTreeSet::new();
         let jid1 = Jid::new("foo@bar").unwrap();
         let jid2 = Jid::new("foo@bar/baz").unwrap();
         let jid3 = FullJid::new("foo@bar/baz").unwrap();
@@ -1232,7 +1234,7 @@ mod tests {
 
     #[test]
     fn lookup_full_jid_by_jid() {
-        let mut map: HashSet<FullJid> = HashSet::new();
+        let mut map: BTreeSet<FullJid> = BTreeSet::new();
         let jid1 = FullJid::new("foo@bar/baz").unwrap();
         let jid2 = FullJid::new("foo@bar/fnord").unwrap();
         let jid3 = Jid::new("foo@bar/fnord").unwrap();
@@ -1246,7 +1248,7 @@ mod tests {
 
     #[test]
     fn lookup_bare_jid_by_jid() {
-        let mut map: HashSet<BareJid> = HashSet::new();
+        let mut map: BTreeSet<BareJid> = BTreeSet::new();
         let jid1 = BareJid::new("foo@bar").unwrap();
         let jid2 = BareJid::new("foo@baz").unwrap();
         let jid3 = Jid::new("foo@baz").unwrap();
