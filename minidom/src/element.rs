@@ -19,17 +19,18 @@ use crate::node::Node;
 use crate::prefixes::{Namespace, Prefix, Prefixes};
 use crate::tree_builder::TreeBuilder;
 
-use std::borrow::Cow;
-use std::collections::{btree_map, BTreeMap};
+use alloc::{
+    borrow::Cow,
+    collections::btree_map::{self, BTreeMap},
+};
+
+use core::slice;
+use core::str::FromStr;
+
 use std::io::{self, BufRead, Write};
-use std::str;
 
 use rxml::writer::{Encoder, Item, TrackNamespace};
 use rxml::{Namespace as RxmlNamespace, RawReader, XmlVersion};
-
-use std::str::FromStr;
-
-use std::slice;
 
 fn encode_and_write<W: Write, T: rxml::writer::TrackNamespace>(
     item: Item<'_>,
@@ -802,7 +803,7 @@ impl<'a> Iterator for ChildrenMut<'a> {
 
 /// An iterator over references to child elements of an `Element`.
 pub struct ContentsAsChildren<'a> {
-    iter: std::vec::Drain<'a, Node>,
+    iter: alloc::vec::Drain<'a, Node>,
 }
 
 impl<'a> Iterator for ContentsAsChildren<'a> {

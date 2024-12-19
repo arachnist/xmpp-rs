@@ -76,6 +76,8 @@
 //! minidom = "*"
 //! ```
 
+extern crate alloc;
+
 pub mod convert;
 pub mod element;
 pub mod error;

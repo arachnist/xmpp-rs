@@ -40,7 +40,7 @@ impl_into_attribute_values!(
     i32,
     i16,
     i8,
-    ::std::net::IpAddr
+    ::core::net::IpAddr
 );
 
 impl IntoAttributeValue for String {
@@ -70,8 +70,8 @@ impl<T: IntoAttributeValue> IntoAttributeValue for Option<T> {
 #[cfg(test)]
 mod tests {
     use super::IntoAttributeValue;
-    use std::net::IpAddr;
-    use std::str::FromStr;
+    use core::net::IpAddr;
+    use core::str::FromStr;
 
     #[test]
     fn test_into_attribute_value_on_ints() {

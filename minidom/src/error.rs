@@ -13,7 +13,7 @@
 
 use std::io;
 
-use std::error::Error as StdError;
+use core::{error::Error as StdError, fmt};
 
 /// Our main error type.
 #[derive(Debug)]
@@ -65,8 +65,8 @@ impl From<io::Error> for Error {
     }
 }
 
-impl std::fmt::Display for Error {
-    fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl fmt::Display for Error {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Error::XmlError(e) => write!(fmt, "XML error: {}", e),
             Error::Io(e) => write!(fmt, "I/O error: {}", e),
@@ -93,4 +93,4 @@ impl From<rxml::strings::Error> for Error {
 }
 
 /// Our simplified Result type.
-pub type Result<T> = ::std::result::Result<T, Error>;
+pub type Result<T> = ::core::result::Result<T, Error>;
