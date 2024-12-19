@@ -51,6 +51,8 @@ XXXX-YY-ZZ RELEASER <admin@example.com>
         the size of these elements (!472).
 	  - Add Message::extract_valid_payload method to warn in case of failure
 	    and return simply Option<T> instead of Result<Option<T>> (!497)
+	  - Add Message::get_best_body_owned and Message::get_best_subject_owned
+	    for best developer experience when performance is not an issue (!497)
 
 Version 0.21.0:
 2024-07-25 Emmanuel Gil Peyrot <linkmauve@linkmauve.fr>

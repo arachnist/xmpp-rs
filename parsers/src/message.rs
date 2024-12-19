@@ -183,6 +183,17 @@ impl Message {
         map.iter().map(|(lang, value)| (lang.clone(), value)).next()
     }
 
+    fn get_best_owned<T: ToOwned<Owned = T>>(
+        map: &BTreeMap<Lang, T>,
+        preferred_langs: Vec<&str>,
+    ) -> Option<(Lang, T)> {
+        if let Some((lang, item)) = Self::get_best::<T>(map, preferred_langs) {
+            Some((lang, item.to_owned()))
+        } else {
+            None
+        }
+    }
+
     /// Returns the best matching body from a list of languages.
     ///
     /// For instance, if a message contains both an xml:lang='de', an xml:lang='fr' and an English
@@ -194,6 +205,11 @@ impl Message {
         Message::get_best::<Body>(&self.bodies, preferred_langs)
     }
 
+    /// Owned variant of [`Message::get_best_body`]
+    pub fn get_best_body_owned(&self, preferred_langs: Vec<&str>) -> Option<(Lang, Body)> {
+        Message::get_best_owned::<Body>(&self.bodies, preferred_langs)
+    }
+
     /// Returns the best matching subject from a list of languages.
     ///
     /// For instance, if a message contains both an xml:lang='de', an xml:lang='fr' and an English
@@ -203,6 +219,11 @@ impl Message {
     /// If no subject matches, an undefined subject will be returned.
     pub fn get_best_subject(&self, preferred_langs: Vec<&str>) -> Option<(Lang, &Subject)> {
         Message::get_best::<Subject>(&self.subjects, preferred_langs)
+    }
+
+    /// Owned variant of [`Message::get_best_subject`]
+    pub fn get_best_subject_owned(&self, preferred_langs: Vec<&str>) -> Option<(Lang, Subject)> {
+        Message::get_best_owned::<Subject>(&self.subjects, preferred_langs)
     }
 
     /// Try to extract the given payload type from the message's payloads.
@@ -478,6 +499,13 @@ mod tests {
             assert_eq!(subject, &Subject::from_str("Hello world!").unwrap());
         }
 
+        // Test owned variant.
+        {
+            let (lang, subject) = message.get_best_subject_owned(vec!["en"]).unwrap();
+            assert_eq!(lang, "");
+            assert_eq!(subject, Subject::from_str("Hello world!").unwrap());
+        }
+
         let elem2 = message.into();
         assert_eq!(elem1, elem2);
     }
@@ -516,6 +544,13 @@ mod tests {
             let (lang, body) = message.get_best_body(vec!["ja"]).unwrap();
             assert_eq!(lang, "");
             assert_eq!(body, &Body::from_str("Hello world!").unwrap());
+        }
+
+        // Test owned variant.
+        {
+            let (lang, body) = message.get_best_body_owned(vec!["ja"]).unwrap();
+            assert_eq!(lang, "");
+            assert_eq!(body, Body::from_str("Hello world!").unwrap());
         }
 
         let message = Message::new(None);
