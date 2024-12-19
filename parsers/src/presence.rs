@@ -8,10 +8,9 @@
 use xso::{error::Error, AsOptionalXmlText, AsXml, AsXmlText, FromXml, FromXmlText};
 
 use crate::ns;
+use alloc::{borrow::Cow, collections::BTreeMap};
 use jid::Jid;
 use minidom::Element;
-use std::borrow::Cow;
-use std::collections::BTreeMap;
 
 /// Should be implemented on every known payload of a `<presence/>`.
 pub trait PresencePayload: TryFrom<Element> + Into<Element> {}
@@ -509,7 +508,7 @@ mod tests {
         let error = Presence::try_from(elem).unwrap_err();
         match error {
             FromElementError::Invalid(Error::TextParseError(e))
-                if e.is::<std::num::ParseIntError>() =>
+                if e.is::<core::num::ParseIntError>() =>
             {
                 ()
             }

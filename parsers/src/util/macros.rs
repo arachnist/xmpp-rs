@@ -58,7 +58,7 @@ macro_rules! get_attr {
     ($elem:ident, $attr:tt, Default, $value:ident, $func:expr) => {
         match $elem.attr($attr) {
             Some($value) => $func,
-            None => ::std::default::Default::default(),
+            None => ::core::default::Default::default(),
         }
     };
 }
@@ -87,18 +87,18 @@ macro_rules! generate_attribute {
                 s.parse().map_err(xso::error::Error::text_parse_error)
             }
         }
-        impl std::fmt::Display for $elem {
-            fn fmt(&self, fmt: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        impl core::fmt::Display for $elem {
+            fn fmt(&self, fmt: &mut core::fmt::Formatter) -> Result<(), core::fmt::Error> {
                 write!(fmt, "{}", match self {
                     $($elem::$a => $b),+
                 })
             }
         }
         impl ::xso::AsXmlText for $elem {
-            fn as_xml_text(&self) -> Result<::std::borrow::Cow<'_, str>, xso::error::Error> {
+            fn as_xml_text(&self) -> Result<::alloc::borrow::Cow<'_, str>, xso::error::Error> {
                 match self {
                     $(
-                        $elem::$a => Ok(::std::borrow::Cow::Borrowed($b))
+                        $elem::$a => Ok(::alloc::borrow::Cow::Borrowed($b))
                     ),+
                 }
             }
@@ -135,15 +135,15 @@ macro_rules! generate_attribute {
             }
         }
         impl ::xso::AsXmlText for $elem {
-            fn as_xml_text(&self) -> Result<std::borrow::Cow<'_, str>, xso::error::Error> {
-                Ok(std::borrow::Cow::Borrowed(match self {
+            fn as_xml_text(&self) -> Result<alloc::borrow::Cow<'_, str>, xso::error::Error> {
+                Ok(alloc::borrow::Cow::Borrowed(match self {
                     $($elem::$a => $b),+
                 }))
             }
 
             #[allow(unreachable_patterns)]
-            fn as_optional_xml_text(&self) -> Result<Option<std::borrow::Cow<'_, str>>, xso::error::Error> {
-                Ok(Some(std::borrow::Cow::Borrowed(match self {
+            fn as_optional_xml_text(&self) -> Result<Option<alloc::borrow::Cow<'_, str>>, xso::error::Error> {
+                Ok(Some(alloc::borrow::Cow::Borrowed(match self {
                     $elem::$default => return Ok(None),
                     $($elem::$a => $b),+
                 })))
@@ -158,7 +158,7 @@ macro_rules! generate_attribute {
                 }))
             }
         }
-        impl ::std::default::Default for $elem {
+        impl ::core::default::Default for $elem {
             fn default() -> $elem {
                 $elem::$default
             }
@@ -190,7 +190,7 @@ macro_rules! generate_attribute {
                 }
             }
         }
-        impl ::std::default::Default for $elem {
+        impl ::core::default::Default for $elem {
             fn default() -> $elem {
                 $elem::None
             }
@@ -201,13 +201,13 @@ macro_rules! generate_attribute {
             }
         }
         impl ::xso::AsXmlText for $elem {
-            fn as_xml_text(&self) -> Result<::std::borrow::Cow<'_, str>, xso::error::Error> {
-                Ok(::std::borrow::Cow::Borrowed($value))
+            fn as_xml_text(&self) -> Result<::alloc::borrow::Cow<'_, str>, xso::error::Error> {
+                Ok(::alloc::borrow::Cow::Borrowed($value))
             }
 
             #[allow(unreachable_patterns)]
-            fn as_optional_xml_text(&self) -> Result<Option<std::borrow::Cow<'_, str>>, xso::error::Error> {
-                Ok(Some(std::borrow::Cow::Borrowed(match self {
+            fn as_optional_xml_text(&self) -> Result<Option<alloc::borrow::Cow<'_, str>>, xso::error::Error> {
+                Ok(Some(alloc::borrow::Cow::Borrowed(match self {
                     $elem::$symbol => $value,
                     $elem::None => return Ok(None),
                 })))
@@ -232,7 +232,7 @@ macro_rules! generate_attribute {
                 }
             }
         }
-        impl ::std::default::Default for $elem {
+        impl ::core::default::Default for $elem {
             fn default() -> $elem {
                 $elem($default)
             }
@@ -243,14 +243,14 @@ macro_rules! generate_attribute {
             }
         }
         impl ::xso::AsXmlText for $elem {
-            fn as_xml_text(&self) -> Result<::std::borrow::Cow<'_, str>, xso::error::Error> {
-                Ok(::std::borrow::Cow::Owned(format!("{}", self.0)))
+            fn as_xml_text(&self) -> Result<::alloc::borrow::Cow<'_, str>, xso::error::Error> {
+                Ok(::alloc::borrow::Cow::Owned(format!("{}", self.0)))
             }
 
-            fn as_optional_xml_text(&self) -> Result<Option<::std::borrow::Cow<'_, str>>, xso::error::Error> {
+            fn as_optional_xml_text(&self) -> Result<Option<::alloc::borrow::Cow<'_, str>>, xso::error::Error> {
                 match self.0 {
                     $default => Ok(None),
-                    _ => Ok(Some(::std::borrow::Cow::Owned(format!("{}", self.0)))),
+                    _ => Ok(Some(::alloc::borrow::Cow::Owned(format!("{}", self.0)))),
                 }
             }
         }
@@ -267,7 +267,7 @@ macro_rules! generate_attribute_enum {
                 $enum
             ),+
         }
-        impl ::std::convert::TryFrom<minidom::Element> for $elem {
+        impl ::core::convert::TryFrom<minidom::Element> for $elem {
             type Error = xso::error::FromElementError;
             fn try_from(elem: minidom::Element) -> Result<$elem, xso::error::FromElementError> {
                 check_ns_only!(elem, $name, $ns);
@@ -395,8 +395,8 @@ macro_rules! generate_id {
             }
         }
         impl ::xso::AsXmlText for $elem {
-            fn as_xml_text(&self) ->Result<::std::borrow::Cow<'_, str>, xso::error::Error> {
-                Ok(::std::borrow::Cow::Borrowed(self.0.as_str()))
+            fn as_xml_text(&self) ->Result<::alloc::borrow::Cow<'_, str>, xso::error::Error> {
+                Ok(::alloc::borrow::Cow::Borrowed(self.0.as_str()))
             }
         }
         impl ::minidom::IntoAttributeValue for $elem {
@@ -429,14 +429,14 @@ macro_rules! generate_elem_id {
 #[cfg(test)]
 macro_rules! assert_size (
     ($t:ty, $sz:expr) => (
-        assert_eq!(::std::mem::size_of::<$t>(), $sz);
+        assert_eq!(::core::mem::size_of::<$t>(), $sz);
     );
 );
 
 // TODO: move that to src/pubsub/mod.rs, once we figure out how to use macros from there.
 macro_rules! impl_pubsub_item {
     ($item:ident, $ns:ident) => {
-        impl ::std::convert::TryFrom<minidom::Element> for $item {
+        impl ::core::convert::TryFrom<minidom::Element> for $item {
             type Error = FromElementError;
 
             fn try_from(mut elem: minidom::Element) -> Result<$item, FromElementError> {
@@ -487,7 +487,7 @@ macro_rules! impl_pubsub_item {
             }
         }
 
-        impl ::std::ops::Deref for $item {
+        impl ::core::ops::Deref for $item {
             type Target = crate::pubsub::Item;
 
             fn deref(&self) -> &Self::Target {
@@ -495,7 +495,7 @@ macro_rules! impl_pubsub_item {
             }
         }
 
-        impl ::std::ops::DerefMut for $item {
+        impl ::core::ops::DerefMut for $item {
             fn deref_mut(&mut self) -> &mut Self::Target {
                 &mut self.0
             }

@@ -24,6 +24,8 @@
 #![warn(missing_docs)]
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
 
+extern crate alloc;
+
 pub use blake2;
 pub use jid;
 pub use minidom;

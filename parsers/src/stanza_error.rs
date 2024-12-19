@@ -9,10 +9,10 @@ use xso::{text::EmptyAsNone, AsXml, FromXml};
 use crate::message::MessagePayload;
 use crate::ns;
 use crate::presence::PresencePayload;
+use alloc::collections::BTreeMap;
+use core::convert::TryFrom;
 use jid::Jid;
 use minidom::Element;
-use std::collections::BTreeMap;
-use std::convert::TryFrom;
 use xso::error::{Error, FromElementError};
 
 generate_attribute!(

@@ -33,7 +33,7 @@ fn get_ecaps2(disco: &DiscoInfoResult) -> Result<ECaps2, Error> {
     ]))
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<(), Box<dyn core::error::Error>> {
     let args: Vec<_> = env::args().collect();
     if args.len() != 2 {
         println!("Usage: {} <node>", args[0]);

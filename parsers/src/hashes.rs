@@ -4,10 +4,12 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use std::borrow::Cow;
-use std::num::ParseIntError;
-use std::ops::{Deref, DerefMut};
-use std::str::FromStr;
+use alloc::borrow::Cow;
+use core::{
+    num::ParseIntError,
+    ops::{Deref, DerefMut},
+    str::FromStr,
+};
 
 use xso::{error::Error, text::Base64, AsXml, AsXmlText, FromXml, FromXmlText};
 

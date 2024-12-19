@@ -152,7 +152,7 @@ mod tests {
         let error = Open::try_from(elem).unwrap_err();
         let message = match error {
             FromElementError::Invalid(Error::TextParseError(error))
-                if error.is::<std::num::ParseIntError>() =>
+                if error.is::<core::num::ParseIntError>() =>
             {
                 error
             }

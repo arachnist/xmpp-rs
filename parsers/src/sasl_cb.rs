@@ -7,7 +7,7 @@
 use xso::{error::Error, AsXml, AsXmlText, FromXml, FromXmlText};
 
 use crate::ns;
-use std::borrow::Cow;
+use alloc::borrow::Cow;
 
 /// One type of channel-binding, as [defined by the IANA](https://www.iana.org/assignments/channel-binding-types/channel-binding-types.xhtml)
 #[derive(Debug, Clone, PartialEq)]

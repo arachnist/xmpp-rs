@@ -7,7 +7,7 @@
 use xso::{AsXml, FromXml};
 
 use crate::ns;
-use std::num::NonZeroU32;
+use core::num::NonZeroU32;
 
 /// Advertises limits on this stream.
 #[derive(FromXml, AsXml, Debug, Clone, PartialEq)]

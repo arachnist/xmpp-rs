@@ -13,10 +13,9 @@ use crate::jingle_ice_udp::Transport as IceUdpTransport;
 use crate::jingle_rtp::Description as RtpDescription;
 use crate::jingle_s5b::Transport as Socks5Transport;
 use crate::ns;
+use alloc::{collections::BTreeMap, fmt};
 use jid::Jid;
 use minidom::Element;
-use std::collections::BTreeMap;
-use std::fmt;
 use xso::error::Error;
 
 generate_attribute!(

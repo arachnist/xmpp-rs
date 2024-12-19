@@ -4,8 +4,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use std::borrow::Cow;
-use std::str::FromStr;
+use alloc::borrow::Cow;
+use core::str::FromStr;
 
 use xso::{error::Error, text::Base64, AsXml, AsXmlText, FromXml, FromXmlText};
 
@@ -187,7 +187,7 @@ mod tests {
             .parse::<ContentId>()
             .unwrap_err();
         let message = match error {
-            Error::TextParseError(error) if error.is::<std::num::ParseIntError>() => error,
+            Error::TextParseError(error) if error.is::<core::num::ParseIntError>() => error,
             _ => panic!(),
         };
         assert_eq!(message.to_string(), "invalid digit found in string");

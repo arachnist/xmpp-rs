@@ -21,7 +21,7 @@ mod helpers {
     use minidom::Element;
     use xso::{error::FromElementError, transform, try_from_element, AsXml, FromXml};
 
-    pub(super) fn roundtrip_full<T: AsXml + FromXml + PartialEq + std::fmt::Debug + Clone>(
+    pub(super) fn roundtrip_full<T: AsXml + FromXml + PartialEq + core::fmt::Debug + Clone>(
         s: &str,
     ) {
         let initial: Element = s.parse().unwrap();
@@ -88,7 +88,7 @@ struct Empty;
 #[test]
 fn empty_roundtrip() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -98,7 +98,7 @@ fn empty_roundtrip() {
 #[test]
 fn empty_name_mismatch() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -111,7 +111,7 @@ fn empty_name_mismatch() {
 #[test]
 fn empty_namespace_mismatch() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -124,7 +124,7 @@ fn empty_namespace_mismatch() {
 #[test]
 fn empty_unexpected_attribute() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -139,7 +139,7 @@ fn empty_unexpected_attribute() {
 #[test]
 fn empty_unexpected_child() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -154,7 +154,7 @@ fn empty_unexpected_child() {
 #[test]
 fn empty_qname_check_has_precedence_over_attr_check() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -171,7 +171,7 @@ struct NamePath;
 #[test]
 fn name_path_roundtrip() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -185,7 +185,7 @@ struct NamespaceLit;
 #[test]
 fn namespace_lit_roundtrip() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -202,7 +202,7 @@ struct RequiredAttribute {
 #[test]
 fn required_attribute_roundtrip() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -212,7 +212,7 @@ fn required_attribute_roundtrip() {
 #[test]
 fn required_attribute_positive() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -223,7 +223,7 @@ fn required_attribute_positive() {
 #[test]
 fn required_attribute_missing() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -249,7 +249,7 @@ struct RenamedAttribute {
 #[test]
 fn renamed_attribute_roundtrip() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -272,7 +272,7 @@ struct NamespacedAttribute {
 #[test]
 fn namespaced_attribute_roundtrip_a() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -286,7 +286,7 @@ fn namespaced_attribute_roundtrip_a() {
 #[test]
 fn namespaced_attribute_roundtrip_b() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -307,7 +307,7 @@ struct PrefixedAttribute {
 #[test]
 fn prefixed_attribute_roundtrip() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -324,7 +324,7 @@ struct RequiredNonStringAttribute {
 #[test]
 fn required_non_string_attribute_roundtrip() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -335,16 +335,16 @@ fn required_non_string_attribute_roundtrip() {
 #[xml(namespace = NS1, name = "attr")]
 struct DefaultAttribute {
     #[xml(attribute(default))]
-    foo: std::option::Option<String>,
+    foo: core::option::Option<String>,
 
     #[xml(attribute(default))]
-    bar: std::option::Option<u16>,
+    bar: core::option::Option<u16>,
 }
 
 #[test]
 fn default_attribute_roundtrip_aa() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -354,7 +354,7 @@ fn default_attribute_roundtrip_aa() {
 #[test]
 fn default_attribute_roundtrip_pa() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -364,7 +364,7 @@ fn default_attribute_roundtrip_pa() {
 #[test]
 fn default_attribute_roundtrip_ap() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -374,7 +374,7 @@ fn default_attribute_roundtrip_ap() {
 #[test]
 fn default_attribute_roundtrip_pp() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -391,7 +391,7 @@ struct TextString {
 #[test]
 fn text_string_roundtrip() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -401,7 +401,7 @@ fn text_string_roundtrip() {
 #[test]
 fn text_string_positive_preserves_whitespace() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -419,7 +419,7 @@ struct TextNonString {
 #[test]
 fn text_non_string_roundtrip() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -433,7 +433,7 @@ struct IgnoresWhitespaceWithoutTextConsumer;
 #[test]
 fn ignores_whitespace_without_text_consumer_positive() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -450,7 +450,7 @@ struct FailsTextWithoutTextConsumer;
 #[test]
 fn fails_text_without_text_consumer_positive() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -469,13 +469,13 @@ fn fails_text_without_text_consumer_positive() {
 #[xml(namespace = NS1, name = "text")]
 struct TextWithCodec {
     #[xml(text(codec = xso::text::EmptyAsNone))]
-    text: std::option::Option<String>,
+    text: core::option::Option<String>,
 }
 
 #[test]
 fn text_with_codec_roundtrip_empty() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -485,7 +485,7 @@ fn text_with_codec_roundtrip_empty() {
 #[test]
 fn text_with_codec_roundtrip_non_empty() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -502,7 +502,7 @@ struct Parent {
 #[test]
 fn parent_roundtrip() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -512,7 +512,7 @@ fn parent_roundtrip() {
 #[test]
 fn parent_positive() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -525,7 +525,7 @@ fn parent_positive() {
 #[test]
 fn parent_negative_duplicate_child() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -539,13 +539,13 @@ fn parent_negative_duplicate_child() {
 #[xml(namespace = NS1, name = "parent")]
 struct OptionalChild {
     #[xml(child(default))]
-    child: std::option::Option<RequiredAttribute>,
+    child: core::option::Option<RequiredAttribute>,
 }
 
 #[test]
 fn optional_child_roundtrip_present() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -557,7 +557,7 @@ fn optional_child_roundtrip_present() {
 #[test]
 fn optional_child_roundtrip_absent() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -568,13 +568,13 @@ fn optional_child_roundtrip_absent() {
 #[xml(namespace = NS1, name = "elem")]
 struct BoxedChild {
     #[xml(child(default))]
-    child: std::option::Option<Box<BoxedChild>>,
+    child: core::option::Option<Box<BoxedChild>>,
 }
 
 #[test]
 fn boxed_child_roundtrip_absent() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -584,7 +584,7 @@ fn boxed_child_roundtrip_absent() {
 #[test]
 fn boxed_child_roundtrip_nested_1() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -594,7 +594,7 @@ fn boxed_child_roundtrip_nested_1() {
 #[test]
 fn boxed_child_roundtrip_nested_2() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -608,7 +608,7 @@ struct RenamedTypes;
 #[test]
 fn renamed_types_roundtrip() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -620,8 +620,8 @@ fn renamed_types_roundtrip() {
 fn renamed_types_get_renamed() {
     // these merely serve as a test that the types are declared with the names
     // given in the attributes.
-    assert!(std::mem::size_of::<RenamedBuilder>() >= 0);
-    assert!(std::mem::size_of::<RenamedIter>() >= 0);
+    assert!(core::mem::size_of::<RenamedBuilder>() >= 0);
+    assert!(core::mem::size_of::<RenamedIter>() >= 0);
 }
 
 // What is this, you may wonder?
@@ -649,7 +649,7 @@ enum NameSwitchedEnum {
 #[test]
 fn name_switched_enum_positive_variant_1() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -664,7 +664,7 @@ fn name_switched_enum_positive_variant_1() {
 #[test]
 fn name_switched_enum_positive_variant_2() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -679,7 +679,7 @@ fn name_switched_enum_positive_variant_2() {
 #[test]
 fn name_switched_enum_negative_name_mismatch() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -692,7 +692,7 @@ fn name_switched_enum_negative_name_mismatch() {
 #[test]
 fn name_switched_enum_negative_namespace_mismatch() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -705,7 +705,7 @@ fn name_switched_enum_negative_namespace_mismatch() {
 #[test]
 fn name_switched_enum_roundtrip_variant_1() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -715,7 +715,7 @@ fn name_switched_enum_roundtrip_variant_1() {
 #[test]
 fn name_switched_enum_roundtrip_variant_2() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -732,7 +732,7 @@ enum RenamedEnumTypes {
 #[test]
 fn renamed_enum_types_roundtrip() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -744,8 +744,8 @@ fn renamed_enum_types_roundtrip() {
 fn renamed_enum_types_get_renamed() {
     // these merely serve as a test that the types are declared with the names
     // given in the attributes.
-    assert!(std::mem::size_of::<RenamedEnumBuilder>() >= 0);
-    assert!(std::mem::size_of::<RenamedEnumIter>() >= 0);
+    assert!(core::mem::size_of::<RenamedEnumBuilder>() >= 0);
+    assert!(core::mem::size_of::<RenamedEnumIter>() >= 0);
 }
 
 #[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
@@ -766,7 +766,7 @@ enum ExhaustiveNameSwitchedEnum {
 #[test]
 fn exhaustive_name_switched_enum_negative_name_mismatch() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -779,7 +779,7 @@ fn exhaustive_name_switched_enum_negative_name_mismatch() {
 #[test]
 fn exhaustive_name_switched_enum_negative_namespace_mismatch() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -792,7 +792,7 @@ fn exhaustive_name_switched_enum_negative_namespace_mismatch() {
 #[test]
 fn exhaustive_name_switched_enum_roundtrip_variant_1() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -802,7 +802,7 @@ fn exhaustive_name_switched_enum_roundtrip_variant_1() {
 #[test]
 fn exhaustive_name_switched_enum_roundtrip_variant_2() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -819,7 +819,7 @@ struct Children {
 #[test]
 fn children_roundtrip() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -838,7 +838,7 @@ struct TextExtract {
 #[test]
 fn text_extract_positive() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -855,7 +855,7 @@ fn text_extract_positive() {
 #[test]
 fn text_extract_negative_absent_child() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -872,7 +872,7 @@ fn text_extract_negative_absent_child() {
 #[test]
 fn text_extract_negative_unexpected_attribute_in_child() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -889,7 +889,7 @@ fn text_extract_negative_unexpected_attribute_in_child() {
 #[test]
 fn text_extract_negative_unexpected_child_in_child() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -908,7 +908,7 @@ fn text_extract_negative_unexpected_child_in_child() {
 #[test]
 fn text_extract_negative_duplicate_child() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -927,7 +927,7 @@ fn text_extract_negative_duplicate_child() {
 #[test]
 fn text_extract_roundtrip() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -946,7 +946,7 @@ struct AttributeExtract {
 #[test]
 fn attribute_extract_positive() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -963,7 +963,7 @@ fn attribute_extract_positive() {
 #[test]
 fn attribute_extract_negative_absent_attribute() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -980,7 +980,7 @@ fn attribute_extract_negative_absent_attribute() {
 #[test]
 fn attribute_extract_negative_unexpected_text_in_child() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -999,7 +999,7 @@ fn attribute_extract_negative_unexpected_text_in_child() {
 #[test]
 fn attribute_extract_roundtrip() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -1012,13 +1012,13 @@ fn attribute_extract_roundtrip() {
 #[xml(namespace = NS1, name = "parent")]
 struct OptionalAttributeExtract {
     #[xml(extract(namespace = NS1, name = "child", fields(attribute(name = "foo", default))))]
-    contents: ::std::option::Option<String>,
+    contents: ::core::option::Option<String>,
 }
 
 #[test]
 fn optional_attribute_extract_positive_present() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -1037,7 +1037,7 @@ fn optional_attribute_extract_positive_present() {
 #[test]
 fn optional_attribute_extract_positive_present_empty() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -1056,7 +1056,7 @@ fn optional_attribute_extract_positive_present_empty() {
 #[test]
 fn optional_attribute_extract_positive_absent() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -1070,7 +1070,7 @@ fn optional_attribute_extract_positive_absent() {
 #[test]
 fn optional_attribute_extract_roundtrip_present() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -1082,7 +1082,7 @@ fn optional_attribute_extract_roundtrip_present() {
 #[test]
 fn optional_attribute_extract_roundtrip_present_empty() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -1094,7 +1094,7 @@ fn optional_attribute_extract_roundtrip_present_empty() {
 #[test]
 fn optional_attribute_extract_roundtrip_absent() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -1111,7 +1111,7 @@ struct ChildExtract {
 #[test]
 fn child_extract_roundtrip() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -1132,7 +1132,7 @@ struct NestedExtract {
 #[test]
 fn nested_extract_positive() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -1149,7 +1149,7 @@ fn nested_extract_positive() {
 #[test]
 fn nested_extract_roundtrip() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -1166,7 +1166,7 @@ struct ExtractOmitNamespace {
 #[test]
 fn extract_omit_namespace_roundtrip() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -1185,7 +1185,7 @@ struct ExtractOmitName {
 #[test]
 fn extract_omit_name_roundtrip() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -1204,7 +1204,7 @@ struct ExtractOmitNameAndNamespace {
 #[test]
 fn extract_omit_name_and_namespace_roundtrip() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -1223,7 +1223,7 @@ struct TextExtractVec {
 #[test]
 fn text_extract_vec_positive_nonempty() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -1242,7 +1242,7 @@ fn text_extract_vec_positive_nonempty() {
 #[test]
 fn text_extract_vec_positive_empty() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -1257,7 +1257,7 @@ fn text_extract_vec_positive_empty() {
 #[test]
 fn text_extract_vec_roundtrip() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -1276,7 +1276,7 @@ struct AttributeExtractVec {
 #[test]
 fn text_extract_attribute_vec_positive_nonempty() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -1295,7 +1295,7 @@ fn text_extract_attribute_vec_positive_nonempty() {
 #[test]
 fn text_extract_attribute_vec_positive_empty() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -1310,7 +1310,7 @@ fn text_extract_attribute_vec_positive_empty() {
 #[test]
 fn text_extract_attribute_vec_roundtrip() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -1323,13 +1323,13 @@ fn text_extract_attribute_vec_roundtrip() {
 #[xml(namespace = NS1, name = "parent")]
 struct TextOptionalExtract {
     #[xml(extract(namespace = NS1, name = "child", default, fields(text(type_ = String))))]
-    contents: ::std::option::Option<String>,
+    contents: ::core::option::Option<String>,
 }
 
 #[test]
 fn text_optional_extract_positive_present() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -1348,7 +1348,7 @@ fn text_optional_extract_positive_present() {
 #[test]
 fn text_optional_extract_positive_absent_child() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -1361,7 +1361,7 @@ fn text_optional_extract_positive_absent_child() {
 #[test]
 fn text_optional_extract_roundtrip_present() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -1373,7 +1373,7 @@ fn text_optional_extract_roundtrip_present() {
 #[test]
 fn text_optional_extract_roundtrip_absent() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -1384,13 +1384,13 @@ fn text_optional_extract_roundtrip_absent() {
 #[xml(namespace = NS1, name = "parent")]
 struct OptionalAttributeOptionalExtract {
     #[xml(extract(namespace = NS1, name = "child", default, fields(attribute(name = "foo", default))))]
-    contents: ::std::option::Option<String>,
+    contents: ::core::option::Option<String>,
 }
 
 #[test]
 fn optional_attribute_optional_extract_positive_present() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -1409,7 +1409,7 @@ fn optional_attribute_optional_extract_positive_present() {
 #[test]
 fn optional_attribute_optional_extract_positive_absent_attribute() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -1424,7 +1424,7 @@ fn optional_attribute_optional_extract_positive_absent_attribute() {
 #[test]
 fn optional_attribute_optional_extract_positive_absent_element() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -1437,7 +1437,7 @@ fn optional_attribute_optional_extract_positive_absent_element() {
 #[test]
 fn optional_attribute_optional_extract_roundtrip_present() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -1449,7 +1449,7 @@ fn optional_attribute_optional_extract_roundtrip_present() {
 #[test]
 fn optional_attribute_optional_extract_roundtrip_absent_attribute() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -1461,14 +1461,14 @@ fn optional_attribute_optional_extract_roundtrip_absent_attribute() {
 #[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = NS1, name = "parent")]
 struct OptionalAttributeOptionalExtractDoubleOption {
-    #[xml(extract(namespace = NS1, name = "child", default, fields(attribute(name = "foo", type_ = ::std::option::Option<String>, default))))]
-    contents: ::std::option::Option<::std::option::Option<String>>,
+    #[xml(extract(namespace = NS1, name = "child", default, fields(attribute(name = "foo", type_ = ::core::option::Option<String>, default))))]
+    contents: ::core::option::Option<::core::option::Option<String>>,
 }
 
 #[test]
 fn optional_attribute_optional_extract_double_option_positive_present() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -1487,7 +1487,7 @@ fn optional_attribute_optional_extract_double_option_positive_present() {
 #[test]
 fn optional_attribute_optional_extract_double_option_positive_absent_attribute() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -1504,7 +1504,7 @@ fn optional_attribute_optional_extract_double_option_positive_absent_attribute()
 #[test]
 fn optional_attribute_optional_extract_double_option_positive_absent_element() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -1519,7 +1519,7 @@ fn optional_attribute_optional_extract_double_option_positive_absent_element() {
 #[test]
 fn optional_attribute_optional_extract_double_option_roundtrip_present() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -1531,7 +1531,7 @@ fn optional_attribute_optional_extract_double_option_roundtrip_present() {
 #[test]
 fn optional_attribute_optional_extract_double_option_roundtrip_absent_attribute() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -1543,7 +1543,7 @@ fn optional_attribute_optional_extract_double_option_roundtrip_absent_attribute(
 #[test]
 fn optional_attribute_optional_extract_double_option_roundtrip_absent_child() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -1562,7 +1562,7 @@ struct ElementCatchall {
 #[test]
 fn element_catchall_roundtrip() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -1578,7 +1578,7 @@ struct TransparentStruct(RequiredAttribute);
 #[test]
 fn transparent_struct_roundtrip() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -1594,7 +1594,7 @@ struct TransparentStructNamed {
 #[test]
 fn transparent_struct_named_roundtrip() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -1617,7 +1617,7 @@ enum DynamicEnum {
 #[test]
 fn dynamic_enum_roundtrip_a() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -1627,7 +1627,7 @@ fn dynamic_enum_roundtrip_a() {
 #[test]
 fn dynamic_enum_roundtrip_b() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -1644,7 +1644,7 @@ struct FallibleParse {
 #[test]
 fn fallible_parse_positive_ok() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -1661,7 +1661,7 @@ fn fallible_parse_positive_ok() {
 #[test]
 fn fallible_parse_positive_err() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -1686,7 +1686,7 @@ struct ExtractTupleToCollection {
 #[test]
 fn extract_tuple_to_collection_roundtrip() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -1708,7 +1708,7 @@ struct ExtractTuple {
 #[test]
 fn extract_tuple_roundtrip() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -1730,7 +1730,7 @@ struct ExtractOptionalTuple {
 #[test]
 fn extract_optional_tuple_roundtrip_present() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -1751,7 +1751,7 @@ fn extract_optional_tuple_roundtrip_present() {
 #[test]
 fn extract_optional_tuple_roundtrip_absent() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -1765,13 +1765,13 @@ struct ExtractTupleToMap {
         attribute(name = "xml:lang", type_ = ::core::option::Option<String>, default),
         text(type_ = String),
     )))]
-    contents: std::collections::BTreeMap<::core::option::Option<String>, String>,
+    contents: alloc::collections::BTreeMap<::core::option::Option<String>, String>,
 }
 
 #[test]
 fn extract_tuple_to_map_roundtrip() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -1787,7 +1787,7 @@ struct IgnoreUnknownAttributes;
 #[test]
 fn ignore_unknown_attributes_empty_roundtrip() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -1797,7 +1797,7 @@ fn ignore_unknown_attributes_empty_roundtrip() {
 #[test]
 fn ignore_unknown_attributes_positive() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -1810,7 +1810,7 @@ fn ignore_unknown_attributes_positive() {
 #[test]
 fn ignore_unknown_attributes_negative_unexpected_child() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -1829,7 +1829,7 @@ struct IgnoreUnknownChildren;
 #[test]
 fn ignore_unknown_children_empty_roundtrip() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -1839,7 +1839,7 @@ fn ignore_unknown_children_empty_roundtrip() {
 #[test]
 fn ignore_unknown_children_positive() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -1852,7 +1852,7 @@ fn ignore_unknown_children_positive() {
 #[test]
 fn ignore_unknown_children_negative_unexpected_attribute() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -1876,7 +1876,7 @@ struct ExtractIgnoreUnknownStuff {
 #[test]
 fn extract_ignore_unknown_stuff_positive() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };
@@ -1893,7 +1893,7 @@ fn extract_ignore_unknown_stuff_positive() {
 #[test]
 fn extract_ignore_unknown_stuff_roundtrip() {
     #[allow(unused_imports)]
-    use std::{
+    use core::{
         option::Option::{None, Some},
         result::Result::{Err, Ok},
     };

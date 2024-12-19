@@ -4,8 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use core::fmt;
-use std::error::Error;
+use core::{error::Error, fmt};
 
 use minidom::Element;
 use xso::{AsXml, FromXml};
@@ -335,7 +334,7 @@ impl fmt::Display for StreamError {
     }
 }
 
-/// Wrapper around [`StreamError`] which implements [`std::error::Error`]
+/// Wrapper around [`StreamError`] which implements [`core::error::Error`]
 /// with an appropriate error message.
 #[derive(FromXml, AsXml, Debug)]
 #[xml(transparent)]
@@ -349,7 +348,7 @@ impl fmt::Display for ReceivedStreamError {
 
 impl Error for ReceivedStreamError {}
 
-/// Wrapper around [`StreamError`] which implements [`std::error::Error`]
+/// Wrapper around [`StreamError`] which implements [`core::error::Error`]
 /// with an appropriate error message.
 #[derive(FromXml, AsXml, Debug)]
 #[xml(transparent)]

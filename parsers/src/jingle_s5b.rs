@@ -10,9 +10,9 @@ use xso::{
 };
 
 use crate::ns;
+use core::net::IpAddr;
 use jid::Jid;
 use minidom::Element;
-use std::net::IpAddr;
 
 generate_attribute!(
     /// The type of the connection being proposed by this candidate.

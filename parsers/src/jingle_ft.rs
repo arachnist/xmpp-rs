@@ -10,8 +10,8 @@ use crate::date::DateTime;
 use crate::hashes::Hash;
 use crate::jingle::{ContentId, Creator};
 use crate::ns;
-use std::collections::BTreeMap;
-use std::str::FromStr;
+use alloc::collections::btree_map::BTreeMap;
+use core::str::FromStr;
 
 /// Represents a range in a file.
 #[derive(FromXml, AsXml, PartialEq, Debug, Clone, Default)]

@@ -4,9 +4,9 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use std::borrow::Cow;
-use std::fmt::{Display, Formatter};
-use std::str::FromStr;
+use alloc::borrow::Cow;
+use core::fmt;
+use core::str::FromStr;
 
 use minidom::IntoAttributeValue;
 use xso::{error::Error, AsXml, AsXmlText, FromXml, FromXmlText};
@@ -109,10 +109,10 @@ pub enum DatatypeError {
     },
 }
 
-impl std::error::Error for DatatypeError {}
+impl core::error::Error for DatatypeError {}
 
-impl Display for DatatypeError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+impl fmt::Display for DatatypeError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             DatatypeError::MissingPrefix { input } => {
                 write!(f, "Missing prefix in validation datatype {input:?}.")
@@ -287,8 +287,8 @@ impl FromStr for Datatype {
     }
 }
 
-impl Display for Datatype {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+impl fmt::Display for Datatype {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let value = match self {
             Datatype::AnyUri => "xs:anyURI",
             Datatype::Byte => "xs:byte",
