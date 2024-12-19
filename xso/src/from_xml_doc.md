@@ -249,6 +249,20 @@ The following mapping types are defined:
 | [`extract`](#extract-meta) | Map the field to contents of a child element of specified structure |
 | [`text`](#text-meta) | Map the field to the text content of the struct's element |
 
+#### Field order
+
+Field order **matters**. The fields are parsed in the order they are declared
+(for children, anyway). If multiple fields match a given child element, the
+first field which matches will be taken. The only exception is
+`#[xml(element(n = ..))]`, which is always processed last.
+
+When XML is generated from a struct, the child elements are also generated
+in the order of the fields. That means that passing an XML element through
+FromXml and IntoXml may re-order some child elements.
+
+Sorting order between elements which match the same field is generally
+preserved, if the container preserves sort order on insertion.
+
 ### `attribute` meta
 
 The `attribute` meta causes the field to be mapped to an XML attribute of the
@@ -419,15 +433,13 @@ The following keys can be used inside the `#[xml(extract(..))]` meta:
 
 | Key | Value type | Description |
 | --- | --- | --- |
-| `n` | `..` | Must be set to the value `..`. |
+| `n` | `1` or `..` | If `1`, a single element is parsed. If `..`, a collection is parsed. Defaults to `1`. |
 
-The `n` parameter will, in the future, support values other than `..`. In
-order to provide a non-breaking path into that future, it must be set to the
-value `..` right now, indicating that an arbitrary number of elements may be
-collected by this meta.
+When parsing a single child element (i.e. `n = 1` or no `n` value set at all),
+the field's type must be a `minidom::Element`.
 
-The field's type must be a collection of `minidom::Element`. It must thus
-implement
+When parsing a collection (with `n = ..`), the field's type must be a
+collection of `minidom::Element`. It must thus implement
 [`IntoIterator<Item = minidom::Element>`][`core::iter::IntoIterator`]. In
 addition, the field's type must implement
 [`Extend<minidom::Element>`][`core::iter::Extend`] to derive `FromXml` and the

@@ -67,10 +67,9 @@ impl Field for ChildField {
                 } = scope;
 
                 let from_events = from_events_fn(element_ty.clone());
-                let from_xml_builder = from_xml_builder_ty(element_ty.clone());
 
                 let matcher = quote! { #from_events(name, attrs) };
-                let builder = from_xml_builder;
+                let builder = from_xml_builder_ty(element_ty.clone());
 
                 (
                     TokenStream::default(),

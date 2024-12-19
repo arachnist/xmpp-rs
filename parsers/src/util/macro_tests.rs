@@ -1620,6 +1620,118 @@ fn optional_attribute_optional_extract_double_option_roundtrip_absent_child() {
 
 #[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = NS1, name = "parent")]
+struct ElementCatchOne {
+    #[xml(element)]
+    child: ::minidom::Element,
+}
+
+#[test]
+fn element_catch_one_roundtrip() {
+    #[allow(unused_imports)]
+    use core::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<ElementCatchOne>(
+        "<parent xmlns='urn:example:ns1'><child><deeper/></child></parent>",
+    )
+}
+
+#[test]
+fn element_catch_one_negative_none() {
+    #[allow(unused_imports)]
+    use core::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    match parse_str::<ElementCatchOne>("<parent xmlns='urn:example:ns1'/>") {
+        Err(::xso::error::FromElementError::Invalid(::xso::error::Error::Other(e)))
+            if e.contains("Missing child field") =>
+        {
+            ()
+        }
+        other => panic!("unexpected result: {:?}", other),
+    }
+}
+
+#[test]
+fn element_catch_one_negative_more_than_one_child() {
+    #[allow(unused_imports)]
+    use core::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    match parse_str::<ElementCatchOne>("<parent xmlns='urn:example:ns1'><child><deeper/></child><child xmlns='urn:example:ns2'/></parent>") {
+        Err(::xso::error::FromElementError::Invalid(::xso::error::Error::Other(e))) if e == "Unknown child in ElementCatchOne element." => (),
+        other => panic!("unexpected result: {:?}", other),
+    }
+}
+
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = NS1, name = "parent")]
+struct ElementCatchChildAndOne {
+    #[xml(child)]
+    child: Empty,
+
+    #[xml(element)]
+    element: ::minidom::Element,
+}
+
+#[test]
+fn element_catch_child_and_one_roundtrip() {
+    #[allow(unused_imports)]
+    use core::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<ElementCatchChildAndOne>(
+        "<parent xmlns='urn:example:ns1'><foo/><element/></parent>",
+    )
+}
+
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = NS1, name = "parent")]
+struct ElementCatchOneAndMany {
+    #[xml(element)]
+    child: ::minidom::Element,
+
+    #[xml(element(n = ..))]
+    children: Vec<::minidom::Element>,
+}
+
+#[test]
+fn element_catch_one_and_many_roundtrip() {
+    #[allow(unused_imports)]
+    use core::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<ElementCatchOneAndMany>(
+        "<parent xmlns='urn:example:ns1'><child num='0'><deeper/></child><child num='1'><deeper/></child></parent>",
+    )
+}
+
+#[test]
+fn element_catch_one_and_many_parse_in_order() {
+    #[allow(unused_imports)]
+    use core::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    match parse_str::<ElementCatchOneAndMany>(
+        "<parent xmlns='urn:example:ns1'><child num='0'/><child num='1'/></parent>",
+    ) {
+        Ok(ElementCatchOneAndMany { child, children }) => {
+            assert_eq!(child.attr("num"), Some("0"));
+            assert_eq!(children.len(), 1);
+            assert_eq!(children[0].attr("num"), Some("1"));
+        }
+        other => panic!("unexpected result: {:?}", other),
+    }
+}
+
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = NS1, name = "parent")]
 struct ElementCatchall {
     #[xml(element(n = ..))]
     children: Vec<::minidom::Element>,

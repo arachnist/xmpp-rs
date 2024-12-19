@@ -1035,17 +1035,19 @@ impl XmlFieldMeta {
     /// Parse a `#[xml(element)]` meta.
     fn element_from_meta(meta: ParseNestedMeta<'_>) -> Result<Self> {
         let mut amount = None;
-        meta.parse_nested_meta(|meta| {
-            if meta.path.is_ident("n") {
-                if amount.is_some() {
-                    return Err(Error::new_spanned(meta.path, "duplicate `n` key"));
+        if meta.input.peek(syn::token::Paren) {
+            meta.parse_nested_meta(|meta| {
+                if meta.path.is_ident("n") {
+                    if amount.is_some() {
+                        return Err(Error::new_spanned(meta.path, "duplicate `n` key"));
+                    }
+                    amount = Some(meta.value()?.parse()?);
+                    Ok(())
+                } else {
+                    Err(Error::new_spanned(meta.path, "unsupported key"))
                 }
-                amount = Some(meta.value()?.parse()?);
-                Ok(())
-            } else {
-                Err(Error::new_spanned(meta.path, "unsupported key"))
-            }
-        })?;
+            })?;
+        }
         Ok(Self::Element {
             span: meta.path.span(),
             amount,

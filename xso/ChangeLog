@@ -21,7 +21,8 @@ Version NEXT:
       - Support for extracting data from child elements without intermediate
         structs.
       - Support for collecting all unknown children in a single field as
-        collection of `minidom::Element`.
+        collection of `minidom::Element`, or one unknown child as a
+        `minidom::Element`.
       - Support for "transparent" structs (newtype-like patterns for XSO).
       - FromXmlText and AsXmlText are now implemented for jid::NodePart,
         jid::DomainPart, and jid::ResourcePart (!485)

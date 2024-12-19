@@ -358,7 +358,7 @@ fn new_field(
                         );
                         err.combine(Error::new(
                             *amount,
-                            "`n` was set to a non-1 value here, which enables connection logic",
+                            "`n` was set to a non-1 value here, which enables collection logic",
                         ));
                         return Err(err);
                     }
@@ -406,20 +406,9 @@ fn new_field(
         }
 
         #[cfg(feature = "minidom")]
-        XmlFieldMeta::Element { span, amount } => {
-            match amount {
-                Some(AmountConstraint::Any(_)) => (),
-                Some(AmountConstraint::FixedSingle(span)) => {
-                    return Err(Error::new(
-                        span,
-                        "only `n = ..` is supported for #[xml(element)]` currently",
-                    ))
-                }
-                None => return Err(Error::new(span, "`n` must be set to `..` currently")),
-            }
-
-            Ok(Box::new(ElementField))
-        }
+        XmlFieldMeta::Element { span, amount } => Ok(Box::new(ElementField {
+            amount: amount.unwrap_or(AmountConstraint::FixedSingle(span)),
+        })),
 
         #[cfg(not(feature = "minidom"))]
         XmlFieldMeta::Element { span, amount } => {
