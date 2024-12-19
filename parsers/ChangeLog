@@ -36,20 +36,21 @@ XXXX-YY-ZZ RELEASER <admin@example.com>
         fast::Tls0Rtt, legacy_omemo::IsPreKey, mam::Complete, sm::ResumeAttr (!476)
       - bookmarks::Conference and bookmarks2::Conference use ResourcePart to store
         the optional nickname instead of a String (!485)
+    * New parsers/serialisers:
+      - Stream Features (RFC 6120) (!400)
+      - Extensible SASL Profile (XEP-0388)
+      - SASL Channel-Binding Type Capability (XEP-0440)
+      - Stream Limits Advertisement (XEP-0478)
+      - Message Displayed Synchronization (XEP-0490)
+      - RFC 6120 stream errors
     * Improvements:
+      - Add support for `<optional/> in XEP-0198 feature advertisment
+      - Add support application-specific error conditions in XEP-0198
       - Keep unsupported vCard elements as `minidom::Element`, so that they
         get serialized back instead of being dropped.  We now also test for
         the size of these elements (!472).
-    * New parsers/serialisers:
-        - Stream Features (RFC 6120) (!400)
-        - Extensible SASL Profile (XEP-0388)
-        - SASL Channel-Binding Type Capability (XEP-0440)
-        - Stream Limits Advertisement (XEP-0478)
-        - Message Displayed Synchronization (XEP-0490)
-        - RFC 6120 stream errors
-    * Improvements:
-        - Add support for `<optional/> in XEP-0198 feature advertisment
-        - Add support application-specific error conditions in XEP-0198
+	  - Add Message::extract_valid_payload method to warn in case of failure
+	    and return simply Option<T> instead of Result<Option<T>> (!497)
 
 Version 0.21.0:
 2024-07-25 Emmanuel Gil Peyrot <linkmauve@linkmauve.fr>

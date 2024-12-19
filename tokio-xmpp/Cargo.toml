@@ -25,7 +25,7 @@ syntect = { version = "5", optional = true }
 pin-project-lite = { version = "0.2" }
 # same repository dependencies
 sasl = { version = "0.5", path = "../sasl" }
-xmpp-parsers = { version = "0.21", path = "../parsers" }
+xmpp-parsers = { version = "0.21", path = "../parsers", features = [ "log" ] }
 xso = { version = "0.1", path = "../xso" }
 
 # these are only needed for starttls ServerConnector support

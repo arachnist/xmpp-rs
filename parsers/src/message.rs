@@ -238,6 +238,24 @@ impl Message {
         std::mem::swap(&mut buf, &mut self.payloads);
         result
     }
+
+    /// Tries to extract the payload, warning when parsing fails.
+    ///
+    /// This method uses [`Message::extract_payload`], but removes the error
+    /// case by simply warning to the current logger.
+    #[cfg(feature = "log")]
+    pub fn extract_valid_payload<T: TryFrom<Element, Error = FromElementError>>(
+        &mut self,
+    ) -> Option<T> {
+        match self.extract_payload::<T>() {
+            Ok(opt) => opt,
+            Err(e) => {
+                // TODO: xso should support human-readable name for T
+                log::warn!("Failed to parse payload: {e}");
+                None
+            }
+        }
+    }
 }
 
 impl TryFrom<Element> for Message {

@@ -21,6 +21,7 @@ sha2 = "0.10"
 sha3 = "0.10"
 blake2 = "0.10.4"
 chrono = { version = "0.4.5", default-features = false, features = ["std"] }
+log = { version = "0.4", optional = true }
 # same repository dependencies
 jid = { version = "0.11", path = "../jid", features = ["minidom"] }
 minidom = { version = "0.16", path = "../minidom" }
@@ -34,6 +35,8 @@ component = []
 disable-validation = []
 # Enable serde support in jid crate
 serde = [ "jid/serde" ]
+# Enable some additional logging in helpers
+log = [ "dep:log" ]
 
 [package.metadata.docs.rs]
 rustdoc-args = [ "--sort-modules-by-appearance", "-Zunstable-options" ]
