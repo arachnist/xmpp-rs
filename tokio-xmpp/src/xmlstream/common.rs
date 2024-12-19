@@ -4,11 +4,13 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use core::future::Future;
-use core::pin::Pin;
-use core::task::{Context, Poll};
-use core::time::Duration;
-use std::borrow::Cow;
+use alloc::borrow::Cow;
+use core::{
+    future::Future,
+    pin::Pin,
+    task::{Context, Poll},
+    time::Duration,
+};
 use std::io;
 
 use futures::{ready, Sink, SinkExt, Stream, StreamExt};

@@ -10,10 +10,10 @@
 //! as good as it can, transparently reconnecting on interruptions of the TCP
 //! stream.
 
+use core::str::FromStr;
+use core::time::Duration;
 use std::env::args;
 use std::process::exit;
-use std::str::FromStr;
-use std::time::Duration;
 
 use rand::{thread_rng, Rng};
 

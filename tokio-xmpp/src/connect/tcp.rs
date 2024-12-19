@@ -1,6 +1,6 @@
 //! `starttls::ServerConfig` provides a `ServerConnector` for starttls connections
 
-use std::borrow::Cow;
+use alloc::borrow::Cow;
 
 use tokio::{io::BufStream, net::TcpStream};
 

@@ -1,12 +1,12 @@
+use alloc::borrow::Cow;
+use core::str::FromStr;
 use futures::{SinkExt, StreamExt};
 use sasl::client::mechanisms::{Anonymous, Plain, Scram};
 use sasl::client::Mechanism;
 use sasl::common::scram::{Sha1, Sha256};
 use sasl::common::Credentials;
-use std::borrow::Cow;
 use std::collections::HashSet;
 use std::io;
-use std::str::FromStr;
 use tokio::io::{AsyncBufRead, AsyncWrite};
 use xmpp_parsers::{
     jid::Jid,

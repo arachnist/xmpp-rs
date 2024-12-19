@@ -1,10 +1,9 @@
 //! `starttls::ServerConfig` provides a `ServerConnector` for starttls connections
 
+use alloc::borrow::Cow;
+use core::{error::Error as StdError, fmt};
 #[cfg(feature = "tls-native")]
 use native_tls::Error as TlsError;
-use std::borrow::Cow;
-use std::error::Error as StdError;
-use std::fmt;
 use std::io;
 use std::os::fd::AsRawFd;
 #[cfg(all(feature = "tls-rust", not(feature = "tls-native")))]
@@ -16,7 +15,7 @@ use futures::{sink::SinkExt, stream::StreamExt};
 
 #[cfg(all(feature = "tls-rust", not(feature = "tls-native")))]
 use {
-    std::sync::Arc,
+    alloc::sync::Arc,
     tokio_rustls::{
         rustls::pki_types::ServerName,
         rustls::{ClientConfig, RootCertStore},

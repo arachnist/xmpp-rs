@@ -1,3 +1,4 @@
+use core::{fmt, net::SocketAddr};
 #[cfg(feature = "dns")]
 use futures::{future::select_ok, FutureExt};
 #[cfg(feature = "dns")]
@@ -6,7 +7,6 @@ use hickory_resolver::{
 };
 #[cfg(feature = "dns")]
 use log::debug;
-use std::net::SocketAddr;
 use tokio::net::TcpStream;
 
 use crate::Error;
@@ -43,8 +43,8 @@ pub enum DnsConfig {
     },
 }
 
-impl std::fmt::Display for DnsConfig {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Display for DnsConfig {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             #[cfg(feature = "dns")]
             Self::UseSrv { host, .. } => write!(f, "{}", host),

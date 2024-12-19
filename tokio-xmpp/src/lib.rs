@@ -46,6 +46,8 @@ compile_error!(
     "when starttls feature enabled one of tls-native and tls-rust features must be enabled."
 );
 
+extern crate alloc;
+
 pub use parsers::{jid, minidom};
 pub use xmpp_parsers as parsers;
 

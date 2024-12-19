@@ -25,7 +25,7 @@ pub trait AsyncReadAndWrite: AsyncBufRead + AsyncWrite + Unpin + Send {}
 impl<T: AsyncBufRead + AsyncWrite + Unpin + Send> AsyncReadAndWrite for T {}
 
 /// Trait that must be extended by the implementation of ServerConnector
-pub trait ServerConnectorError: std::error::Error + Sync + Send {}
+pub trait ServerConnectorError: core::error::Error + Sync + Send {}
 
 /// Trait called to connect to an XMPP server, perhaps called multiple times
 pub trait ServerConnector: Clone + core::fmt::Debug + Send + Unpin + 'static {
@@ -37,7 +37,7 @@ pub trait ServerConnector: Clone + core::fmt::Debug + Send + Unpin + 'static {
         jid: &Jid,
         ns: &'static str,
         timeouts: Timeouts,
-    ) -> impl std::future::Future<
+    ) -> impl core::future::Future<
         Output = Result<(PendingFeaturesRecv<Self::Stream>, ChannelBinding), Error>,
     > + Send;
 }

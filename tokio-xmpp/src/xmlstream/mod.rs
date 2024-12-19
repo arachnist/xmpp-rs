@@ -114,7 +114,7 @@ struct LogXsoBuf<'x>(&'x [u8]);
 impl<'x> fmt::Display for LogXsoBuf<'x> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         // We always generate UTF-8, so this should be good... I think.
-        let text = std::str::from_utf8(&self.0).unwrap();
+        let text = core::str::from_utf8(&self.0).unwrap();
         #[cfg(feature = "syntax-highlighting")]
         let text = highlight_xml(text);
         f.write_str(&text)
@@ -195,7 +195,7 @@ impl fmt::Display for ReadError {
 }
 
 impl core::error::Error for ReadError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+    fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
         match self {
             ReadError::HardError(e) => Some(e),
             ReadError::ParseError(e) => Some(e),

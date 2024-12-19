@@ -1,13 +1,10 @@
+use core::{error::Error as StdError, fmt, net::AddrParseError, str::Utf8Error};
 #[cfg(feature = "dns")]
 use hickory_resolver::{
     error::ResolveError as DnsResolveError, proto::error::ProtoError as DnsProtoError,
 };
 use sasl::client::MechanismError as SaslMechanismError;
-use std::error::Error as StdError;
-use std::fmt;
 use std::io::Error as IoError;
-use std::net::AddrParseError;
-use std::str::Utf8Error;
 
 use crate::{
     connect::ServerConnectorError, jid, minidom,
