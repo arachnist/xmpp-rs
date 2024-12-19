@@ -34,6 +34,8 @@ Version 0.11.1, release 2024-07-23:
     - Fix clippy lints, cargo doc, and other warnings
     - xso::FromXmlText and xso::AsXmlText are now implemented for NodePart,
       DomainPart, and ResourcePart (!485)
+    - serde::Serialize and serde::Deserialize are now derived for NodePart,
+      DomainPart, and ResourcePart when serde feature flag is enabled (!499)
 
 
 Version 0.11.0, release 2024-07-23 [YANKED]

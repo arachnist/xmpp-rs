@@ -6,6 +6,8 @@ use core::mem;
 use core::ops::Deref;
 use core::str::FromStr;
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 use stringprep::{nameprep, nodeprep, resourceprep};
 
 use crate::{BareJid, Error, Jid};
@@ -210,11 +212,13 @@ def_part_types! {
     /// [`FullJid`][crate::FullJid].
     ///
     /// The corresponding slice type is [`NodeRef`].
+    #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
     pub struct NodePart(String) use nodeprep(err = Error::NodePrep, empty = Error::NodeEmpty, long = Error::NodeTooLong);
 
     /// `str`-like type which conforms to the requirements of [`NodePart`].
     ///
     /// See [`NodePart`] for details.
+    #[cfg_attr(feature = "serde", derive(Serialize))]
     pub struct ref NodeRef(str);
 }
 
@@ -222,23 +226,27 @@ def_part_types! {
     /// The [`DomainPart`] is the part between the (optional) `@` and the
     /// (optional) `/` in any [`Jid`][crate::Jid], whether
     /// [`BareJid`][crate::BareJid] or [`FullJid`][crate::FullJid].
+    #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
     pub struct DomainPart(String) use nameprep(err = Error::NamePrep, empty = Error::DomainEmpty, long = Error::DomainTooLong);
 
     /// `str`-like type which conforms to the requirements of [`DomainPart`].
     ///
     /// See [`DomainPart`] for details.
+    #[cfg_attr(feature = "serde", derive(Serialize))]
     pub struct ref DomainRef(str);
 }
 
 def_part_types! {
     /// The [`ResourcePart`] is the optional part after the `/` in a
     /// [`Jid`][crate::Jid]. It is mandatory in [`FullJid`][crate::FullJid].
+    #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
     pub struct ResourcePart(String) use resourceprep(err = Error::ResourcePrep, empty = Error::ResourceEmpty, long = Error::ResourceTooLong);
 
     /// `str`-like type which conforms to the requirements of
     /// [`ResourcePart`].
     ///
     /// See [`ResourcePart`] for details.
+    #[cfg_attr(feature = "serde", derive(Serialize))]
     pub struct ref ResourceRef(str);
 }
 
