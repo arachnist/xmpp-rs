@@ -53,7 +53,7 @@ pub struct Timeouts {
     /// Maximum silence after a soft timeout.
     ///
     /// If the stream is silent for longer than this time after a soft timeout
-    /// has been emitted, a hard [`TimedOut`][`std::io::ErrorKind::TimedOut`]
+    /// has been emitted, a hard [`TimedOut`][`io::ErrorKind::TimedOut`]
     /// I/O error is returned and the stream is to be considered dead.
     pub response_timeout: Duration,
 }

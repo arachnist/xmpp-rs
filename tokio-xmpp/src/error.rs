@@ -4,7 +4,7 @@ use hickory_resolver::{
     error::ResolveError as DnsResolveError, proto::error::ProtoError as DnsProtoError,
 };
 use sasl::client::MechanismError as SaslMechanismError;
-use std::io::Error as IoError;
+use std::io;
 
 use crate::{
     connect::ServerConnectorError, jid, minidom,
@@ -15,7 +15,7 @@ use crate::{
 #[derive(Debug)]
 pub enum Error {
     /// I/O error
-    Io(IoError),
+    Io(io::Error),
     /// Error parsing Jabber-Id
     JidParse(jid::Error),
     /// Protocol-level error
@@ -71,8 +71,8 @@ impl fmt::Display for Error {
 
 impl StdError for Error {}
 
-impl From<IoError> for Error {
-    fn from(e: IoError) -> Self {
+impl From<io::Error> for Error {
+    fn from(e: io::Error) -> Self {
         Error::Io(e)
     }
 }
