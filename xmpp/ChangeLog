@@ -16,6 +16,9 @@ XXXX-YY-ZZ [ RELEASER <admin@localhost> ]
     * Added:
       - Agent::send_room_message takes RoomMessageSettings argument (!483)
       - Agent::send_raw_message takes RawMessageSettings for any message type (!487)
+      - Event::ChatMessageCorrection, Event::RoomMessageCorrection, and
+        Event::RoomPrivateMessageCorrection signal XEP-0308 message corrections; they're
+        not checked how old the corrected entry is, which has security concerns (!496)
     * Fixes:
       - Use tokio::sync::RwLock not std::sync::RwLock (!432)
       - Agent::wait_for_events now return Vec<Event> and sets inner tokio_xmpp Client

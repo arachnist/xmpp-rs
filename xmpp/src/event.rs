@@ -26,9 +26,22 @@ pub enum Event {
     /// - The [`Body`] is the message body.
     /// - The [`StanzaTimeInfo`] about when message was received, and when the message was claimed sent.
     ChatMessage(Id, BareJid, Body, StanzaTimeInfo),
+    /// A message in a one-to-one chat was corrected/edited.
+    /// - The [`Id`] is the ID of the message that was corrected (always Some)
+    /// - The [`BareJid`] is the JID of the other participant in the chat.
+    /// - The [`Body`] is the new body of the message, to replace the old one.
+    /// - The [`StanzaTimeInfo`] is the time the message correction was sent/received
+    ChatMessageCorrection(Id, BareJid, Body, StanzaTimeInfo),
     RoomJoined(BareJid),
     RoomLeft(BareJid),
     RoomMessage(Id, BareJid, RoomNick, Body, StanzaTimeInfo),
+    /// A message in a MUC was corrected/edited.
+    /// - The [`Id`] is the ID of the message that was corrected (always Some)
+    /// - The [`BareJid`] is the JID of the room where the message was sent.
+    /// - The [`RoomNick`] is the nickname of the sender of the message.
+    /// - The [`Body`] is the new body of the message, to replace the old one.
+    /// - The [`StanzaTimeInfo`] is the time the message correction was sent/received
+    RoomMessageCorrection(Id, BareJid, RoomNick, Body, StanzaTimeInfo),
     /// The subject of a room was received.
     /// - The BareJid is the room's address.
     /// - The RoomNick is the nickname of the room member who set the subject.
@@ -37,6 +50,13 @@ pub enum Event {
     /// A private message received from a room, containing the message ID, the room's BareJid,
     /// the sender's nickname, and the message body.
     RoomPrivateMessage(Id, BareJid, RoomNick, Body, StanzaTimeInfo),
+    /// A private message in a MUC was corrected/edited.
+    /// - The [`Id`] is the ID of the message that was corrected (always Some)
+    /// - The [`BareJid`] is the JID of the room where the message was sent.
+    /// - The [`RoomNick`] is the nickname of the sender of the message.
+    /// - The [`Body`] is the new body of the message, to replace the old one.
+    /// - The [`StanzaTimeInfo`] is the time the message correction was sent/received
+    RoomPrivateMessageCorrection(Id, BareJid, RoomNick, Body, StanzaTimeInfo),
     ServiceMessage(Id, BareJid, Body, StanzaTimeInfo),
     HttpUploadedFile(String),
 }

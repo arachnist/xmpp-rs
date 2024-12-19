@@ -6,7 +6,7 @@
 
 use tokio_xmpp::{
     jid::Jid,
-    parsers::{message::Message, muc::user::MucUser},
+    parsers::{message::Message, message_correct::Replace, muc::user::MucUser},
 };
 
 use crate::{delay::StanzaTimeInfo, Agent, Event, RoomNick};
@@ -15,44 +15,56 @@ pub async fn handle_message_chat(
     agent: &mut Agent,
     events: &mut Vec<Event>,
     from: Jid,
-    message: &Message,
+    message: &mut Message,
     time_info: StanzaTimeInfo,
 ) {
     let langs: Vec<&str> = agent.lang.iter().map(String::as_str).collect();
-    if let Some((_lang, body)) = message.get_best_body(langs) {
-        let mut found_special_message = false;
 
-        for payload in &message.payloads {
-            if let Ok(_) = MucUser::try_from(payload.clone()) {
-                let event = match from.clone().try_into_full() {
-                    Err(bare) => {
-                        // TODO: Can a service message be of type Chat/Normal and not Groupchat?
-                        warn!("Received malformed MessageType::Chat in muc#user namespace from a bare JID.");
-                        Event::ServiceMessage(
-                            message.id.clone(),
-                            bare,
-                            body.clone(),
-                            time_info.clone(),
-                        )
-                    }
-                    Ok(full) => Event::RoomPrivateMessage(
-                        message.id.clone(),
-                        full.to_bare(),
-                        RoomNick::from_resource_ref(full.resource()),
-                        body.clone(),
-                        time_info.clone(),
-                    ),
-                };
+    let Some((_lang, body)) = message.get_best_body_cloned(langs) else {
+        debug!("Received normal/chat message without body:\n{:#?}", message);
+        return;
+    };
 
-                found_special_message = true;
-                events.push(event);
-            }
-        }
+    let is_muc_pm = message.extract_valid_payload::<MucUser>().is_some();
+    let correction = message.extract_valid_payload::<Replace>();
 
-        if !found_special_message {
-            let event =
-                Event::ChatMessage(message.id.clone(), from.to_bare(), body.clone(), time_info);
+    if is_muc_pm {
+        if from.resource().is_none() {
+            warn!("Received malformed MessageType::Chat in muc#user namespace from a bare JID:\n{:#?}", message);
+        } else {
+            let full_from = from.clone().try_into_full().unwrap();
+
+            let event = if let Some(correction) = correction {
+                Event::RoomPrivateMessageCorrection(
+                    Some(correction.id),
+                    full_from.to_bare(),
+                    RoomNick::from_resource_ref(full_from.resource()),
+                    body.clone(),
+                    time_info,
+                )
+            } else {
+                Event::RoomPrivateMessage(
+                    message.id.clone(),
+                    from.to_bare(),
+                    RoomNick::from_resource_ref(full_from.resource()),
+                    body.clone(),
+                    time_info,
+                )
+            };
             events.push(event);
         }
+    } else {
+        let event = if let Some(correction) = correction {
+            // TODO: Check that correction is valid (only for last N minutes or last N messages)
+            Event::ChatMessageCorrection(
+                Some(correction.id),
+                from.to_bare(),
+                body.clone(),
+                time_info,
+            )
+        } else {
+            Event::ChatMessage(message.id.clone(), from.to_bare(), body.clone(), time_info)
+        };
+        events.push(event);
     }
 }

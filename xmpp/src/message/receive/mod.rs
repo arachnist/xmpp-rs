@@ -14,7 +14,7 @@ use crate::{delay::message_time_info, pubsub, Agent, Event};
 pub mod chat;
 pub mod group_chat;
 
-pub async fn handle_message(agent: &mut Agent, message: Message) -> Vec<Event> {
+pub async fn handle_message(agent: &mut Agent, mut message: Message) -> Vec<Event> {
     let mut events = vec![];
     let from = message.from.clone().unwrap();
     let time_info = message_time_info(&message);
@@ -25,17 +25,21 @@ pub async fn handle_message(agent: &mut Agent, message: Message) -> Vec<Event> {
                 agent,
                 &mut events,
                 from.clone(),
-                &message,
+                &mut message,
                 time_info,
             )
             .await;
         }
         MessageType::Chat | MessageType::Normal => {
-            chat::handle_message_chat(agent, &mut events, from.clone(), &message, time_info).await;
+            chat::handle_message_chat(agent, &mut events, from.clone(), &mut message, time_info)
+                .await;
         }
         _ => {}
     }
 
+    // TODO: should this be here or in specific branch of messagetype?
+    // We may drop some payloads in branches before (&mut message), but
+    // that's ok because pubsub only wants the pubsub payload.
     for child in message.payloads {
         if child.is("event", ns::PUBSUB_EVENT) {
             let new_events = pubsub::handle_event(&from, child, agent).await;

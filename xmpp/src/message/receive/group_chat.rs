@@ -4,18 +4,22 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use tokio_xmpp::{jid::Jid, parsers::message::Message};
-
-use crate::{delay::StanzaTimeInfo, Agent, Event, RoomNick};
+use crate::{
+    delay::StanzaTimeInfo,
+    jid::Jid,
+    parsers::{message::Message, message_correct::Replace},
+    Agent, Event, RoomNick,
+};
 
 pub async fn handle_message_group_chat(
     agent: &mut Agent,
     events: &mut Vec<Event>,
     from: Jid,
-    message: &Message,
+    message: &mut Message,
     time_info: StanzaTimeInfo,
 ) {
     let langs: Vec<&str> = agent.lang.iter().map(String::as_str).collect();
+    let mut found_subject = false;
 
     if let Some((_lang, subject)) = message.get_best_subject(langs.clone()) {
         events.push(Event::RoomSubject(
@@ -24,19 +28,60 @@ pub async fn handle_message_group_chat(
             subject.0.clone(),
             time_info.clone(),
         ));
+        found_subject = true;
     }
 
-    if let Some((_lang, body)) = message.get_best_body(langs) {
-        let event = match from.clone().try_into_full() {
-            Ok(full) => Event::RoomMessage(
-                message.id.clone(),
+    let Some((_lang, body)) = message.get_best_body_cloned(langs) else {
+        if !found_subject {
+            debug!(
+                "Received groupchat message without body/subject:\n{:#?}",
+                message
+            );
+        }
+        return;
+    };
+
+    let correction = message.extract_payload::<Replace>().unwrap_or_else(|e| {
+        warn!("Failed to parse <replace> payload: {e}");
+        None
+    });
+
+    // Now we have a groupchat message... which can be:
+    //
+    // - a normal MUC message from a user in a room
+    // - a MUC message correction from a user in a room
+    // - a service message from a MUC channel (barejid)
+    //
+    // In theory we can have service message correction but nope nope nope
+
+    if let Some(resource) = from.resource() {
+        // User message/correction
+
+        let event = if let Some(correction) = correction {
+            Event::RoomMessageCorrection(
+                Some(correction.id),
                 from.to_bare(),
-                RoomNick::from_resource_ref(full.resource()),
+                RoomNick::from_resource_ref(resource),
                 body.clone(),
                 time_info,
-            ),
-            Err(bare) => Event::ServiceMessage(message.id.clone(), bare, body.clone(), time_info),
+            )
+        } else {
+            Event::RoomMessage(
+                message.id.clone(),
+                from.to_bare(),
+                RoomNick::from_resource_ref(resource),
+                body.clone(),
+                time_info,
+            )
         };
-        events.push(event)
+        events.push(event);
+    } else {
+        // Service message
+        if correction.is_some() {
+            warn!("Found correction in service message:\n{:#?}", message);
+        } else {
+            let event = Event::ServiceMessage(message.id.clone(), from.to_bare(), body, time_info);
+            events.push(event);
+        }
     }
 }
