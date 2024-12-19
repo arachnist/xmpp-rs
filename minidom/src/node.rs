@@ -13,7 +13,7 @@ use crate::error::Result;
 
 use rxml::writer::Item;
 
-use std::io::Write;
+use std::io;
 
 /// A node in an element tree.
 #[derive(Clone, Debug, Eq)]
@@ -158,7 +158,7 @@ impl Node {
     }
 
     #[doc(hidden)]
-    pub(crate) fn write_to_inner<W: Write>(&self, writer: &mut ItemWriter<W>) -> Result<()> {
+    pub(crate) fn write_to_inner<W: io::Write>(&self, writer: &mut ItemWriter<W>) -> Result<()> {
         match self {
             Node::Element(elmt) => elmt.write_to_inner(writer)?,
             Node::Text(s) => {

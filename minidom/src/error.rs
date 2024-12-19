@@ -24,7 +24,7 @@ pub enum Error {
     /// I/O error from accessing the source or destination.
     ///
     /// Even though the [`rxml`] crate emits its errors through
-    /// [`std::io::Error`] when using it with [`BufRead`][`std::io::BufRead`],
+    /// [`io::Error`] when using it with [`BufRead`][`io::BufRead`],
     /// any rxml errors will still be reported through the
     /// [`XmlError`][`Self::XmlError`] variant.
     Io(io::Error),

@@ -27,12 +27,12 @@ use alloc::{
 use core::slice;
 use core::str::FromStr;
 
-use std::io::{self, BufRead, Write};
+use std::io;
 
 use rxml::writer::{Encoder, Item, TrackNamespace};
 use rxml::{Namespace as RxmlNamespace, RawReader, XmlVersion};
 
-fn encode_and_write<W: Write, T: rxml::writer::TrackNamespace>(
+fn encode_and_write<W: io::Write, T: rxml::writer::TrackNamespace>(
     item: Item<'_>,
     enc: &mut Encoder<T>,
     mut w: W,
@@ -44,14 +44,14 @@ fn encode_and_write<W: Write, T: rxml::writer::TrackNamespace>(
     Ok(())
 }
 
-/// Wrapper around a [`std::io::Write`] and an [`rxml::writer::Encoder`], to
+/// Wrapper around a [`io::Write`] and an [`rxml::writer::Encoder`], to
 /// provide a simple function to write an rxml Item to a writer.
 pub struct CustomItemWriter<W, T> {
     writer: W,
     encoder: Encoder<T>,
 }
 
-impl<W: Write> CustomItemWriter<W, rxml::writer::SimpleNamespaces> {
+impl<W: io::Write> CustomItemWriter<W, rxml::writer::SimpleNamespaces> {
     pub(crate) fn new(writer: W) -> Self {
         Self {
             writer,
@@ -60,7 +60,7 @@ impl<W: Write> CustomItemWriter<W, rxml::writer::SimpleNamespaces> {
     }
 }
 
-impl<W: Write, T: rxml::writer::TrackNamespace> CustomItemWriter<W, T> {
+impl<W: io::Write, T: rxml::writer::TrackNamespace> CustomItemWriter<W, T> {
     pub(crate) fn write(&mut self, item: Item<'_>) -> io::Result<()> {
         encode_and_write(item, &mut self.encoder, &mut self.writer)
     }
@@ -333,8 +333,8 @@ impl Element {
         namespace.into().compare(self.namespace.as_ref())
     }
 
-    /// Parse a document from a `BufRead`.
-    pub fn from_reader<R: BufRead>(reader: R) -> Result<Element> {
+    /// Parse a document from a `io::BufRead`.
+    pub fn from_reader<R: io::BufRead>(reader: R) -> Result<Element> {
         let mut tree_builder = TreeBuilder::new();
         let mut driver = RawReader::new(reader);
         while let Some(event) = driver.read()? {
@@ -347,10 +347,10 @@ impl Element {
         Err(Error::EndOfDocument)
     }
 
-    /// Parse a document from a `BufRead`, allowing Prefixes to be specified. Useful to provide
+    /// Parse a document from a `io::BufRead`, allowing Prefixes to be specified. Useful to provide
     /// knowledge of namespaces that would have been declared on parent elements not present in the
     /// reader.
-    pub fn from_reader_with_prefixes<R: BufRead, P: Into<Prefixes>>(
+    pub fn from_reader_with_prefixes<R: io::BufRead, P: Into<Prefixes>>(
         reader: R,
         prefixes: P,
     ) -> Result<Element> {
@@ -366,23 +366,23 @@ impl Element {
         Err(Error::EndOfDocument)
     }
 
-    /// Output a document to a `Writer`.
-    pub fn write_to<W: Write>(&self, writer: &mut W) -> Result<()> {
+    /// Output a document to a `io::Writer`.
+    pub fn write_to<W: io::Write>(&self, writer: &mut W) -> Result<()> {
         self.to_writer(&mut ItemWriter::new(writer))
     }
 
-    /// Output a document to a `Writer`.
-    pub fn write_to_decl<W: Write>(&self, writer: &mut W) -> Result<()> {
+    /// Output a document to a `io::Writer`.
+    pub fn write_to_decl<W: io::Write>(&self, writer: &mut W) -> Result<()> {
         self.to_writer_decl(&mut ItemWriter::new(writer))
     }
 
     /// Output the document to an `ItemWriter`
-    pub fn to_writer<W: Write>(&self, writer: &mut ItemWriter<W>) -> Result<()> {
+    pub fn to_writer<W: io::Write>(&self, writer: &mut ItemWriter<W>) -> Result<()> {
         self.write_to_inner(writer)
     }
 
     /// Output the document to an `ItemWriter`
-    pub fn to_writer_decl<W: Write>(&self, writer: &mut ItemWriter<W>) -> Result<()> {
+    pub fn to_writer_decl<W: io::Write>(&self, writer: &mut ItemWriter<W>) -> Result<()> {
         writer
             .write(Item::XmlDeclaration(XmlVersion::V1_0))
             .unwrap(); // TODO: error return
@@ -390,7 +390,7 @@ impl Element {
     }
 
     /// Like `write_to()` but without the `<?xml?>` prelude
-    pub fn write_to_inner<W: Write>(&self, writer: &mut ItemWriter<W>) -> Result<()> {
+    pub fn write_to_inner<W: io::Write>(&self, writer: &mut ItemWriter<W>) -> Result<()> {
         for (prefix, namespace) in self.prefixes.declared_prefixes() {
             assert!(writer.encoder.ns_tracker_mut().declare_fixed(
                 prefix.as_ref().map(|x| (&**x).try_into()).transpose()?,
