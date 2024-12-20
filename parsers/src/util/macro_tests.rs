@@ -1669,6 +1669,48 @@ fn element_catch_one_negative_more_than_one_child() {
 
 #[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = NS1, name = "parent")]
+struct ElementCatchMaybeOne {
+    #[xml(element(default))]
+    maybe_child: core::option::Option<::minidom::Element>,
+}
+
+#[test]
+fn element_catch_maybe_one_roundtrip_none() {
+    #[allow(unused_imports)]
+    use core::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<ElementCatchMaybeOne>("<parent xmlns='urn:example:ns1'/>")
+}
+
+#[test]
+fn element_catch_maybe_one_roundtrip_some() {
+    #[allow(unused_imports)]
+    use core::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<ElementCatchMaybeOne>(
+        "<parent xmlns='urn:example:ns1'><child><deeper/></child></parent>",
+    )
+}
+
+#[test]
+fn element_catch_maybe_one_negative_more_than_one_child() {
+    #[allow(unused_imports)]
+    use core::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    match parse_str::<ElementCatchMaybeOne>("<parent xmlns='urn:example:ns1'><child><deeper/></child><child xmlns='urn:example:ns2'/></parent>") {
+        Err(::xso::error::FromElementError::Invalid(::xso::error::Error::Other(e))) if e == "Unknown child in ElementCatchMaybeOne element." => (),
+        other => panic!("unexpected result: {:?}", other),
+    }
+}
+
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = NS1, name = "parent")]
 struct ElementCatchChildAndOne {
     #[xml(child)]
     child: Empty,
@@ -1686,6 +1728,28 @@ fn element_catch_child_and_one_roundtrip() {
     };
     roundtrip_full::<ElementCatchChildAndOne>(
         "<parent xmlns='urn:example:ns1'><foo/><element/></parent>",
+    )
+}
+
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = NS1, name = "parent")]
+struct ElementCatchChildAndMaybeOne {
+    #[xml(child)]
+    child: Empty,
+
+    #[xml(element(default))]
+    element: ::core::option::Option<::minidom::Element>,
+}
+
+#[test]
+fn element_catch_child_and_maybe_one_roundtrip() {
+    #[allow(unused_imports)]
+    use core::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<ElementCatchChildAndMaybeOne>(
+        "<parent xmlns='urn:example:ns1'><foo/></parent>",
     )
 }
 

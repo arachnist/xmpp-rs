@@ -14,7 +14,7 @@ use quote::quote;
 use syn::*;
 
 use crate::error_message::{self, ParentRef};
-use crate::meta::AmountConstraint;
+use crate::meta::{AmountConstraint, Flag};
 use crate::scope::{AsItemsScope, FromEventsScope};
 use crate::types::{
     as_xml_iter_fn, default_fn, element_ty, from_events_fn, from_xml_builder_ty,
@@ -25,6 +25,10 @@ use crate::types::{
 use super::{Field, FieldBuilderPart, FieldIteratorPart, FieldTempInit, NestedMatcher};
 
 pub(super) struct ElementField {
+    /// Flag indicating whether the value should be defaulted if the
+    /// child is absent.
+    pub(super) default_: Flag,
+
     /// Number of child elements allowed.
     pub(super) amount: AmountConstraint,
 }
@@ -58,8 +62,13 @@ impl Field for ElementField {
         match self.amount {
             AmountConstraint::FixedSingle(_) => {
                 let missing_msg = error_message::on_missing_child(container_name, member);
-                let on_absent = quote! {
-                    return ::core::result::Result::Err(::xso::error::Error::Other(#missing_msg).into())
+                let on_absent = match self.default_ {
+                    Flag::Absent => quote! {
+                        return ::core::result::Result::Err(::xso::error::Error::Other(#missing_msg).into())
+                    },
+                    Flag::Present(_) => {
+                        quote! { #default_fn() }
+                    }
                 };
                 Ok(FieldBuilderPart::Nested {
                     extra_defs,

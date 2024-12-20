@@ -22,7 +22,8 @@ Version NEXT:
         structs.
       - Support for collecting all unknown children in a single field as
         collection of `minidom::Element`, or one unknown child as a
-        `minidom::Element`.
+        `minidom::Element`, or zero or one unknown children as an
+        `Option<minidom::Element>`.
       - Support for "transparent" structs (newtype-like patterns for XSO).
       - FromXmlText and AsXmlText are now implemented for jid::NodePart,
         jid::DomainPart, and jid::ResourcePart (!485)

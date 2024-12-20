@@ -755,6 +755,9 @@ pub(crate) enum XmlFieldMeta {
         /// This is useful for error messages.
         span: Span,
 
+        /// The `default` flag.
+        default_: Flag,
+
         /// The `n` flag.
         amount: Option<AmountConstraint>,
     },
@@ -1035,9 +1038,16 @@ impl XmlFieldMeta {
     /// Parse a `#[xml(element)]` meta.
     fn element_from_meta(meta: ParseNestedMeta<'_>) -> Result<Self> {
         let mut amount = None;
+        let mut default_ = Flag::Absent;
         if meta.input.peek(syn::token::Paren) {
             meta.parse_nested_meta(|meta| {
-                if meta.path.is_ident("n") {
+                if meta.path.is_ident("default") {
+                    if default_.is_set() {
+                        return Err(Error::new_spanned(meta.path, "duplicate `default` key"));
+                    }
+                    default_ = (&meta.path).into();
+                    Ok(())
+                } else if meta.path.is_ident("n") {
                     if amount.is_some() {
                         return Err(Error::new_spanned(meta.path, "duplicate `n` key"));
                     }
@@ -1050,6 +1060,7 @@ impl XmlFieldMeta {
         }
         Ok(Self::Element {
             span: meta.path.span(),
+            default_,
             amount,
         })
     }

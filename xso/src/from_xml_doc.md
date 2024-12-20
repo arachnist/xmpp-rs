@@ -433,6 +433,7 @@ The following keys can be used inside the `#[xml(extract(..))]` meta:
 
 | Key | Value type | Description |
 | --- | --- | --- |
+| `default` | flag | If present, an absent child will substitute the default value instead of raising an error. |
 | `n` | `1` or `..` | If `1`, a single element is parsed. If `..`, a collection is parsed. Defaults to `1`. |
 
 When parsing a single child element (i.e. `n = 1` or no `n` value set at all),
@@ -445,6 +446,16 @@ addition, the field's type must implement
 [`Extend<minidom::Element>`][`core::iter::Extend`] to derive `FromXml` and the
 field's reference type must implement
 `IntoIterator<Item = &'_ minidom::Element>` to derive `AsXml`.
+
+If `default` is specified and the child is absent in the source, the value
+is generated using [`core::default::Default`]. `default` has no influence on
+`AsXml`. Combining `default` and `n` where `n` is not set to `1` is not
+supported and will cause a compile-time error.
+
+Using `default` with a type other than `Option<T>` will cause the
+serialisation to mismatch the deserialisation (i.e. the struct is then not
+roundtrip-safe), because the deserialisation does not compare the value
+against `default` (but has special provisions to work with `Option<T>`).
 
 Fields with the `element` meta are deserialised with the lowest priority.
 While other fields are processed in the order they are declared, `element`

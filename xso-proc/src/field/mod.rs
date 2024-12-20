@@ -406,7 +406,12 @@ fn new_field(
         }
 
         #[cfg(feature = "minidom")]
-        XmlFieldMeta::Element { span, amount } => Ok(Box::new(ElementField {
+        XmlFieldMeta::Element {
+            span,
+            default_,
+            amount,
+        } => Ok(Box::new(ElementField {
+            default_,
             amount: amount.unwrap_or(AmountConstraint::FixedSingle(span)),
         })),
 
