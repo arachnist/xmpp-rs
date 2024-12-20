@@ -7,12 +7,6 @@
 use xso::{AsXml, FromXml};
 
 use crate::ns;
-use minidom::Element;
-use xso::{
-    error::{Error, FromElementError, FromEventsError},
-    exports::rxml,
-    minidom_compat
-};
 
 /// Requests paging through a potentially big set of items (represented by an
 /// UID).
@@ -38,105 +32,42 @@ pub struct SetQuery {
     pub index: Option<usize>,
 }
 
-/// Describes the paging result of a [query](struct.SetQuery.html).
-#[derive(Debug, Clone, PartialEq)]
-pub struct SetResult {
-    /// The UID of the first item of the page.
-    pub first: Option<String>,
-
-    /// The position of the [first item](#structfield.first) in the full set
+/// The first item of the page.
+#[derive(FromXml, AsXml, Debug, Clone, PartialEq)]
+#[xml(namespace = ns::RSM, name = "first")]
+pub struct First {
+    /// The position of the [first item](#structfield.item) in the full set
     /// (which may be approximate).
-    pub first_index: Option<usize>,
+    #[xml(attribute(default))]
+    pub index: Option<usize>,
+
+    /// The UID of the first item of the page.
+    #[xml(text)]
+    pub item: String,
+}
+
+/// Describes the paging result of a [query](struct.SetQuery.html).
+#[derive(FromXml, AsXml, Debug, Clone, PartialEq)]
+#[xml(namespace = ns::RSM, name = "set")]
+pub struct SetResult {
+    /// The first item of the page.
+    #[xml(child(default))]
+    pub first: Option<First>,
 
     /// The UID of the last item of the page.
+    #[xml(extract(default, fields(text(type_ = String))))]
     pub last: Option<String>,
 
     /// How many items there are in the full set (which may be approximate).
+    #[xml(extract(default, fields(text(type_ = usize))))]
     pub count: Option<usize>,
-}
-
-impl TryFrom<Element> for SetResult {
-    type Error = FromElementError;
-
-    fn try_from(elem: Element) -> Result<SetResult, FromElementError> {
-        check_self!(elem, "set", RSM, "RSM set");
-        let mut set = SetResult {
-            first: None,
-            first_index: None,
-            last: None,
-            count: None,
-        };
-        for child in elem.children() {
-            if child.is("first", ns::RSM) {
-                if set.first.is_some() {
-                    return Err(Error::Other("Set can’t have more than one first.").into());
-                }
-                set.first_index = get_attr!(child, "index", Option);
-                set.first = Some(child.text());
-            } else if child.is("last", ns::RSM) {
-                if set.last.is_some() {
-                    return Err(Error::Other("Set can’t have more than one last.").into());
-                }
-                set.last = Some(child.text());
-            } else if child.is("count", ns::RSM) {
-                if set.count.is_some() {
-                    return Err(Error::Other("Set can’t have more than one count.").into());
-                }
-                set.count = Some(child.text().parse().map_err(Error::text_parse_error)?);
-            } else {
-                return Err(Error::Other("Unknown child in set element.").into());
-            }
-        }
-        Ok(set)
-    }
-}
-
-impl FromXml for SetResult {
-    type Builder = minidom_compat::FromEventsViaElement<SetResult>;
-
-    fn from_events(
-        qname: rxml::QName,
-        attrs: rxml::AttrMap,
-    ) -> Result<Self::Builder, FromEventsError> {
-        if qname.0 != crate::ns::RSM || qname.1 != "set" {
-            return Err(FromEventsError::Mismatch { name: qname, attrs });
-        }
-        Self::Builder::new(qname, attrs)
-    }
-}
-
-impl From<SetResult> for Element {
-    fn from(set: SetResult) -> Element {
-        let first = set.first.clone().map(|first| {
-            Element::builder("first", ns::RSM)
-                .attr("index", set.first_index)
-                .append(first)
-        });
-        Element::builder("set", ns::RSM)
-            .append_all(first)
-            .append_all(
-                set.last
-                    .map(|last| Element::builder("last", ns::RSM).append(last)),
-            )
-            .append_all(
-                set.count
-                    .map(|count| Element::builder("count", ns::RSM).append(format!("{}", count))),
-            )
-            .build()
-    }
-}
-
-impl AsXml for SetResult {
-    type ItemIter<'x> = minidom_compat::AsItemsViaElement<'x>;
-
-    fn as_xml_iter(&self) -> Result<Self::ItemIter<'_>, Error> {
-        minidom_compat::AsItemsViaElement::new(self.clone())
-    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use minidom::Element;
+    use xso::error::{Error, FromElementError};
 
     #[cfg(target_pointer_width = "32")]
     #[test]
@@ -218,7 +149,7 @@ mod tests {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Unknown child in set element.");
+        assert_eq!(message, "Unknown child in SetResult element.");
     }
 
     #[test]
@@ -240,7 +171,6 @@ mod tests {
             .unwrap();
         let rsm = SetResult {
             first: None,
-            first_index: None,
             last: None,
             count: None,
         };
@@ -274,12 +204,15 @@ mod tests {
                 .unwrap();
         let elem1 = elem.clone();
         let set = SetResult::try_from(elem).unwrap();
-        assert_eq!(set.first, Some(String::from("coucou")));
-        assert_eq!(set.first_index, Some(4));
+        let first = set.first.unwrap();
+        assert_eq!(first.item, "coucou");
+        assert_eq!(first.index, Some(4));
 
         let set2 = SetResult {
-            first: Some(String::from("coucou")),
-            first_index: Some(4),
+            first: Some(First {
+                item: String::from("coucou"),
+                index: Some(4),
+            }),
             last: None,
             count: None,
         };
