@@ -152,6 +152,12 @@ fn as_xml_impl(input: Item) -> Result<TokenStream> {
     result.extend(quote! {
         impl ::core::convert::From<#ident> for ::xso::exports::minidom::Element {
             fn from(other: #ident) -> Self {
+                ::xso::transform(&other).expect("seamless conversion into minidom::Element")
+            }
+        }
+
+        impl ::core::convert::From<&#ident> for ::xso::exports::minidom::Element {
+            fn from(other: &#ident) -> Self {
                 ::xso::transform(other).expect("seamless conversion into minidom::Element")
             }
         }
@@ -163,6 +169,13 @@ fn as_xml_impl(input: Item) -> Result<TokenStream> {
             type Error = ::xso::error::Error;
 
             fn try_from(other: #ident) -> ::core::result::Result<Self, Self::Error> {
+                ::xso::transform(&other)
+            }
+        }
+        impl ::core::convert::TryFrom<&#ident> for ::xso::exports::minidom::Element {
+            type Error = ::xso::error::Error;
+
+            fn try_from(other: &#ident) -> ::core::result::Result<Self, Self::Error> {
                 ::xso::transform(other)
             }
         }

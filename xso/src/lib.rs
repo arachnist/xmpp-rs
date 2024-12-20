@@ -381,7 +381,7 @@ impl UnknownChildPolicy {
 
 /// Attempt to transform a type implementing [`AsXml`] into another
 /// type which implements [`FromXml`].
-pub fn transform<T: FromXml, F: AsXml>(from: F) -> Result<T, self::error::Error> {
+pub fn transform<T: FromXml, F: AsXml>(from: &F) -> Result<T, self::error::Error> {
     let mut iter = self::rxml_util::ItemToEvent::new(from.as_xml_iter()?);
     let (qname, attrs) = match iter.next() {
         Some(Ok(rxml::Event::StartElement(_, qname, attrs))) => (qname, attrs),

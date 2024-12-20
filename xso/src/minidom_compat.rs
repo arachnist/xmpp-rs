@@ -475,7 +475,7 @@ mod tests {
     #[test]
     fn transform_element_is_equivalent() {
         let el: Element = "<foo xmlns='urn:a' a='b' c='d'><child a='x'/><child a='y'>some text</child><child xmlns='urn:b'><nested-child/></child></foo>".parse().unwrap();
-        let transformed: Element = crate::transform(el.clone()).unwrap();
+        let transformed: Element = crate::transform(&el).unwrap();
         assert_eq!(el, transformed);
     }
 }

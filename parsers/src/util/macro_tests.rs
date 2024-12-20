@@ -29,8 +29,7 @@ mod helpers {
             Ok(v) => v,
             Err(e) => panic!("failed to parse from {:?}: {}", s, e),
         };
-        let recovered =
-            transform(structural.clone()).expect("roundtrip did not produce an element");
+        let recovered = transform(&structural).expect("roundtrip did not produce an element");
         assert_eq!(initial, recovered);
         let structural2: T = match try_from_element(recovered) {
             Ok(v) => v,
