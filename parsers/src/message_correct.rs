@@ -6,7 +6,7 @@
 
 use xso::{AsXml, FromXml};
 
-use crate::message::MessagePayload;
+use crate::message::{Id, MessagePayload};
 use crate::ns;
 
 /// Defines that the message containing this payload should replace a
@@ -16,7 +16,7 @@ use crate::ns;
 pub struct Replace {
     /// The 'id' attribute of the message getting corrected.
     #[xml(attribute)]
-    pub id: String,
+    pub id: Id,
 }
 
 impl MessagePayload for Replace {}
@@ -98,7 +98,7 @@ mod tests {
             .parse()
             .unwrap();
         let replace = Replace {
-            id: String::from("coucou"),
+            id: Id(String::from("coucou")),
         };
         let elem2 = replace.into();
         assert_eq!(elem, elem2);

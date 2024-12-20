@@ -59,7 +59,7 @@ pub async fn handle_message_group_chat(
 
         let event = if let Some(correction) = correction {
             Event::RoomMessageCorrection(
-                Some(correction.id),
+                correction.id,
                 from.to_bare(),
                 RoomNick::from_resource_ref(resource),
                 body.clone(),

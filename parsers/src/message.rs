@@ -36,6 +36,14 @@ generate_attribute!(
 
 type Lang = String;
 
+generate_id!(
+    /// Id field in a [`Message`], if any.
+    ///
+    /// This field is not mandatory on incoming messages, but may be useful for moderation/correction,
+    /// especially for outgoing messages.
+    Id
+);
+
 generate_elem_id!(
     /// Represents one `<body/>` element, that is the free form text content of
     /// a message.
@@ -70,7 +78,7 @@ pub struct Message {
 
     /// The @id attribute of this stanza, which is required in order to match a
     /// request with its response.
-    pub id: Option<String>,
+    pub id: Option<Id>,
 
     /// The type of this message.
     pub type_: MessageType,

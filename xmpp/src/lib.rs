@@ -19,6 +19,7 @@ extern crate log;
 
 use core::fmt;
 use jid::{ResourcePart, ResourceRef};
+use parsers::message::Id as MessageId;
 
 pub mod agent;
 pub mod builder;
@@ -40,7 +41,6 @@ pub use event::Event;
 pub use feature::ClientFeature;
 
 pub type Error = tokio_xmpp::Error;
-pub type Id = Option<String>;
 
 /// Nickname for a person in a chatroom.
 ///

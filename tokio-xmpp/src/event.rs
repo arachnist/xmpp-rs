@@ -5,7 +5,12 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 use rand::{thread_rng, Rng};
-use xmpp_parsers::{iq::Iq, jid::Jid, message::Message, presence::Presence};
+use xmpp_parsers::{
+    iq::Iq,
+    jid::Jid,
+    message::{Id, Message},
+    presence::Presence,
+};
 use xso::{AsXml, FromXml};
 
 use crate::xmlstream::XmppStreamElement;
@@ -43,7 +48,7 @@ impl Stanza {
                 }
                 &iq.id
             }
-            Self::Message(message) => message.id.get_or_insert_with(make_id),
+            Self::Message(message) => message.id.get_or_insert_with(|| Id(make_id())).0.as_ref(),
             Self::Presence(presence) => presence.id.get_or_insert_with(make_id),
         }
     }

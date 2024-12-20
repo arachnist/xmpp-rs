@@ -36,7 +36,7 @@ pub async fn handle_message_chat(
 
             let event = if let Some(correction) = correction {
                 Event::RoomPrivateMessageCorrection(
-                    Some(correction.id),
+                    correction.id,
                     full_from.to_bare(),
                     RoomNick::from_resource_ref(full_from.resource()),
                     body.clone(),
@@ -56,14 +56,9 @@ pub async fn handle_message_chat(
     } else {
         let event = if let Some(correction) = correction {
             // TODO: Check that correction is valid (only for last N minutes or last N messages)
-            Event::ChatMessageCorrection(
-                Some(correction.id),
-                from.to_bare(),
-                body.clone(),
-                time_info,
-            )
+            Event::ChatMessageCorrection(correction.id, from.to_bare(), body.clone(), time_info)
         } else {
-            Event::ChatMessage(message.id.clone(), from.to_bare(), body.clone(), time_info)
+            Event::ChatMessage(message.id.clone(), from.to_bare(), body, time_info)
         };
         events.push(event);
     }
