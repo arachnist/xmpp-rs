@@ -14,7 +14,7 @@ use crate::data_forms::DataForm;
 use crate::iq::{IqGetPayload, IqResultPayload, IqSetPayload};
 use crate::ns;
 use crate::pubsub::{
-    AffiliationAttribute, Item as PubSubItem, NodeName, Subscription, SubscriptionId,
+    AffiliationAttribute, ItemId, NodeName, PubSubPayload, Subscription, SubscriptionId,
 };
 use jid::Jid;
 use minidom::Element;
@@ -111,11 +111,37 @@ impl Items {
     }
 }
 
-/// Response wrapper for a PubSub `<item/>`.
-#[derive(Debug, Clone, PartialEq)]
-pub struct Item(pub PubSubItem);
+/// A requested item from a PubSub node.
+#[derive(FromXml, AsXml, Debug, Clone, PartialEq)]
+#[xml(namespace = ns::PUBSUB, name = "item")]
+pub struct Item {
+    /// The identifier for this item, unique per node.
+    #[xml(attribute(default))]
+    pub id: Option<ItemId>,
 
-impl_pubsub_item!(Item, PUBSUB);
+    /// The JID of the entity who published this item.
+    #[xml(attribute(default))]
+    pub publisher: Option<Jid>,
+
+    /// The payload of this item, in an arbitrary namespace.
+    #[xml(element(default))]
+    pub payload: Option<Element>,
+}
+
+impl Item {
+    /// Create a new item, accepting only payloads implementing `PubSubPayload`.
+    pub fn new<P: PubSubPayload>(
+        id: Option<ItemId>,
+        publisher: Option<Jid>,
+        payload: Option<P>,
+    ) -> Item {
+        Item {
+            id,
+            publisher,
+            payload: payload.map(Into::into),
+        }
+    }
+}
 
 /// The options associated to a subscription request.
 #[derive(FromXml, AsXml, Debug, PartialEq, Clone)]

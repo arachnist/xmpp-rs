@@ -36,6 +36,7 @@ XXXX-YY-ZZ RELEASER <admin@example.com>
         fast::Tls0Rtt, legacy_omemo::IsPreKey, mam::Complete, sm::ResumeAttr (!476)
       - bookmarks::Conference and bookmarks2::Conference use ResourcePart to store
         the optional nickname instead of a String (!485)
+      - pubsub Item and pubsub#event Item are now distinct structs (!503)
       - message::Message id field is now Option<message::Id> instead of
         Option<String> (!504)
       - message_correction::Replace id field is now Id instead of String (!504)

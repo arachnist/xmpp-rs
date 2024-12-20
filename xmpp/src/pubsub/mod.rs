@@ -123,7 +123,6 @@ pub(crate) async fn handle_iq_result(
                 let mut new_room_list: Vec<BareJid> = Vec::new();
 
                 for item in items.items {
-                    let item = item.0;
                     let jid = BareJid::from_str(&item.id.clone().unwrap().0).unwrap();
                     let payload = item.payload.clone().unwrap();
                     match bookmarks2::Conference::try_from(payload) {

@@ -4,20 +4,33 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use xso::{AsXml, FromXml};
+
 use crate::data_forms::DataForm;
 use crate::date::DateTime;
 use crate::message::MessagePayload;
 use crate::ns;
-use crate::pubsub::{Item as PubSubItem, ItemId, NodeName, Subscription, SubscriptionId};
+use crate::pubsub::{ItemId, NodeName, Subscription, SubscriptionId};
 use jid::Jid;
 use minidom::Element;
 use xso::error::{Error, FromElementError};
 
-/// Event wrapper for a PubSub `<item/>`.
-#[derive(Debug, Clone, PartialEq)]
-pub struct Item(pub PubSubItem);
+/// An event item from a PubSub node.
+#[derive(FromXml, AsXml, Debug, Clone, PartialEq)]
+#[xml(namespace = ns::PUBSUB_EVENT, name = "item")]
+pub struct Item {
+    /// The identifier for this item, unique per node.
+    #[xml(attribute(default))]
+    pub id: Option<ItemId>,
 
-impl_pubsub_item!(Item, PUBSUB_EVENT);
+    /// The JID of the entity who published this item.
+    #[xml(attribute(default))]
+    pub publisher: Option<Jid>,
+
+    /// The payload of this item, in an arbitrary namespace.
+    #[xml(element(default))]
+    pub payload: Option<Element>,
+}
 
 /// Represents an event happening to a PubSub node.
 #[derive(Debug, Clone, PartialEq)]

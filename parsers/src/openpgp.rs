@@ -64,8 +64,8 @@ mod tests {
     use super::*;
     use crate::ns;
     use crate::pubsub::{
-        pubsub::{Item as PubSubItem, Publish},
-        Item, NodeName,
+        pubsub::{Item, Publish},
+        NodeName,
     };
     use core::str::FromStr;
     use minidom::Element;
@@ -82,7 +82,7 @@ mod tests {
 
         let pubsub = Publish {
             node: NodeName(format!("{}:{}", ns::OX_PUBKEYS, "some-fingerprint")),
-            items: vec![PubSubItem(Item::new(None, None, Some(pubkey)))],
+            items: vec![Item::new(None, None, Some(pubkey))],
         };
         println!("Foo2: {:?}", pubsub);
     }
@@ -99,7 +99,7 @@ mod tests {
 
         let pubsub = Publish {
             node: NodeName("foo".to_owned()),
-            items: vec![PubSubItem(Item::new(None, None, Some(pubkeymeta)))],
+            items: vec![Item::new(None, None, Some(pubkeymeta))],
         };
         println!("Foo2: {:?}", pubsub);
     }

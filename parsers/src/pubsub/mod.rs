@@ -18,7 +18,6 @@ pub use self::event::PubSubEvent;
 pub use self::owner::PubSubOwner;
 pub use self::pubsub::PubSub;
 
-use jid::Jid;
 use minidom::Element;
 
 generate_id!(
@@ -76,34 +75,6 @@ generate_attribute!(
         PublishOnly => "publish-only",
     }
 );
-
-/// An item from a PubSub node.
-#[derive(Debug, Clone, PartialEq)]
-pub struct Item {
-    /// The identifier for this item, unique per node.
-    pub id: Option<ItemId>,
-
-    /// The JID of the entity who published this item.
-    pub publisher: Option<Jid>,
-
-    /// The payload of this item, in an arbitrary namespace.
-    pub payload: Option<Element>,
-}
-
-impl Item {
-    /// Create a new item, accepting only payloads implementing `PubSubPayload`.
-    pub fn new<P: PubSubPayload>(
-        id: Option<ItemId>,
-        publisher: Option<Jid>,
-        payload: Option<P>,
-    ) -> Item {
-        Item {
-            id,
-            publisher,
-            payload: payload.map(Into::into),
-        }
-    }
-}
 
 /// This trait should be implemented on any element which can be included as a PubSub payload.
 pub trait PubSubPayload: TryFrom<Element> + Into<Element> {}
