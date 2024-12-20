@@ -448,7 +448,11 @@ mod tests {
     }
 
     #[test]
-    fn test_fails_with_invalid_children() -> Result<(), Error> {
+    #[cfg_attr(
+        feature = "disable-validation",
+        should_panic = "Validate::try_from(element).is_err()"
+    )]
+    fn test_fails_with_invalid_children() {
         let cases = [
             r#"<validate xmlns='http://jabber.org/protocol/xdata-validate'><basic /><open /></validate>"#,
             r#"<validate xmlns='http://jabber.org/protocol/xdata-validate'><unknown /></validate>"#,
@@ -460,7 +464,5 @@ mod tests {
                 .expect(&format!("Failed to parse {}", case));
             assert!(Validate::try_from(element).is_err());
         }
-
-        Ok(())
     }
 }

@@ -219,6 +219,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(feature = "disable-validation", should_panic = "Result::unwrap_err")]
     fn test_invalid_child() {
         let elem: Element = "<c xmlns='urn:xmpp:caps'><hash xmlns='urn:xmpp:hashes:2' algo='sha-256'>K1Njy3HZBThlo4moOD5gBGhn0U0oK7/CbfLlIUDi6o4=</hash><hash xmlns='urn:xmpp:hashes:1' algo='sha3-256'>+sDTQqBmX6iG/X3zjt06fjZMBBqL/723knFIyRf0sg8=</hash></c>".parse().unwrap();
         let error = ECaps2::try_from(elem).unwrap_err();

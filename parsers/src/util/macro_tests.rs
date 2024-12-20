@@ -121,6 +121,10 @@ fn empty_namespace_mismatch() {
 }
 
 #[test]
+#[cfg_attr(
+    feature = "disable-validation",
+    should_panic = "unexpected result: Ok("
+)]
 fn empty_unexpected_attribute() {
     #[allow(unused_imports)]
     use core::{
@@ -136,6 +140,10 @@ fn empty_unexpected_attribute() {
 }
 
 #[test]
+#[cfg_attr(
+    feature = "disable-validation",
+    should_panic = "unexpected result: Ok("
+)]
 fn empty_unexpected_child() {
     #[allow(unused_imports)]
     use core::{
@@ -869,6 +877,10 @@ fn text_extract_negative_absent_child() {
 }
 
 #[test]
+#[cfg_attr(
+    feature = "disable-validation",
+    should_panic = "unexpected result: Ok("
+)]
 fn text_extract_negative_unexpected_attribute_in_child() {
     #[allow(unused_imports)]
     use core::{
@@ -886,6 +898,10 @@ fn text_extract_negative_unexpected_attribute_in_child() {
 }
 
 #[test]
+#[cfg_attr(
+    feature = "disable-validation",
+    should_panic = "unexpected result: Ok("
+)]
 fn text_extract_negative_unexpected_child_in_child() {
     #[allow(unused_imports)]
     use core::{
@@ -1807,6 +1823,10 @@ fn ignore_unknown_attributes_positive() {
 }
 
 #[test]
+#[cfg_attr(
+    feature = "disable-validation",
+    should_panic = "unexpected result: Ok("
+)]
 fn ignore_unknown_attributes_negative_unexpected_child() {
     #[allow(unused_imports)]
     use core::{
@@ -1849,6 +1869,10 @@ fn ignore_unknown_children_positive() {
 }
 
 #[test]
+#[cfg_attr(
+    feature = "disable-validation",
+    should_panic = "unexpected result: Ok("
+)]
 fn ignore_unknown_children_negative_unexpected_attribute() {
     #[allow(unused_imports)]
     use core::{

@@ -194,6 +194,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(feature = "disable-validation", should_panic = "Result::unwrap_err")]
     fn unknown_child() {
         let elem: Element = "<data xmlns='urn:xmpp:bob' cid='sha1+8f35fef110ffc5df08d579a50083ff9308fb6242@bob.xmpp.org'><coucou/></data>"
             .parse()

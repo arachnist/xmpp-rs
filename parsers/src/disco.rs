@@ -258,6 +258,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(feature = "disable-validation", should_panic = "Result::unwrap_err")]
     fn test_invalid() {
         let elem: Element =
             "<query xmlns='http://jabber.org/protocol/disco#info'><coucou/></query>"

@@ -81,6 +81,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(feature = "disable-validation", should_panic = "Result::unwrap_err")]
     fn test_invalid_child() {
         let elem: Element =
             "<delay xmlns='urn:xmpp:delay' stamp='2002-09-10T23:08:25+00:00'><coucou/></delay>"

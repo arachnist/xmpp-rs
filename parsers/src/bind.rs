@@ -77,6 +77,7 @@ impl From<BindResponse> for Jid {
 mod tests {
     use super::*;
     use minidom::Element;
+    #[cfg(not(feature = "disable-validation"))]
     use xso::error::{Error, FromElementError};
 
     #[cfg(target_pointer_width = "32")]

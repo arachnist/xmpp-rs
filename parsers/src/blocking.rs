@@ -62,6 +62,7 @@ pub struct Blocked;
 
 #[cfg(test)]
 mod tests {
+    #[cfg(not(feature = "disable-validation"))]
     use xso::error::{Error, FromElementError};
 
     use super::*;

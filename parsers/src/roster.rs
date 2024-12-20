@@ -289,7 +289,7 @@ mod tests {
     }
 
     #[test]
-    fn test_invalid_item() {
+    fn test_item_missing_jid() {
         let elem: Element = "<query xmlns='jabber:iq:roster'><item/></query>"
             .parse()
             .unwrap();
@@ -302,7 +302,10 @@ mod tests {
             message,
             "Required attribute field 'jid' on Item element missing."
         );
+    }
 
+    #[test]
+    fn test_item_invalid_jid() {
         let elem: Element = "<query xmlns='jabber:iq:roster'><item jid=''/></query>"
             .parse()
             .unwrap();
@@ -311,7 +314,11 @@ mod tests {
             format!("{error}"),
             "text parse error: no domain found in this JID"
         );
+    }
 
+    #[test]
+    #[cfg_attr(feature = "disable-validation", should_panic = "Result::unwrap_err")]
+    fn test_item_unknown_child() {
         let elem: Element =
             "<query xmlns='jabber:iq:roster'><item jid='coucou'><coucou/></item></query>"
                 .parse()

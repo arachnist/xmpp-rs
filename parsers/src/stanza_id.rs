@@ -76,6 +76,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(feature = "disable-validation", should_panic = "Result::unwrap_err")]
     fn test_invalid_child() {
         let elem: Element =
             "<stanza-id xmlns='urn:xmpp:sid:0' by='a@b' id='x'><coucou/></stanza-id>"

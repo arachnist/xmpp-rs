@@ -32,7 +32,7 @@ uuid = { version = "1.9.1", features = ["v4"] }
 # Build xmpp-parsers to make components instead of clients.
 component = []
 # Disable validation of unknown attributes.
-disable-validation = []
+disable-validation = [ "xso/non-pedantic" ]
 # Enable serde support in jid crate
 serde = [ "jid/serde" ]
 # Enable some additional logging in helpers

@@ -324,13 +324,18 @@ impl<T: AsXmlText> AsOptionalXmlText for Option<T> {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Default)]
 pub enum UnknownAttributePolicy {
     /// All unknown attributes are discarded.
+    ///
+    /// This is the default policy if the crate is built with the
+    /// `non-pedantic` feature.
+    #[cfg_attr(feature = "non-pedantic", default)]
     Discard,
 
     /// The first unknown attribute which is encountered generates a fatal
     /// parsing error.
     ///
-    /// This is the default policy.
-    #[default]
+    /// This is the default policy if the crate is built **without** the
+    /// `non-pedantic` feature.
+    #[cfg_attr(not(feature = "non-pedantic"), default)]
     Fail,
 }
 
@@ -356,13 +361,18 @@ impl UnknownAttributePolicy {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Default)]
 pub enum UnknownChildPolicy {
     /// All unknown children are discarded.
+    ///
+    /// This is the default policy if the crate is built with the
+    /// `non-pedantic` feature.
+    #[cfg_attr(feature = "non-pedantic", default)]
     Discard,
 
     /// The first unknown child which is encountered generates a fatal
     /// parsing error.
     ///
-    /// This is the default policy.
-    #[default]
+    /// This is the default policy if the crate is built **without** the
+    /// `non-pedantic` feature.
+    #[cfg_attr(not(feature = "non-pedantic"), default)]
     Fail,
 }
 

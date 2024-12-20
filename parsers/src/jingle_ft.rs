@@ -304,7 +304,7 @@ mod tests {
     }
 
     #[test]
-    fn test_received() {
+    fn test_received_valid() {
         let elem: Element = "<received xmlns='urn:xmpp:jingle:apps:file-transfer:5' name='coucou' creator='initiator'/>".parse().unwrap();
         let received = Received::try_from(elem).unwrap();
         assert_eq!(received.name, ContentId(String::from("coucou")));
@@ -313,7 +313,11 @@ mod tests {
         let received2 = Received::try_from(elem2).unwrap();
         assert_eq!(received2.name, ContentId(String::from("coucou")));
         assert_eq!(received2.creator, Creator::Initiator);
+    }
 
+    #[test]
+    #[cfg_attr(feature = "disable-validation", should_panic = "Result::unwrap_err")]
+    fn test_received_unknown_child() {
         let elem: Element = "<received xmlns='urn:xmpp:jingle:apps:file-transfer:5' name='coucou' creator='initiator'><coucou/></received>".parse().unwrap();
         let error = Received::try_from(elem).unwrap_err();
         let message = match error {
@@ -321,7 +325,10 @@ mod tests {
             _ => panic!(),
         };
         assert_eq!(message, "Unknown child in Received element.");
+    }
 
+    #[test]
+    fn test_received_missing_name() {
         let elem: Element =
             "<received xmlns='urn:xmpp:jingle:apps:file-transfer:5' creator='initiator'/>"
                 .parse()
@@ -335,7 +342,10 @@ mod tests {
             message,
             "Required attribute field 'name' on Received element missing."
         );
+    }
 
+    #[test]
+    fn test_received_invalid_creator() {
         let elem: Element = "<received xmlns='urn:xmpp:jingle:apps:file-transfer:5' name='coucou' creator='coucou'/>".parse().unwrap();
         let error = Received::try_from(elem).unwrap_err();
         let message = match error {
@@ -361,7 +371,7 @@ mod tests {
     }
 
     #[test]
-    fn test_checksum() {
+    fn test_checksum_valid() {
         let elem: Element = "<checksum xmlns='urn:xmpp:jingle:apps:file-transfer:5' name='coucou' creator='initiator'><file><hash xmlns='urn:xmpp:hashes:2' algo='sha-1'>w0mcJylzCn+AfvuGdqkty2+KP48=</hash></file></checksum>".parse().unwrap();
         let hash = vec![
             195, 73, 156, 39, 41, 115, 10, 127, 128, 126, 251, 134, 118, 169, 45, 203, 111, 138,
@@ -388,15 +398,22 @@ mod tests {
                 hash: hash.clone()
             })
         );
+    }
 
-        let elem: Element = "<checksum xmlns='urn:xmpp:jingle:apps:file-transfer:5' name='coucou' creator='initiator'><coucou/></checksum>".parse().unwrap();
+    #[test]
+    #[cfg_attr(feature = "disable-validation", should_panic = "Result::unwrap_err")]
+    fn test_checksum_unknown_child() {
+        let elem: Element = "<checksum xmlns='urn:xmpp:jingle:apps:file-transfer:5' name='coucou' creator='initiator'><file><hash xmlns='urn:xmpp:hashes:2' algo='sha-1'>w0mcJylzCn+AfvuGdqkty2+KP48=</hash></file><coucou/></checksum>".parse().unwrap();
         let error = Checksum::try_from(elem).unwrap_err();
         let message = match error {
             FromElementError::Invalid(Error::Other(string)) => string,
             other => panic!("unexpected error: {:?}", other),
         };
         assert_eq!(message, "Unknown child in Checksum element.");
+    }
 
+    #[test]
+    fn test_checksum_missing_name() {
         let elem: Element = "<checksum xmlns='urn:xmpp:jingle:apps:file-transfer:5' creator='initiator'><file><hash xmlns='urn:xmpp:hashes:2' algo='sha-1'>w0mcJylzCn+AfvuGdqkty2+KP48=</hash></file></checksum>".parse().unwrap();
         let error = Checksum::try_from(elem).unwrap_err();
         let message = match error {
@@ -407,7 +424,10 @@ mod tests {
             message,
             "Required attribute field 'name' on Checksum element missing."
         );
+    }
 
+    #[test]
+    fn test_checksum_invalid_creator() {
         let elem: Element = "<checksum xmlns='urn:xmpp:jingle:apps:file-transfer:5' name='coucou' creator='coucou'><file><hash xmlns='urn:xmpp:hashes:2' algo='sha-1'>w0mcJylzCn+AfvuGdqkty2+KP48=</hash></file></checksum>".parse().unwrap();
         let error = Checksum::try_from(elem).unwrap_err();
         let message = match error {

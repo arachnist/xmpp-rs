@@ -154,6 +154,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(feature = "disable-validation", should_panic = "Result::unwrap_err")]
     fn test_unknown_child() {
         let elem: Element = "<media xmlns='urn:xmpp:media-element'><coucou/></media>"
             .parse()

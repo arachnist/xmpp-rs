@@ -29,6 +29,7 @@ default = [ "std" ]
 macros = [ "dep:xso_proc", "rxml/macros" ]
 minidom = [ "xso_proc/minidom"]
 panicking-into-impl = ["xso_proc/panicking-into-impl"]
+non-pedantic = []
 std = []
 
 [package.metadata.docs.rs]

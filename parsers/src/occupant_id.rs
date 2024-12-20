@@ -53,6 +53,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(feature = "disable-validation", should_panic = "Result::unwrap_err")]
     fn test_invalid_child() {
         let elem: Element =
             "<occupant-id xmlns='urn:xmpp:occupant-id:0' id='foo'><coucou/></occupant-id>"

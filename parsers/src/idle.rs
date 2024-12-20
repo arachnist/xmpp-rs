@@ -42,6 +42,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(feature = "disable-validation", should_panic = "Result::unwrap_err")]
     fn test_invalid_child() {
         let elem: Element =
             "<idle xmlns='urn:xmpp:idle:1' since='2017-05-21T20:19:55+01:00'><coucou/></idle>"

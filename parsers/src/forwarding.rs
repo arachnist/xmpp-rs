@@ -56,8 +56,9 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(feature = "disable-validation", should_panic = "Result::unwrap_err")]
     fn test_invalid_child() {
-        let elem: Element = "<forwarded xmlns='urn:xmpp:forward:0'><coucou/></forwarded>"
+        let elem: Element = "<forwarded xmlns='urn:xmpp:forward:0'><message xmlns='jabber:client'/><coucou/></forwarded>"
             .parse()
             .unwrap();
         let error = Forwarded::try_from(elem).unwrap_err();

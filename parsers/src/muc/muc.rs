@@ -113,6 +113,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(feature = "disable-validation", should_panic = "Result::unwrap_err")]
     fn test_muc_invalid_child() {
         let elem: Element = "<x xmlns='http://jabber.org/protocol/muc'><coucou/></x>"
             .parse()

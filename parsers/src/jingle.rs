@@ -754,7 +754,7 @@ mod tests {
     }
 
     #[test]
-    fn test_invalid_reason() {
+    fn test_missing_reason_text() {
         let elem: Element = "<jingle xmlns='urn:xmpp:jingle:1' action='session-initiate' sid='coucou'><reason/></jingle>".parse().unwrap();
         let error = Jingle::try_from(elem).unwrap_err();
         let message = match error {
@@ -765,23 +765,22 @@ mod tests {
             message,
             "Missing child field 'reason' in ReasonElement element."
         );
+    }
 
-        let elem: Element = "<jingle xmlns='urn:xmpp:jingle:1' action='session-initiate' sid='coucou'><reason><a/></reason></jingle>".parse().unwrap();
+    #[test]
+    #[cfg_attr(feature = "disable-validation", should_panic = "Result::unwrap_err")]
+    fn test_invalid_child_in_reason() {
+        let elem: Element = "<jingle xmlns='urn:xmpp:jingle:1' action='session-initiate' sid='coucou'><reason><decline/><a/></reason></jingle>".parse().unwrap();
         let error = Jingle::try_from(elem).unwrap_err();
         let message = match error {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
         assert_eq!(message, "Unknown child in ReasonElement element.");
+    }
 
-        let elem: Element = "<jingle xmlns='urn:xmpp:jingle:1' action='session-initiate' sid='coucou'><reason><a xmlns='http://www.w3.org/1999/xhtml'/></reason></jingle>".parse().unwrap();
-        let error = Jingle::try_from(elem).unwrap_err();
-        let message = match error {
-            FromElementError::Invalid(Error::Other(string)) => string,
-            _ => panic!(),
-        };
-        assert_eq!(message, "Unknown child in ReasonElement element.");
-
+    #[test]
+    fn test_multiple_reason_children() {
         let elem: Element = "<jingle xmlns='urn:xmpp:jingle:1' action='session-initiate' sid='coucou'><reason><decline/></reason><reason/></jingle>".parse().unwrap();
         let error = Jingle::try_from(elem).unwrap_err();
         let message = match error {
