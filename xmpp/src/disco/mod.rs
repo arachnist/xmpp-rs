@@ -26,7 +26,6 @@ pub async fn handle_disco_info_result(agent: &mut Agent, disco: DiscoInfoResult,
         // TODO: only send this when the JoinRooms feature is enabled.
         agent.awaiting_disco_bookmarks_type = false;
         let mut perform_bookmarks2 = false;
-        info!("{:#?}", disco.features);
         for feature in disco.features {
             if feature.var == "urn:xmpp:bookmarks:1#compat" {
                 perform_bookmarks2 = true;
