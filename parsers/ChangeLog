@@ -38,6 +38,7 @@ XXXX-YY-ZZ RELEASER <admin@example.com>
         the optional nickname instead of a String (!485)
     * New parsers/serialisers:
       - Stream Features (RFC 6120) (!400)
+      - Spam Reporting (XEP-0377) (!506)
       - Extensible SASL Profile (XEP-0388)
       - SASL Channel-Binding Type Capability (XEP-0440)
       - Stream Limits Advertisement (XEP-0478)

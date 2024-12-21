@@ -257,6 +257,9 @@ pub mod mix;
 /// XEP-0373: OpenPGP for XMPP
 pub mod openpgp;
 
+/// XEP-0377: Spam Reporting
+pub mod spam_reporting;
+
 /// XEP-0380: Explicit Message Encryption
 pub mod eme;
 
