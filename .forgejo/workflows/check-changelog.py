@@ -15,6 +15,8 @@ if __name__ == '__main__':
         sys.exit(0)
 
     treeish = 'main..'
+    if os.environ['CI_PIPELINE_SOURCE'] == 'push' and os.environ['CI_COMMIT_REF_NAME'] == 'main':
+        treeish = '{}..'.format(os.environ['CI_COMMIT_BEFORE_SHA'])
     if os.environ['CI_PIPELINE_SOURCE'] == 'merge_request_event':
         treeish = '{}..'.format(os.environ['CI_MERGE_REQUEST_DIFF_BASE_SHA'])
 
