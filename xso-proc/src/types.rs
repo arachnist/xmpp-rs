@@ -84,7 +84,7 @@ pub(crate) fn cow_ty(ty: Type, lifetime: Lifetime) -> Type {
             }),
             segments: [
                 PathSegment {
-                    ident: Ident::new("alloc", span),
+                    ident: Ident::new("std", span),
                     arguments: PathArguments::None,
                 },
                 PathSegment {
@@ -233,7 +233,7 @@ pub(crate) fn default_fn(of_ty: Type) -> Expr {
     })
 }
 
-/// Construct a [`syn::Type`] referring to `::alloc::string::String`.
+/// Construct a [`syn::Type`] referring to `::std::string::String`.
 pub(crate) fn string_ty(span: Span) -> Type {
     Type::Path(TypePath {
         qself: None,
@@ -243,7 +243,7 @@ pub(crate) fn string_ty(span: Span) -> Type {
             }),
             segments: [
                 PathSegment {
-                    ident: Ident::new("alloc", span),
+                    ident: Ident::new("std", span),
                     arguments: PathArguments::None,
                 },
                 PathSegment {

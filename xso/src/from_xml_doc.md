@@ -588,7 +588,6 @@ a field, for consistency.
 #### Example without codec
 
 ```rust
-# extern crate alloc;
 # use xso::FromXml;
 #[derive(FromXml, Debug, PartialEq)]
 #[xml(namespace = "urn:example", name = "foo")]
@@ -606,7 +605,6 @@ assert_eq!(foo, Foo {
 #### Example with codec
 
 ```rust
-# extern crate alloc;
 # use xso::FromXml;
 #[derive(FromXml, Debug, PartialEq)]
 #[xml(namespace = "urn:example", name = "foo")]

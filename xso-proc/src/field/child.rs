@@ -423,7 +423,7 @@ impl ExtractDef {
                 quote! {
                     let name = (
                         ::xso::exports::rxml::Namespace::from(#xml_namespace),
-                        ::alloc::borrow::Cow::Borrowed(#xml_name),
+                        ::std::borrow::Cow::Borrowed(#xml_name),
                     );
                     #init
                 }
