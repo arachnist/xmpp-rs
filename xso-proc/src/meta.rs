@@ -755,6 +755,17 @@ pub(crate) enum XmlFieldMeta {
         /// The `n` flag.
         amount: Option<AmountConstraint>,
     },
+
+    /// `#[xml(flag)]
+    Flag {
+        /// The span of the `#[xml(flag)]` meta from which this was parsed.
+        ///
+        /// This is useful for error messages.
+        span: Span,
+
+        /// The namespace/name keys.
+        qname: QNameRef,
+    },
 }
 
 impl XmlFieldMeta {
@@ -1017,6 +1028,19 @@ impl XmlFieldMeta {
         })
     }
 
+    /// Parse a `#[xml(flag)]` meta.
+    fn flag_from_meta(meta: ParseNestedMeta<'_>) -> Result<Self> {
+        let mut qname = QNameRef::default();
+        meta.parse_nested_meta(|meta| match qname.parse_incremental_from_meta(meta)? {
+            None => Ok(()),
+            Some(meta) => Err(Error::new_spanned(meta.path, "unsupported key")),
+        })?;
+        Ok(Self::Flag {
+            span: meta.path.span(),
+            qname,
+        })
+    }
+
     /// Parse [`Self`] from a nestd meta, switching on the identifier
     /// of that nested meta.
     fn parse_from_meta(meta: ParseNestedMeta<'_>) -> Result<Self> {
@@ -1030,6 +1054,8 @@ impl XmlFieldMeta {
             Self::extract_from_meta(meta)
         } else if meta.path.is_ident("element") {
             Self::element_from_meta(meta)
+        } else if meta.path.is_ident("flag") {
+            Self::flag_from_meta(meta)
         } else {
             Err(Error::new_spanned(meta.path, "unsupported field meta"))
         }
@@ -1112,6 +1138,7 @@ impl XmlFieldMeta {
             Self::Text { ref span, .. } => *span,
             Self::Extract { ref span, .. } => *span,
             Self::Element { ref span, .. } => *span,
+            Self::Flag { ref span, .. } => *span,
         }
     }
 

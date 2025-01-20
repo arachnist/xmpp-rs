@@ -269,6 +269,58 @@ impl FromEventsBuilder for Discard {
     }
 }
 
+/// Builder which discards the contents (or raises on unexpected contents).
+///
+/// This builder is only to be used from within the proc macros and is not
+/// stable, public API.
+#[doc(hidden)]
+#[cfg(feature = "macros")]
+pub struct EmptyBuilder {
+    childerr: &'static str,
+    texterr: &'static str,
+}
+
+#[cfg(feature = "macros")]
+impl FromEventsBuilder for EmptyBuilder {
+    type Output = ();
+
+    fn feed(&mut self, ev: rxml::Event) -> Result<Option<Self::Output>, Error> {
+        match ev {
+            rxml::Event::EndElement(..) => Ok(Some(())),
+            rxml::Event::StartElement(..) => Err(Error::Other(self.childerr)),
+            rxml::Event::Text(..) => Err(Error::Other(self.texterr)),
+            _ => Err(Error::Other(
+                "unexpected content in supposed-to-be-empty element",
+            )),
+        }
+    }
+}
+
+/// Precursor struct for [`EmptyBuilder`].
+///
+/// This struct is only to be used from within the proc macros and is not
+/// stable, public API.
+#[doc(hidden)]
+#[cfg(feature = "macros")]
+pub struct Empty {
+    pub attributeerr: &'static str,
+    pub childerr: &'static str,
+    pub texterr: &'static str,
+}
+
+#[cfg(feature = "macros")]
+impl Empty {
+    pub fn start(self, attr: rxml::AttrMap) -> Result<EmptyBuilder, Error> {
+        if attr.len() > 0 {
+            return Err(Error::Other(self.attributeerr));
+        }
+        Ok(EmptyBuilder {
+            childerr: self.childerr,
+            texterr: self.texterr,
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

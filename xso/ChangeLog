@@ -25,6 +25,8 @@ Version NEXT:
       - Support for "transparent" structs (newtype-like patterns for XSO).
       - FromXmlText and AsXmlText are now implemented for jid::NodePart,
         jid::DomainPart, and jid::ResourcePart (!485)
+      - Support for optional child elements, the presence of which are
+        translated into a boolean (`#[xml(flag)]`).
 
 Version 0.1.2:
 2024-07-26 Jonas Schäfer <jonas@zombofant.net>

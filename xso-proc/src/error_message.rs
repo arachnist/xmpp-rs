@@ -102,7 +102,7 @@ impl ParentRef {
 /// It implements [`core::fmt::Display`] for that purpose and is otherwise of
 /// little use.
 #[repr(transparent)]
-struct FieldName<'x>(&'x Member);
+pub(crate) struct FieldName<'x>(pub &'x Member);
 
 impl fmt::Display for FieldName<'_> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

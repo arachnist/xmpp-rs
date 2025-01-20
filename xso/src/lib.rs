@@ -39,10 +39,23 @@ mod rxml_util;
 pub mod text;
 
 #[doc(hidden)]
+#[cfg(feature = "macros")]
 pub mod exports {
     #[cfg(feature = "minidom")]
     pub use minidom;
     pub use rxml;
+
+    /// The built-in `bool` type.
+    ///
+    /// This is re-exported for use by macros in cases where we cannot rely on
+    /// people not having done `type bool = str` or some similar shenanigans.
+    pub type CoreBool = bool;
+
+    /// The built-in `u8` type.
+    ///
+    /// This is re-exported for use by macros in cases where we cannot rely on
+    /// people not having done `type u8 = str` or some similar shenanigans.
+    pub type CoreU8 = u8;
 }
 
 use alloc::{

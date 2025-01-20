@@ -1922,3 +1922,45 @@ fn extract_ignore_unknown_stuff_roundtrip() {
     };
     roundtrip_full::<ExtractIgnoreUnknownStuff>("<parent xmlns='urn:example:ns1'><child><grandchild>hello world</grandchild></child></parent>")
 }
+
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = NS1, name = "foo")]
+struct Flag {
+    #[xml(flag(namespace = NS1, name = "flag"))]
+    flag: bool,
+}
+
+#[test]
+fn flag_parse_present_as_true() {
+    #[allow(unused_imports)]
+    use core::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    match parse_str::<Flag>("<foo xmlns='urn:example:ns1'><flag/></foo>") {
+        Ok(Flag { flag }) => {
+            assert!(flag);
+        }
+        other => panic!("unexpected result: {:?}", other),
+    }
+}
+
+#[test]
+fn flag_present_roundtrip() {
+    #[allow(unused_imports)]
+    use core::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<Flag>("<foo xmlns='urn:example:ns1'><flag/></foo>");
+}
+
+#[test]
+fn flag_absent_roundtrip() {
+    #[allow(unused_imports)]
+    use core::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<Flag>("<foo xmlns='urn:example:ns1'/>");
+}

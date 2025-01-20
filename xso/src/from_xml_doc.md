@@ -27,7 +27,8 @@ assert_eq!(foo, Foo);
     2. [`child` meta](#child-meta)
     3. [`element` meta](#element-meta)
     4. [`extract` meta](#extract-meta)
-    5. [`text` meta](#text-meta)
+    5. [`flag` meta](#flag-meta)
+    6. [`text` meta](#text-meta)
 
 ## Attributes
 
@@ -554,6 +555,47 @@ let foo: Foo = xso::from_bytes(b"<foo
     xmlns='urn:example'><bar a='xyz'/></foo>").unwrap();
 assert_eq!(foo, Foo {
     a: "xyz".to_string(),
+});
+```
+
+### `flag` meta
+
+The `flag` meta causes the field to be mapped to a single, optional child element. Absence of the child is equivalent to the value `false`, presence
+of the child element is equivalent to the value `true`.
+
+The following keys can be used inside the `#[xml(flag(..))]` meta:
+
+| Key | Value type | Description |
+| --- | --- | --- |
+| `namespace` | *string literal* or *path* | The optional namespace of the XML attribute to match. If it is a *path*, it must point at a `&'static str`. |
+| `name` | *string literal* or *path* | The name of the XML attribute to match. If it is a *path*, it must point at a `&'static NcNameStr`. |
+
+The field on which the `flag` meta is used must be of type `bool`.
+
+If `namespace` is not set, it defaults to the namespace of the surrounding
+container. If `name` is not set, it defaults to the field's name, if available.
+If `name` is not set and the field is unnamed, a compile-time error is raised.
+
+When parsing, any contents within the child element generate a parse error.
+
+#### Example
+```rust
+# use xso::FromXml;
+#[derive(FromXml, Debug, PartialEq)]
+#[xml(namespace = "urn:example", name = "foo")]
+struct Foo {
+    #[xml(flag(name = "flag"))]
+    flag: bool,
+};
+
+let foo: Foo = xso::from_bytes(b"<foo xmlns='urn:example'><flag/></foo>").unwrap();
+assert_eq!(foo, Foo {
+    flag: true,
+});
+
+let foo: Foo = xso::from_bytes(b"<foo xmlns='urn:example'/>").unwrap();
+assert_eq!(foo, Foo {
+    flag: false,
 });
 ```
 

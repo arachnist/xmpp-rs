@@ -20,12 +20,14 @@ mod attribute;
 mod child;
 #[cfg(feature = "minidom")]
 mod element;
+mod flag;
 mod text;
 
 use self::attribute::AttributeField;
 use self::child::{ChildField, ExtractDef};
 #[cfg(feature = "minidom")]
 use self::element::ElementField;
+use self::flag::FlagField;
 use self::text::TextField;
 
 /// Code slices necessary for declaring and initializing a temporary variable
@@ -405,6 +407,18 @@ fn new_field(
                 span,
                 "#[xml(element)] requires xso to be built with the \"minidom\" feature.",
             ))
+        }
+
+        XmlFieldMeta::Flag {
+            span,
+            qname: QNameRef { namespace, name },
+        } => {
+            let xml_namespace = namespace.unwrap_or_else(|| container_namespace.clone());
+            let xml_name = default_name(span, name, field_ident)?;
+            Ok(Box::new(FlagField {
+                xml_namespace,
+                xml_name,
+            }))
         }
     }
 }

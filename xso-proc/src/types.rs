@@ -890,3 +890,95 @@ pub(crate) fn discard_builder_ty(span: Span) -> Type {
         },
     })
 }
+
+/// Construct a [`syn::Type`] referring to the built-in `bool` type.
+///
+/// Note that we go through `xso::exports::CoreBool` for that, because there seems
+/// to be no way to access built-in types once they have been shadowed in a
+/// scope.
+pub(crate) fn bool_ty(span: Span) -> Type {
+    Type::Path(TypePath {
+        qself: None,
+        path: Path {
+            leading_colon: Some(syn::token::PathSep {
+                spans: [span, span],
+            }),
+            segments: [
+                PathSegment {
+                    ident: Ident::new("xso", span),
+                    arguments: PathArguments::None,
+                },
+                PathSegment {
+                    ident: Ident::new("exports", span),
+                    arguments: PathArguments::None,
+                },
+                PathSegment {
+                    ident: Ident::new("CoreBool", span),
+                    arguments: PathArguments::None,
+                },
+            ]
+            .into_iter()
+            .collect(),
+        },
+    })
+}
+
+/// Construct a [`syn::Type`] referring to the built-in `u8` type.
+///
+/// Note that we go through `xso::exports::CoreU8` for that, because there seems
+/// to be no way to access built-in types once they have been shadowed in a
+/// scope.
+pub(crate) fn u8_ty(span: Span) -> Type {
+    Type::Path(TypePath {
+        qself: None,
+        path: Path {
+            leading_colon: Some(syn::token::PathSep {
+                spans: [span, span],
+            }),
+            segments: [
+                PathSegment {
+                    ident: Ident::new("xso", span),
+                    arguments: PathArguments::None,
+                },
+                PathSegment {
+                    ident: Ident::new("exports", span),
+                    arguments: PathArguments::None,
+                },
+                PathSegment {
+                    ident: Ident::new("CoreU8", span),
+                    arguments: PathArguments::None,
+                },
+            ]
+            .into_iter()
+            .collect(),
+        },
+    })
+}
+
+/// Construct a [`syn::Type`] referring to `::xso::fromxml::EmptyBuilder`.
+pub(crate) fn empty_builder_ty(span: Span) -> Type {
+    Type::Path(TypePath {
+        qself: None,
+        path: Path {
+            leading_colon: Some(syn::token::PathSep {
+                spans: [span, span],
+            }),
+            segments: [
+                PathSegment {
+                    ident: Ident::new("xso", span),
+                    arguments: PathArguments::None,
+                },
+                PathSegment {
+                    ident: Ident::new("fromxml", span),
+                    arguments: PathArguments::None,
+                },
+                PathSegment {
+                    ident: Ident::new("EmptyBuilder", span),
+                    arguments: PathArguments::None,
+                },
+            ]
+            .into_iter()
+            .collect(),
+        },
+    })
+}
