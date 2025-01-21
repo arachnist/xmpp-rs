@@ -187,6 +187,7 @@ pub struct TaskData {
 mod tests {
     use super::*;
     use base64::prelude::*;
+    use uuid::Uuid;
 
     #[cfg(target_pointer_width = "32")]
     #[test]
@@ -598,7 +599,9 @@ mod tests {
         let user_agent = auth.user_agent;
         assert_eq!(
             user_agent.id,
-            "d4565fa7-4d72-4749-b3d3-740edbf87770".try_into().unwrap()
+            "d4565fa7-4d72-4749-b3d3-740edbf87770"
+                .parse::<Uuid>()
+                .unwrap()
         );
         assert_eq!(user_agent.software.as_deref(), Some("AwesomeXMPP"));
         assert_eq!(user_agent.device.as_deref(), Some("Kiva's Phone"));
@@ -639,7 +642,9 @@ mod tests {
         let user_agent = auth.user_agent;
         assert_eq!(
             user_agent.id,
-            "d4565fa7-4d72-4749-b3d3-740edbf87770".try_into().unwrap()
+            "d4565fa7-4d72-4749-b3d3-740edbf87770"
+                .parse::<Uuid>()
+                .unwrap()
         );
         assert_eq!(user_agent.software.as_deref(), Some("AwesomeXMPP"));
         assert_eq!(user_agent.device.as_deref(), Some("Kiva's Phone"));
@@ -709,7 +714,9 @@ mod tests {
 
         assert_eq!(
             auth.user_agent.id,
-            "d4565fa7-4d72-4749-b3d3-740edbf87770".try_into().unwrap()
+            "d4565fa7-4d72-4749-b3d3-740edbf87770"
+                .parse::<Uuid>()
+                .unwrap()
         );
         assert_eq!(auth.user_agent.software.as_deref(), Some("AwesomeXMPP"));
         assert_eq!(auth.user_agent.device.as_deref(), Some("Kiva's Phone"));
