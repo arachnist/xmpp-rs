@@ -460,14 +460,22 @@ impl ExtractDef {
             // about that in [`make_from_xml_builder_parts`] implementation
             // corresponding to this code above, and we will not repeat it
             // here.
+
+            // These sections with quote_spanned are used to improve error
+            // messages on type mismatches. Without these, the rustc errors
+            // will point at `#[derive(AsXml)]` only, instead of directly
+            // pointing at the sources of those types.
             let cast = quote_spanned! { input_ty.span()=>
                 ::core::option::Option::from(#bound_name)
             };
+            let type_assert = quote_spanned! { inner_ty.span()=>
+                ::core::option::Option<#inner_ty>
+            };
             (
                 quote! {
-                    ::xso::asxml::OptionAsXml::new(#cast.map(|#bound_name: #inner_ty| {
+                    ::xso::asxml::OptionAsXml::new({ let x: #type_assert = #cast; x.map(|#bound_name: #inner_ty| {
                         #item_iter_ty_ident::new((#repack))
-                    }).transpose()?)
+                    })}.transpose()?)
                 },
                 option_as_xml_ty(item_iter_ty),
             )
