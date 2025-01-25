@@ -260,6 +260,7 @@ impl ConnectedState {
             let next = next.take();
             match stream.as_mut().start_send(&next.stanza) {
                 Ok(()) => {
+                    next.token.send_replace(StanzaState::Sent {});
                     if let Some(sm_state) = sm_state.as_mut() {
                         sm_state.enqueue(next);
                     }
