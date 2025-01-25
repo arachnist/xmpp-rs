@@ -67,8 +67,8 @@ mod tests {
         pubsub::{Item as PubSubItem, Publish},
         Item, NodeName,
     };
+    use core::str::FromStr;
     use minidom::Element;
-    use std::str::FromStr;
 
     #[test]
     fn pubsub_publish_pubkey_data() {

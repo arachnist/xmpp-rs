@@ -10,8 +10,8 @@ use crate::date::DateTime;
 use crate::iq::{IqGetPayload, IqResultPayload};
 use crate::ns;
 use chrono::FixedOffset;
+use core::str::FromStr;
 use minidom::Element;
-use std::str::FromStr;
 use xso::error::{Error, FromElementError};
 
 /// An entity time query.

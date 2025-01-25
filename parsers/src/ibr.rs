@@ -7,8 +7,8 @@
 use crate::data_forms::DataForm;
 use crate::iq::{IqGetPayload, IqResultPayload, IqSetPayload};
 use crate::ns;
+use alloc::collections::BTreeMap;
 use minidom::Element;
-use std::collections::HashMap;
 use xso::error::{Error, FromElementError};
 
 /// Query for registering against a service.
@@ -16,7 +16,7 @@ use xso::error::{Error, FromElementError};
 pub struct Query {
     /// Deprecated fixed list of possible fields to fill before the user can
     /// register.
-    pub fields: HashMap<String, String>,
+    pub fields: BTreeMap<String, String>,
 
     /// Whether this account is already registered.
     pub registered: bool,
@@ -41,7 +41,7 @@ impl TryFrom<Element> for Query {
         check_self!(elem, "query", REGISTER, "IBR query");
         let mut query = Query {
             registered: false,
-            fields: HashMap::new(),
+            fields: BTreeMap::new(),
             remove: false,
             form: None,
         };
@@ -119,13 +119,13 @@ mod tests {
     #[cfg(target_pointer_width = "32")]
     #[test]
     fn test_size() {
-        assert_size!(Query, 88);
+        assert_size!(Query, 68);
     }
 
     #[cfg(target_pointer_width = "64")]
     #[test]
     fn test_size() {
-        assert_size!(Query, 160);
+        assert_size!(Query, 136);
     }
 
     #[test]

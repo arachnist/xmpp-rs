@@ -7,7 +7,7 @@
 use xso::{text::Base64, AsXml, FromXml};
 
 use crate::ns;
-use std::collections::BTreeMap;
+use alloc::collections::BTreeMap;
 
 generate_attribute!(
     /// The list of available SASL mechanisms.

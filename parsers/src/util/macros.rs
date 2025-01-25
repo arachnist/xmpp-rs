@@ -73,7 +73,7 @@ macro_rules! generate_attribute {
                 $a
             ),+
         }
-        impl ::std::str::FromStr for $elem {
+        impl ::core::str::FromStr for $elem {
             type Err = xso::error::Error;
             fn from_str(s: &str) -> Result<$elem, xso::error::Error> {
                 Ok(match s {
@@ -120,7 +120,7 @@ macro_rules! generate_attribute {
                 $a
             ),+
         }
-        impl ::std::str::FromStr for $elem {
+        impl ::core::str::FromStr for $elem {
             type Err = xso::error::Error;
             fn from_str(s: &str) -> Result<$elem, xso::error::Error> {
                 Ok(match s {
@@ -173,7 +173,7 @@ macro_rules! generate_attribute {
             /// Value when absent.
             None,
         }
-        impl ::std::str::FromStr for $elem {
+        impl ::core::str::FromStr for $elem {
             type Err = xso::error::Error;
             fn from_str(s: &str) -> Result<Self, xso::error::Error> {
                 Ok(match s {
@@ -218,7 +218,7 @@ macro_rules! generate_attribute {
         $(#[$meta])*
         #[derive(Debug, Clone, PartialEq)]
         pub struct $elem(pub $type);
-        impl ::std::str::FromStr for $elem {
+        impl ::core::str::FromStr for $elem {
             type Err = xso::error::Error;
             fn from_str(s: &str) -> Result<Self, xso::error::Error> {
                 Ok($elem($type::from_str(s).map_err(xso::error::Error::text_parse_error)?))
@@ -382,7 +382,7 @@ macro_rules! generate_id {
         $(#[$meta])*
         #[derive(Debug, Clone, PartialEq, Eq, Hash)]
         pub struct $elem(pub String);
-        impl ::std::str::FromStr for $elem {
+        impl ::core::str::FromStr for $elem {
             type Err = xso::error::Error;
             fn from_str(s: &str) -> Result<$elem, xso::error::Error> {
                 // TODO: add a way to parse that differently when needed.
@@ -410,7 +410,7 @@ macro_rules! generate_id {
 macro_rules! generate_elem_id {
     ($(#[$meta:meta])* $elem:ident, $name:literal, $ns:ident) => (
         generate_elem_id!($(#[$meta])* $elem, $name, $ns, String);
-        impl ::std::str::FromStr for $elem {
+        impl ::core::str::FromStr for $elem {
             type Err = xso::error::Error;
             fn from_str(s: &str) -> Result<$elem, xso::error::Error> {
                 // TODO: add a way to parse that differently when needed.

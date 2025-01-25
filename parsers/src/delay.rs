@@ -35,9 +35,9 @@ impl PresencePayload for Delay {}
 #[cfg(test)]
 mod tests {
     use super::*;
+    use core::str::FromStr;
     use jid::BareJid;
     use minidom::Element;
-    use std::str::FromStr;
     use xso::error::{Error, FromElementError};
 
     #[cfg(target_pointer_width = "32")]

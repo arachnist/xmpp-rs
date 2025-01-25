@@ -192,8 +192,8 @@ impl From<PubSubOwner> for Element {
 mod tests {
     use super::*;
     use crate::data_forms::{DataFormType, Field, FieldType};
+    use core::str::FromStr;
     use jid::BareJid;
-    use std::str::FromStr;
 
     #[test]
     fn affiliations() {

@@ -6,8 +6,8 @@
 
 use crate::message::MessagePayload;
 use crate::ns;
+use alloc::collections::BTreeMap;
 use minidom::{Element, Node};
-use std::collections::HashMap;
 use xso::error::{Error, FromElementError};
 
 // TODO: Use a proper lang type.
@@ -17,7 +17,7 @@ type Lang = String;
 #[derive(Debug, Clone)]
 pub struct XhtmlIm {
     /// Map of language to body element.
-    bodies: HashMap<Lang, Body>,
+    bodies: BTreeMap<Lang, Body>,
 }
 
 impl XhtmlIm {
@@ -41,7 +41,7 @@ impl XhtmlIm {
 
     /// Removes all unknown elements.
     fn flatten(self) -> XhtmlIm {
-        let mut bodies = HashMap::new();
+        let mut bodies = BTreeMap::new();
         for (lang, body) in self.bodies {
             let children = body.children.into_iter().fold(vec![], |mut acc, child| {
                 match child {
@@ -66,7 +66,7 @@ impl TryFrom<Element> for XhtmlIm {
         check_self!(elem, "html", XHTML_IM);
         check_no_attributes!(elem, "html");
 
-        let mut bodies = HashMap::new();
+        let mut bodies = BTreeMap::new();
         for child in elem.children() {
             if child.is("body", ns::XHTML) {
                 let child = child.clone();
@@ -504,7 +504,7 @@ mod tests {
     #[cfg(target_pointer_width = "32")]
     #[test]
     fn test_size() {
-        assert_size!(XhtmlIm, 32);
+        assert_size!(XhtmlIm, 12);
         assert_size!(Child, 48);
         assert_size!(Tag, 48);
     }
@@ -512,7 +512,7 @@ mod tests {
     #[cfg(target_pointer_width = "64")]
     #[test]
     fn test_size() {
-        assert_size!(XhtmlIm, 48);
+        assert_size!(XhtmlIm, 24);
         assert_size!(Child, 96);
         assert_size!(Tag, 96);
     }

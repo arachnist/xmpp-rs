@@ -100,8 +100,8 @@ impl Muc {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use core::str::FromStr;
     use minidom::Element;
-    use std::str::FromStr;
     use xso::error::{Error, FromElementError};
 
     #[test]

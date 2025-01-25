@@ -97,8 +97,8 @@ impl IqResultPayload for Roster {}
 #[cfg(test)]
 mod tests {
     use super::*;
+    use core::str::FromStr;
     use minidom::Element;
-    use std::str::FromStr;
     use xso::error::{Error, FromElementError};
 
     #[cfg(target_pointer_width = "32")]

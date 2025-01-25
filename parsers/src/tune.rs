@@ -117,8 +117,8 @@ impl Tune {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use core::str::FromStr;
     use minidom::Element;
-    use std::str::FromStr;
 
     #[cfg(target_pointer_width = "32")]
     #[test]

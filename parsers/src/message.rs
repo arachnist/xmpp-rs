@@ -402,7 +402,7 @@ impl ::xso::AsXml for Message {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::str::FromStr;
+    use core::str::FromStr;
 
     #[cfg(target_pointer_width = "32")]
     #[test]

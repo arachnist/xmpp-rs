@@ -37,8 +37,8 @@ pub struct Photo {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use core::str::FromStr;
     use minidom::Element;
-    use std::str::FromStr;
 
     #[test]
     fn test_vcard_update() {
