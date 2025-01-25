@@ -48,11 +48,10 @@ such:
 
 - *path*: A Rust path, like `some_crate::foo::Bar`. Note that `foo` on its own
   is also a path.
-- *identifier*: A single Rust identifier.
 - *string literal*: A string literal, like `"hello world!"`.
 - *type*: A Rust type.
 - *expression*: A Rust expression.
-- *ident*: A Rust identifier.
+- *ident*: A single Rust identifier.
 - *nested*: The meta is followed by parentheses, inside of which meta-specific
   additional keys are present.
 - flag: Has no value. The key's mere presence has relevance and it must not be
@@ -69,8 +68,8 @@ The following keys are defined on structs:
 | `transparent` | *flag* | If present, declares the struct as *transparent* struct (see below) |
 | `builder` | optional *ident* | The name to use for the generated builder type. |
 | `iterator` | optional *ident* | The name to use for the generated iterator type. |
-| `on_unknown_attribute` | *identifier* | Name of an [`UnknownAttributePolicy`] member, controlling how unknown attributes are handled. |
-| `on_unknown_child` | *identifier* | Name of an [`UnknownChildPolicy`] member, controlling how unknown children are handled. |
+| `on_unknown_attribute` | optional *ident* | Name of an [`UnknownAttributePolicy`] member, controlling how unknown attributes are handled. |
+| `on_unknown_child` | optional *ident* | Name of an [`UnknownChildPolicy`] member, controlling how unknown children are handled. |
 
 Note that the `name` value must be a valid XML element name, without colons.
 The namespace prefix, if any, is assigned automatically at serialisation time
@@ -150,8 +149,8 @@ documentation above.
 | Key | Value type | Description |
 | --- | --- | --- |
 | `name` | *string literal* or *path* | The XML element name to match for this variant. If it is a *path*, it must point at a `&'static NcNameStr`. |
-| `on_unknown_attribute` | *identifier* | Name of an [`UnknownAttributePolicy`] member, controlling how unknown attributes are handled. |
-| `on_unknown_child` | *identifier* | Name of an [`UnknownChildPolicy`] member, controlling how unknown children are handled. |
+| `on_unknown_attribute` | optional *ident* | Name of an [`UnknownAttributePolicy`] member, controlling how unknown attributes are handled. |
+| `on_unknown_child` | optional *ident* | Name of an [`UnknownChildPolicy`] member, controlling how unknown children are handled. |
 
 Note that the `name` value must be a valid XML element name, without colons.
 The namespace prefix, if any, is assigned automatically at serialisation time
@@ -260,9 +259,9 @@ The following keys can be used inside the `#[xml(attribute(..))]` meta:
 
 | Key | Value type | Description |
 | --- | --- | --- |
-| `namespace` | *string literal* or *path* | The optional namespace of the XML attribute to match. If it is a *path*, it must point at a `&'static str`. Note that attributes, unlike elements, are unnamespaced by default. |
-| `name` | *string literal* or *path* | The name of the XML attribute to match. If it is a *path*, it must point at a `&'static NcNameStr`. |
-| `default` | flag | If present, an absent attribute will substitute the default value instead of raising an error. |
+| `namespace` | optional *string literal* or *path* | The namespace of the XML attribute to match. If it is a *path*, it must point at a `&'static str`. Note that attributes, unlike elements, are unnamespaced by default. |
+| `name` | optional *string literal* or *path* | The name of the XML attribute to match. If it is a *path*, it must point at a `&'static NcNameStr`. |
+| `default` | *flag* | If present, an absent attribute will substitute the default value instead of raising an error. |
 | `type_` | *type* | Optional explicit type specification. Only allowed within `#[xml(extract(fields(..)))]`. |
 
 If the `name` key contains a namespace prefix, it must be one of the prefixes
@@ -328,7 +327,7 @@ The following keys can be used inside the `#[xml(child(..))]` meta:
 
 | Key | Value type | Description |
 | --- | --- | --- |
-| `default` | flag | If present, an absent child will substitute the default value instead of raising an error. |
+| `default` | *flag* | If present, an absent child will substitute the default value instead of raising an error. |
 | `n` | `1` or `..` | If `1`, a single element is parsed. If `..`, a collection is parsed. Defaults to `1`. |
 
 When parsing a single child element (i.e. `n = 1` or no `n` value set at all),
@@ -470,13 +469,13 @@ The following keys can be used inside the `#[xml(extract(..))]` meta:
 
 | Key | Value type | Description |
 | --- | --- | --- |
-| `namespace` | *string literal* or *path* | The XML namespace of the child element. |
-| `name` | *string literal* or *path* | The XML name of the child element. If it is a *path*, it must point at a `&'static NcNameStr`. |
-| `default` | flag | If present, an absent child will substitute the default value instead of raising an error. |
+| `namespace` | optional *string literal* or *path* | The XML namespace of the child element. |
+| `name` | optional *string literal* or *path* | The XML name of the child element. If it is a *path*, it must point at a `&'static NcNameStr`. |
+| `default` | *flag* | If present, an absent child will substitute the default value instead of raising an error. |
 | `n` | `1` or `..` | If `1`, a single element is parsed. If `..`, a collection is parsed. Defaults to `1`. |
 | `fields` | *nested* | A list of [field meta](#field-meta) which describe the contents of the child element. |
-| `on_unknown_attribute` | *identifier* | Name of an [`UnknownAttributePolicy`] member, controlling how unknown attributes are handled. |
-| `on_unknown_child` | *identifier* | Name of an [`UnknownChildPolicy`] member, controlling how unknown children are handled. |
+| `on_unknown_attribute` | optional *ident* | Name of an [`UnknownAttributePolicy`] member, controlling how unknown attributes are handled. |
+| `on_unknown_child` | optional *ident* | Name of an [`UnknownChildPolicy`] member, controlling how unknown children are handled. |
 
 If the `name` key contains a namespace prefix, it must be one of the prefixes
 defined as built-in in the XML specifications. That prefix will then be
@@ -567,14 +566,16 @@ The following keys can be used inside the `#[xml(flag(..))]` meta:
 
 | Key | Value type | Description |
 | --- | --- | --- |
-| `namespace` | *string literal* or *path* | The optional namespace of the XML attribute to match. If it is a *path*, it must point at a `&'static str`. |
-| `name` | *string literal* or *path* | The name of the XML attribute to match. If it is a *path*, it must point at a `&'static NcNameStr`. |
+| `namespace` | optional *string literal* or *path* | The namespace of the XML element to match. If it is a *path*, it must point at a `&'static str`. |
+| `name` | optional *string literal* or *path* | The name of the XML element to match. If it is a *path*, it must point at a `&'static NcNameStr`. |
 
 The field on which the `flag` meta is used must be of type `bool`.
 
-If `namespace` is not set, it defaults to the namespace of the surrounding
-container. If `name` is not set, it defaults to the field's name, if available.
-If `name` is not set and the field is unnamed, a compile-time error is raised.
+Both `namespace` and `name` may be omitted. If `namespace` is omitted, it
+defaults to the namespace of the surrounding container. If `name` is omitted
+and the `flag` meta is being used on a named field, that field's name is
+used. If `name` is omitted and `flag` is not used on a named field, an
+error is emitted.
 
 When parsing, any contents within the child element generate a parse error.
 
@@ -606,8 +607,8 @@ element.
 
 | Key | Value type | Description |
 | --- | --- | --- |
-| `codec` | *expression* | Optional [`TextCodec`] implementation which is used to encode or decode the field. |
-| `type_` | *type* | Optional explicit type specification. Only allowed within `#[xml(extract(fields(..)))]`. |
+| `codec` | optional *expression* | [`TextCodec`] implementation which is used to encode or decode the field. |
+| `type_` | optional *type* | Explicit type specification. Only allowed within `#[xml(extract(fields(..)))]`. |
 
 If `codec` is given, the given `codec` value must implement
 [`TextCodec<T>`][`TextCodec`] where `T` is the type of the field.
