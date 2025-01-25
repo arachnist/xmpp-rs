@@ -25,11 +25,6 @@ pub struct Cert {
     pub data: Vec<u8>,
 }
 
-/// Temporary zero-sized struct for when the no-cert-management element is present.
-#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
-#[xml(namespace = ns::SASL_CERT, name = "no-cert-management")]
-pub struct NoCertManagement;
-
 /// For the client to upload an X.509 certificate.
 #[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = ns::SASL_CERT, name = "append")]
@@ -43,9 +38,8 @@ pub struct Append {
     pub cert: Cert,
 
     /// This client is forbidden from managing certificates.
-    // TODO: replace with `#[xml(flag)]` once we have it.
-    #[xml(child(default))]
-    pub no_cert_management: Option<NoCertManagement>,
+    #[xml(flag(name = "no-cert-management"))]
+    pub no_cert_management: bool,
 }
 
 impl IqSetPayload for Append {}
@@ -86,9 +80,8 @@ pub struct Item {
     pub cert: Cert,
 
     /// This client is forbidden from managing certificates.
-    #[xml(child(default))]
-    // TODO: replace with `#[xml(flag)]` once we have it.
-    pub no_cert_management: Option<NoCertManagement>,
+    #[xml(flag(name = "no-cert-management"))]
+    pub no_cert_management: bool,
 
     /// List of resources currently using this certificate.
     #[xml(child(default))]
@@ -138,7 +131,6 @@ mod tests {
     #[cfg(target_pointer_width = "32")]
     #[test]
     fn test_size() {
-        assert_size!(NoCertManagement, 0);
         assert_size!(Append, 28);
         assert_size!(Disable, 12);
         assert_size!(Revoke, 12);
@@ -153,7 +145,6 @@ mod tests {
     #[cfg(target_pointer_width = "64")]
     #[test]
     fn test_size() {
-        assert_size!(NoCertManagement, 0);
         assert_size!(Append, 56);
         assert_size!(Disable, 24);
         assert_size!(Revoke, 24);
@@ -225,7 +216,7 @@ mod tests {
             cert: Cert {
                 data: b"\0\0\0".to_vec(),
             },
-            no_cert_management: None,
+            no_cert_management: false,
         };
         let elem: Element = append.into();
         assert!(elem.is("append", ns::SASL_CERT));
@@ -251,7 +242,7 @@ mod tests {
             cert: Cert {
                 data: b"\0\0\0".to_vec(),
             },
-            no_cert_management: None,
+            no_cert_management: false,
             users: None,
         };
 
@@ -270,7 +261,7 @@ mod tests {
             cert: Cert {
                 data: b"\0\0\0".to_vec(),
             },
-            no_cert_management: None,
+            no_cert_management: false,
         };
 
         let serialized: Element = append.into();

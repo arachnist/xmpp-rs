@@ -42,6 +42,10 @@ XXXX-YY-ZZ RELEASER <admin@example.com>
       - `Caps::hash` has been split into `Caps::hash` (the algo) and
         `Caps::ver` (the actual hash), to reflect the attributes (!517)
       - muc::MucUser now has an `invite` field
+      - cert_management::Append::no_cert_management,
+        cert_management::Item::no_cert_management,
+        ssm::StreamManagement::optional and starttls::StartTls::required are
+        now proper bools, instead of Option<ZeroSizedType> (!518)
     * New parsers/serialisers:
       - Stream Features (RFC 6120) (!400)
       - Spam Reporting (XEP-0377) (!506)

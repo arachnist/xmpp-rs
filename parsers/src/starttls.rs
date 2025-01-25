@@ -25,15 +25,9 @@ pub struct Proceed;
 #[xml(namespace = ns::TLS, name = "starttls")]
 pub struct StartTls {
     /// Marker for mandatory StartTLS.
-    // TODO: replace with `#[xml(flag)]` once we have it
-    #[xml(child(default))]
-    pub required: Option<RequiredStartTls>,
+    #[xml(flag(name = "required"))]
+    pub required: bool,
 }
-
-/// Marker for mandatory StartTLS.
-#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
-#[xml(namespace = ns::TLS, name = "required")]
-pub struct RequiredStartTls;
 
 /// Enum which allows parsing/serialising any STARTTLS element.
 #[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
@@ -58,7 +52,6 @@ mod tests {
         assert_size!(Request, 0);
         assert_size!(Proceed, 0);
         assert_size!(StartTls, 1);
-        assert_size!(RequiredStartTls, 0);
         assert_size!(Nonza, 1);
     }
 
@@ -82,7 +75,7 @@ mod tests {
             .parse()
             .unwrap();
         let starttls = StartTls::try_from(elem.clone()).unwrap();
-        assert_eq!(starttls.required, None);
+        assert_eq!(starttls.required, false);
         let elem2 = Element::from(starttls);
         assert_eq!(elem, elem2);
 
@@ -91,7 +84,7 @@ mod tests {
                 .parse()
                 .unwrap();
         let starttls = StartTls::try_from(elem.clone()).unwrap();
-        assert_eq!(starttls.required, Some(RequiredStartTls));
+        assert_eq!(starttls.required, true);
         let elem2 = Element::from(starttls);
         assert_eq!(elem, elem2);
 

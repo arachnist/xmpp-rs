@@ -129,7 +129,7 @@ mod tests {
         assert_eq!(features.can_bind(), false);
         assert_eq!(features.sasl_mechanisms.mechanisms.len(), 0);
         assert_eq!(features.can_starttls(), true);
-        assert_eq!(features.starttls.unwrap().required.is_some(), true);
+        assert_eq!(features.starttls.unwrap().required, true);
     }
 
     #[test]
