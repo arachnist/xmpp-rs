@@ -11,7 +11,7 @@ use crate::message::MessagePayload;
 use crate::ns;
 use crate::presence::PresencePayload;
 
-use jid::FullJid;
+use jid::{FullJid, Jid};
 
 generate_attribute_enum!(
 /// Lists all of the possible status codes used in MUC presences.
@@ -237,6 +237,52 @@ impl Item {
     }
 }
 
+/// Mediated invite
+#[derive(FromXml, AsXml, Debug, PartialEq, Clone)]
+#[xml(namespace = ns::MUC_USER, name = "invite")]
+pub struct Invite {
+    /// Sender.
+    ///
+    /// This is only populated for invites which have been mediated by a MUC
+    /// and sent to the invitee.
+    #[xml(attribute(default))]
+    pub from: Option<Jid>,
+
+    /// Recipient.
+    ///
+    /// This is only populated for requests to mediate an invite through a
+    /// MUC, before forwarding it to the invitee.
+    #[xml(attribute(default))]
+    pub to: Option<Jid>,
+
+    /// The optional reason for the invite.
+    #[xml(extract(name = "reason", default, fields(text(type_ = String))))]
+    pub reason: Option<String>,
+}
+
+/// Rejection of a mediated invite.
+#[derive(FromXml, AsXml, Debug, PartialEq, Clone)]
+#[xml(namespace = ns::MUC_USER, name = "decline")]
+pub struct Decline {
+    /// Sender.
+    ///
+    /// This is only populated for rejections which have been mediated by a
+    /// MUC and sent to the inviter.
+    #[xml(attribute(default))]
+    pub from: Option<Jid>,
+
+    /// Recipient.
+    ///
+    /// This is only populated for requests to decline an invite through a
+    /// MUC, before forwarding it to the inviter.
+    #[xml(attribute(default))]
+    pub to: Option<Jid>,
+
+    /// The optional reason for the rejection.
+    #[xml(extract(name = "reason", default, fields(text(type_ = String))))]
+    pub reason: Option<String>,
+}
+
 /// The main muc#user element.
 #[derive(FromXml, AsXml, Debug, PartialEq, Clone)]
 #[xml(namespace = ns::MUC_USER, name = "x")]
@@ -248,6 +294,14 @@ pub struct MucUser {
     /// List of items.
     #[xml(child(n = ..))]
     pub items: Vec<Item>,
+
+    /// A mediated invite
+    #[xml(child(default))]
+    pub invite: Option<Invite>,
+
+    /// A mediated invite rejection
+    #[xml(child(default))]
+    pub decline: Option<Decline>,
 }
 
 impl Default for MucUser {
@@ -262,6 +316,8 @@ impl MucUser {
         MucUser {
             status: vec![],
             items: vec![],
+            invite: None,
+            decline: None,
         }
     }
 
@@ -340,6 +396,8 @@ mod tests {
         let muc = MucUser {
             status: vec![],
             items: vec![],
+            invite: None,
+            decline: None,
         };
         let elem2 = muc.into();
         assert_eq!(elem, elem2);
