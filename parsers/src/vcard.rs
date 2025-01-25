@@ -73,7 +73,6 @@ impl IqResultPayload for VCard {}
 #[cfg(test)]
 mod tests {
     use super::*;
-    use base64::Engine;
     use std::str::FromStr;
 
     #[cfg(target_pointer_width = "32")]
@@ -116,7 +115,7 @@ mod tests {
       <BINVAL>{}</BINVAL>
     </PHOTO>
   </vCard>",
-            base64::prelude::BASE64_STANDARD.encode(&bytes)
+            base64::Engine::encode(&base64::prelude::BASE64_STANDARD, &bytes)
         );
 
         let test_vcard = Element::from_str(&test_vcard).expect("Failed to parse XML");
