@@ -1977,7 +1977,7 @@ fn extract_ignore_unknown_stuff_roundtrip() {
 #[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = NS1, name = "foo")]
 struct Flag {
-    #[xml(flag(namespace = NS1, name = "flag"))]
+    #[xml(flag)]
     flag: bool,
 }
 

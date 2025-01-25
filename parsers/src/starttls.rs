@@ -25,7 +25,7 @@ pub struct Proceed;
 #[xml(namespace = ns::TLS, name = "starttls")]
 pub struct StartTls {
     /// Marker for mandatory StartTLS.
-    #[xml(flag(name = "required"))]
+    #[xml(flag)]
     pub required: bool,
 }
 

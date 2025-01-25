@@ -1055,10 +1055,12 @@ impl XmlFieldMeta {
     /// Parse a `#[xml(flag)]` meta.
     fn flag_from_meta(meta: ParseNestedMeta<'_>) -> Result<Self> {
         let mut qname = QNameRef::default();
-        meta.parse_nested_meta(|meta| match qname.parse_incremental_from_meta(meta)? {
-            None => Ok(()),
-            Some(meta) => Err(Error::new_spanned(meta.path, "unsupported key")),
-        })?;
+        if meta.input.peek(syn::token::Paren) {
+            meta.parse_nested_meta(|meta| match qname.parse_incremental_from_meta(meta)? {
+                None => Ok(()),
+                Some(meta) => Err(Error::new_spanned(meta.path, "unsupported key")),
+            })?;
+        }
         Ok(Self::Flag {
             span: meta.path.span(),
             qname,

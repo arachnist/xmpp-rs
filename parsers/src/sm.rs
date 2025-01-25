@@ -139,7 +139,7 @@ pub struct Resumed {
 #[xml(namespace = ns::SM, name = "sm")]
 pub struct StreamManagement {
     /// `<optional/>` flag.
-    #[xml(flag(name = "optional"))]
+    #[xml(flag)]
     pub optional: bool,
 }
 
