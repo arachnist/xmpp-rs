@@ -18,7 +18,7 @@ use alloc::{
 use crate::{error::Error, AsXmlText, FromXmlText};
 
 #[cfg(feature = "base64")]
-use base64::engine::{general_purpose::STANDARD as StandardBase64Engine, Engine as _};
+use base64::engine::general_purpose::STANDARD as StandardBase64Engine;
 
 macro_rules! convert_via_fromstr_and_display {
     ($($(#[cfg $cfg:tt])?$t:ty,)+) => {
@@ -291,38 +291,47 @@ impl TextFilter for StripWhitespace {
     }
 }
 
-/// Text codec transforming text to binary using standard base64.
+/// Text codec transforming text to binary using standard `base64`.
 ///
 /// The `Filter` type argument can be used to employ additional preprocessing
 /// of incoming text data. Most interestingly, passing [`StripWhitespace`]
 /// will make the implementation ignore any whitespace within the text.
+///
+/// `Base64` uses the [`base64::engine::general_purpose::STANDARD`] engine.
+/// [`TextCodec`] is also automatically implemented for any value which
+/// implements [`base64::engine::Engine`], allowing you to choose different
+/// alphabets easily.
 #[cfg(feature = "base64")]
 pub struct Base64;
 
 #[cfg(feature = "base64")]
 impl TextCodec<Vec<u8>> for Base64 {
     fn decode(&self, s: String) -> Result<Vec<u8>, Error> {
-        StandardBase64Engine
-            .decode(s.as_bytes())
+        base64::engine::Engine::decode(&StandardBase64Engine, s.as_bytes())
             .map_err(Error::text_parse_error)
     }
 
     fn encode<'x>(&self, value: &'x Vec<u8>) -> Result<Option<Cow<'x, str>>, Error> {
-        Ok(Some(Cow::Owned(StandardBase64Engine.encode(&value))))
+        Ok(Some(Cow::Owned(base64::engine::Engine::encode(
+            &StandardBase64Engine,
+            &value,
+        ))))
     }
 }
 
 #[cfg(feature = "base64")]
 impl<'x> TextCodec<Cow<'x, [u8]>> for Base64 {
     fn decode(&self, s: String) -> Result<Cow<'x, [u8]>, Error> {
-        StandardBase64Engine
-            .decode(s.as_bytes())
+        base64::engine::Engine::decode(&StandardBase64Engine, s.as_bytes())
             .map_err(Error::text_parse_error)
             .map(Cow::Owned)
     }
 
     fn encode<'a>(&self, value: &'a Cow<'x, [u8]>) -> Result<Option<Cow<'a, str>>, Error> {
-        Ok(Some(Cow::Owned(StandardBase64Engine.encode(&value))))
+        Ok(Some(Cow::Owned(base64::engine::Engine::encode(
+            &StandardBase64Engine,
+            &value,
+        ))))
     }
 }
 
@@ -342,6 +351,40 @@ where
         decoded
             .as_ref()
             .map(|x| self.encode(x))
+            .transpose()
+            .map(Option::flatten)
+    }
+}
+
+#[cfg(feature = "base64")]
+impl<T: base64::engine::Engine> TextCodec<Vec<u8>> for T {
+    fn decode(&self, s: String) -> Result<Vec<u8>, Error> {
+        base64::engine::Engine::decode(self, s.as_bytes()).map_err(Error::text_parse_error)
+    }
+
+    fn encode<'x>(&self, value: &'x Vec<u8>) -> Result<Option<Cow<'x, str>>, Error> {
+        Ok(Some(Cow::Owned(base64::engine::Engine::encode(
+            self, &value,
+        ))))
+    }
+}
+
+#[cfg(feature = "base64")]
+impl<'a, T: base64::engine::Engine, U> TextCodec<Option<U>> for T
+where
+    T: TextCodec<U>,
+{
+    fn decode(&self, s: String) -> Result<Option<U>, Error> {
+        if s.is_empty() {
+            return Ok(None);
+        }
+        Ok(Some(TextCodec::decode(self, s)?))
+    }
+
+    fn encode<'x>(&self, decoded: &'x Option<U>) -> Result<Option<Cow<'x, str>>, Error> {
+        decoded
+            .as_ref()
+            .map(|x| TextCodec::encode(self, x))
             .transpose()
             .map(Option::flatten)
     }

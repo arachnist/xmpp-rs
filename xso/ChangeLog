@@ -27,6 +27,8 @@ Version NEXT:
         jid::DomainPart, and jid::ResourcePart (!485)
       - Support for optional child elements, the presence of which are
         translated into a boolean (`#[xml(flag)]`).
+      - Generic TextCodec implementation for all base64 engines provided by
+        the base64 crate (if the `base64` feature is enabled).
 
 Version 0.1.2:
 2024-07-26 Jonas Schäfer <jonas@zombofant.net>
