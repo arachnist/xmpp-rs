@@ -293,10 +293,6 @@ impl TextFilter for StripWhitespace {
 
 /// Text codec transforming text to binary using standard `base64`.
 ///
-/// The `Filter` type argument can be used to employ additional preprocessing
-/// of incoming text data. Most interestingly, passing [`StripWhitespace`]
-/// will make the implementation ignore any whitespace within the text.
-///
 /// `Base64` uses the [`base64::engine::general_purpose::STANDARD`] engine.
 /// [`TextCodec`] is also automatically implemented for any value which
 /// implements [`base64::engine::Engine`], allowing you to choose different
