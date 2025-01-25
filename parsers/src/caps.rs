@@ -4,6 +4,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use xso::{AsXml, FromXml};
+
 use crate::data_forms::DataForm;
 use crate::disco::{DiscoInfoQuery, DiscoInfoResult, Feature, Identity};
 use crate::hashes::{Algo, Hash};
@@ -12,62 +14,37 @@ use crate::presence::PresencePayload;
 use base64::{engine::general_purpose::STANDARD as Base64, Engine};
 use blake2::Blake2bVar;
 use digest::{Digest, Update, VariableOutput};
-use minidom::Element;
 use sha1::Sha1;
 use sha2::{Sha256, Sha512};
 use sha3::{Sha3_256, Sha3_512};
-use xso::error::{Error, FromElementError};
 
 /// Represents a capability hash for a given client.
-#[derive(Debug, Clone)]
+///
+/// Warning: This protocol is insecure, you may want to switch to
+/// [ecaps2](../ecaps2/index.html) instead, see [this
+/// email](https://mail.jabber.org/pipermail/security/2009-July/000812.html).
+#[derive(FromXml, AsXml, Debug, Clone)]
+#[xml(namespace = ns::CAPS, name = "c")]
 pub struct Caps {
     /// Deprecated list of additional feature bundles.
+    #[xml(attribute(default))]
     pub ext: Option<String>,
 
     /// A URI identifying an XMPP application.
+    #[xml(attribute)]
     pub node: String,
+
+    /// The algorithm of the hash of these caps.
+    #[xml(attribute)]
+    pub hash: Algo,
 
     /// The hash of that application’s
     /// [disco#info](../disco/struct.DiscoInfoResult.html).
-    ///
-    /// Warning: This protocol is insecure, you may want to switch to
-    /// [ecaps2](../ecaps2/index.html) instead, see [this
-    /// email](https://mail.jabber.org/pipermail/security/2009-July/000812.html).
-    pub hash: Hash,
+    #[xml(attribute(codec = Base64))]
+    pub ver: Vec<u8>,
 }
 
 impl PresencePayload for Caps {}
-
-impl TryFrom<Element> for Caps {
-    type Error = FromElementError;
-
-    fn try_from(elem: Element) -> Result<Caps, FromElementError> {
-        check_self!(elem, "c", CAPS, "caps");
-        check_no_children!(elem, "caps");
-        check_no_unknown_attributes!(elem, "caps", ["hash", "ver", "ext", "node"]);
-        let ver: String = get_attr!(elem, "ver", Required);
-        let hash = Hash {
-            algo: get_attr!(elem, "hash", Required),
-            hash: Base64.decode(ver).map_err(Error::text_parse_error)?,
-        };
-        Ok(Caps {
-            ext: get_attr!(elem, "ext", Option),
-            node: get_attr!(elem, "node", Required),
-            hash,
-        })
-    }
-}
-
-impl From<Caps> for Element {
-    fn from(caps: Caps) -> Element {
-        Element::builder("c", ns::CAPS)
-            .attr("ext", caps.ext)
-            .attr("hash", caps.hash.algo)
-            .attr("node", caps.node)
-            .attr("ver", Base64.encode(&caps.hash.hash))
-            .build()
-    }
-}
 
 impl Caps {
     /// Create a Caps element from its node and hash.
@@ -75,7 +52,8 @@ impl Caps {
         Caps {
             ext: None,
             node: node.into(),
-            hash,
+            hash: hash.algo,
+            ver: hash.hash,
         }
     }
 }
@@ -207,7 +185,7 @@ pub fn hash_caps(data: &[u8], algo: Algo) -> Result<Hash, String> {
 /// caps hash.
 pub fn query_caps(caps: Caps) -> DiscoInfoQuery {
     DiscoInfoQuery {
-        node: Some(format!("{}#{}", caps.node, Base64.encode(&caps.hash.hash))),
+        node: Some(format!("{}#{}", caps.node, Base64.encode(&caps.ver))),
     }
 }
 
@@ -215,6 +193,8 @@ pub fn query_caps(caps: Caps) -> DiscoInfoQuery {
 mod tests {
     use super::*;
     use crate::caps;
+    use minidom::Element;
+    use xso::error::{Error, FromElementError};
 
     #[cfg(target_pointer_width = "32")]
     #[test]
@@ -233,9 +213,9 @@ mod tests {
         let elem: Element = "<c xmlns='http://jabber.org/protocol/caps' hash='sha-256' node='coucou' ver='K1Njy3HZBThlo4moOD5gBGhn0U0oK7/CbfLlIUDi6o4='/>".parse().unwrap();
         let caps = Caps::try_from(elem).unwrap();
         assert_eq!(caps.node, String::from("coucou"));
-        assert_eq!(caps.hash.algo, Algo::Sha_256);
+        assert_eq!(caps.hash, Algo::Sha_256);
         assert_eq!(
-            caps.hash.hash,
+            caps.ver,
             Base64
                 .decode("K1Njy3HZBThlo4moOD5gBGhn0U0oK7/CbfLlIUDi6o4=")
                 .unwrap()
@@ -245,13 +225,13 @@ mod tests {
     #[cfg(not(feature = "disable-validation"))]
     #[test]
     fn test_invalid_child() {
-        let elem: Element = "<c xmlns='http://jabber.org/protocol/caps'><hash xmlns='urn:xmpp:hashes:2' algo='sha-256'>K1Njy3HZBThlo4moOD5gBGhn0U0oK7/CbfLlIUDi6o4=</hash></c>".parse().unwrap();
+        let elem: Element = "<c xmlns='http://jabber.org/protocol/caps' node='coucou' hash='sha-256' ver='K1Njy3HZBThlo4moOD5gBGhn0U0oK7/CbfLlIUDi6o4='><hash xmlns='urn:xmpp:hashes:2' algo='sha-256'>K1Njy3HZBThlo4moOD5gBGhn0U0oK7/CbfLlIUDi6o4=</hash></c>".parse().unwrap();
         let error = Caps::try_from(elem).unwrap_err();
         let message = match error {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Unknown child in caps element.");
+        assert_eq!(message, "Unknown child in Caps element.");
     }
 
     #[test]

@@ -39,6 +39,8 @@ XXXX-YY-ZZ RELEASER <admin@example.com>
       - message::Message id field is now Option<message::Id> instead of
         Option<String> (!504)
       - message_correction::Replace id field is now Id instead of String (!504)
+      - `Caps::hash` has been split into `Caps::hash` (the algo) and
+        `Caps::ver` (the actual hash), to reflect the attributes (!517)
     * New parsers/serialisers:
       - Stream Features (RFC 6120) (!400)
       - Spam Reporting (XEP-0377) (!506)
