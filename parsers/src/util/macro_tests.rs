@@ -389,6 +389,57 @@ fn default_attribute_roundtrip_pp() {
 }
 
 #[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = NS1, name = "attr")]
+struct AttributeWithCodec {
+    #[xml(attribute(default, codec = xso::text::EmptyAsNone))]
+    foo: core::option::Option<String>,
+}
+
+#[test]
+fn attribute_with_codec_is_none() {
+    #[allow(unused_imports)]
+    use core::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    let el = parse_str::<AttributeWithCodec>("<attr xmlns='urn:example:ns1'/>").unwrap();
+    assert_eq!(el.foo, None);
+    let el = parse_str::<AttributeWithCodec>("<attr xmlns='urn:example:ns1' foo=''/>").unwrap();
+    assert_eq!(el.foo, None);
+    let el = parse_str::<AttributeWithCodec>("<attr xmlns='urn:example:ns1' foo='bar'/>").unwrap();
+    assert_eq!(el.foo, Some(String::from("bar")));
+}
+
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = NS1, name = "attr")]
+struct AttributeWithBase64Codec {
+    #[xml(attribute(codec = xso::text::Base64))]
+    foo: Vec<u8>,
+}
+
+#[test]
+fn attribute_with_base64_codec_roundtrip() {
+    #[allow(unused_imports)]
+    use core::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    roundtrip_full::<AttributeWithBase64Codec>("<attr xmlns='urn:example:ns1' foo='AAAA'/>");
+}
+
+#[test]
+fn attribute_with_base64_codec_decodes() {
+    #[allow(unused_imports)]
+    use core::{
+        option::Option::{None, Some},
+        result::Result::{Err, Ok},
+    };
+    let el = parse_str::<AttributeWithBase64Codec>("<attr xmlns='urn:example:ns1' foo='AAAA'/>")
+        .unwrap();
+    assert_eq!(el.foo, [0, 0, 0]);
+}
+
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
 #[xml(namespace = NS1, name = "text")]
 struct TextString {
     #[xml(text)]

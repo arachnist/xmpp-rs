@@ -29,6 +29,8 @@ Version NEXT:
         translated into a boolean (`#[xml(flag)]`).
       - Generic TextCodec implementation for all base64 engines provided by
         the base64 crate (if the `base64` feature is enabled).
+      - New `codec` field on `attribute` meta, to support decoding and
+        encoding using any `TextCodec`.
 
 Version 0.1.2:
 2024-07-26 Jonas Schäfer <jonas@zombofant.net>

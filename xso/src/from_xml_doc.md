@@ -263,6 +263,7 @@ The following keys can be used inside the `#[xml(attribute(..))]` meta:
 | `name` | optional *string literal* or *path* | The name of the XML attribute to match. If it is a *path*, it must point at a `&'static NcNameStr`. |
 | `default` | *flag* | If present, an absent attribute will substitute the default value instead of raising an error. |
 | `type_` | *type* | Optional explicit type specification. Only allowed within `#[xml(extract(fields(..)))]`. |
+| `codec` | optional *expression* | [`TextCodec`] implementation which is used to encode or decode the field. |
 
 If the `name` key contains a namespace prefix, it must be one of the prefixes
 defined as built-in in the XML specifications. That prefix will then be
@@ -283,6 +284,9 @@ influence on `AsXml`.
 If `type_` is specified and the `text` meta is used within an
 `#[xml(extract(fields(..)))]` meta, the specified type is used instead of the
 field type on which the `extract` is declared.
+
+If `codec` is given, the given `codec` value must implement
+[`TextCodec<T>`][`TextCodec`] where `T` is the type of the field.
 
 #### Example
 

@@ -14,7 +14,10 @@ use syn::*;
 use crate::error_message::{self, ParentRef};
 use crate::meta::{Flag, NameRef, NamespaceRef};
 use crate::scope::{AsItemsScope, FromEventsScope};
-use crate::types::{as_optional_xml_text_fn, default_fn, from_xml_text_fn};
+use crate::types::{
+    as_optional_xml_text_fn, default_fn, from_xml_text_fn, text_codec_decode_fn,
+    text_codec_encode_fn,
+};
 
 use super::{Field, FieldBuilderPart, FieldIteratorPart, FieldTempInit};
 
@@ -29,6 +32,9 @@ pub(super) struct AttributeField {
     /// Flag indicating whether the value should be defaulted if the
     /// attribute is absent.
     pub(super) default_: Flag,
+
+    /// Optional codec to use.
+    pub(super) codec: Option<Expr>,
 }
 
 impl Field for AttributeField {
@@ -53,7 +59,18 @@ impl Field for AttributeField {
             },
         };
 
-        let from_xml_text = from_xml_text_fn(ty.clone());
+        let finalize = match self.codec {
+            Some(ref codec) => {
+                let decode = text_codec_decode_fn(ty.clone());
+                quote! {
+                    |value| #decode(&#codec, value)
+                }
+            }
+            None => {
+                let from_xml_text = from_xml_text_fn(ty.clone());
+                quote! { #from_xml_text }
+            }
+        };
 
         let on_absent = match self.default_ {
             Flag::Absent => quote! {
@@ -70,7 +87,7 @@ impl Field for AttributeField {
         Ok(FieldBuilderPart::Init {
             value: FieldTempInit {
                 init: quote! {
-                    match #attrs.remove(#xml_namespace, #xml_name).map(#from_xml_text).transpose()? {
+                    match #attrs.remove(#xml_namespace, #xml_name).map(#finalize).transpose()? {
                         ::core::option::Option::Some(v) => v,
                         ::core::option::Option::None => #on_absent,
                     }
@@ -96,11 +113,20 @@ impl Field for AttributeField {
         };
         let xml_name = &self.xml_name;
 
-        let as_optional_xml_text = as_optional_xml_text_fn(ty.clone());
+        let generator = match self.codec {
+            Some(ref codec) => {
+                let encode = text_codec_encode_fn(ty.clone());
+                quote! { #encode(&#codec, #bound_name)? }
+            }
+            None => {
+                let as_optional_xml_text = as_optional_xml_text_fn(ty.clone());
+                quote! { #as_optional_xml_text(#bound_name)? }
+            }
+        };
 
         Ok(FieldIteratorPart::Header {
             generator: quote! {
-                #as_optional_xml_text(#bound_name)?.map(|#bound_name| ::xso::Item::Attribute(
+                #generator.map(|#bound_name| ::xso::Item::Attribute(
                     #xml_namespace,
                     ::std::borrow::Cow::Borrowed(#xml_name),
                     #bound_name,

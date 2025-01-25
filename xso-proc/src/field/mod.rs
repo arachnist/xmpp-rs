@@ -253,6 +253,7 @@ fn new_field(
             qname: QNameRef { namespace, name },
             default_,
             type_,
+            codec,
         } => {
             let xml_name = default_name(span, name, field_ident)?;
 
@@ -270,6 +271,7 @@ fn new_field(
                 xml_name,
                 xml_namespace: namespace,
                 default_,
+                codec,
             }))
         }
 

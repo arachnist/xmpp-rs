@@ -689,6 +689,9 @@ pub(crate) enum XmlFieldMeta {
 
         /// An explicit type override, only usable within extracts.
         type_: Option<Type>,
+
+        /// The path to the optional codec type.
+        codec: Option<Expr>,
     },
 
     /// `#[xml(text)]`
@@ -787,12 +790,14 @@ impl XmlFieldMeta {
                 },
                 default_: Flag::Absent,
                 type_: None,
+                codec: None,
             })
         } else if meta.input.peek(syn::token::Paren) {
             // full syntax
             let mut qname = QNameRef::default();
             let mut default_ = Flag::Absent;
             let mut type_ = None;
+            let mut codec = None;
             meta.parse_nested_meta(|meta| {
                 if meta.path.is_ident("default") {
                     if default_.is_set() {
@@ -806,6 +811,23 @@ impl XmlFieldMeta {
                     }
                     type_ = Some(meta.value()?.parse()?);
                     Ok(())
+                } else if meta.path.is_ident("codec") {
+                    if codec.is_some() {
+                        return Err(Error::new_spanned(meta.path, "duplicate `codec` key"));
+                    }
+                    let (new_codec, helpful_error) = parse_codec_expr(meta.value()?)?;
+                    // See the comment at the top of text_from_meta() below for why we
+                    // do this.
+                    let lookahead = meta.input.lookahead1();
+                    if !lookahead.peek(Token![,]) && !meta.input.is_empty() {
+                        if let Some(helpful_error) = helpful_error {
+                            let mut e = lookahead.error();
+                            e.combine(helpful_error);
+                            return Err(e);
+                        }
+                    }
+                    codec = Some(new_codec);
+                    Ok(())
                 } else {
                     match qname.parse_incremental_from_meta(meta)? {
                         None => Ok(()),
@@ -818,6 +840,7 @@ impl XmlFieldMeta {
                 qname,
                 default_,
                 type_,
+                codec,
             })
         } else {
             // argument-less syntax
@@ -826,6 +849,7 @@ impl XmlFieldMeta {
                 qname: QNameRef::default(),
                 default_: Flag::Absent,
                 type_: None,
+                codec: None,
             })
         }
     }
