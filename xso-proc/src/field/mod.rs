@@ -47,6 +47,20 @@ pub(crate) enum NestedMatcher {
         /// Expression which evaluates to `Result<T, FromEventsError>`,
         /// consuming `name: rxml::QName` and `attrs: rxml::AttrMap`.
         ///
+        /// If the `name` and `attrs` allow starting to parse the child
+        /// element as a value of this field, `Ok(_)` must be returned. If
+        /// the `name` and `attrs` are those of an element which *could*
+        /// be a value of this field, but they have invalid contents,
+        /// `Err(FromEventsError::Invalid(_))` must be returned. Depending
+        /// on the field kind, it may also be acceptable to return the
+        /// `Invalid` variant if the data is valid, but no further child
+        /// element can be accepted into the value.
+        ///
+        /// Otherwise, the `name` and `attrs` must be returned *unchanged* in
+        /// a `FromEventsError::Mismatch { .. }` variant. In that case, the
+        /// implementation in `Compound` will let the next field attempt to
+        /// parse the child element.
+        ///
         /// `T` must be the type specified in the
         /// [`FieldBuilderPart::Nested::builder`]  field.
         TokenStream,
@@ -60,6 +74,11 @@ pub(crate) enum NestedMatcher {
     Fallback(
         /// Expression which evaluates to `T` (or `return`s an error),
         /// consuming `name: rxml::QName` and `attrs: rxml::AttrMap`.
+        ///
+        /// Unlike the [`Selective`][`Self::Selective`] variant, this
+        /// expression must always evaluate to an instance of `T`. If that is
+        /// not possible, the expression must diverge, most commonly using
+        /// `return` with a `Err::<_, xso::error::Error>(_)`.
         ///
         /// `T` must be the type specified in the
         /// [`FieldBuilderPart::Nested::builder`]  field.
