@@ -28,8 +28,11 @@ mod stream;
 
 /// XMPP client connection and state
 ///
-/// This implements the `futures` crate's [`Stream`](#impl-Stream) and
-/// [`Sink`](#impl-Sink<Packet>) traits.
+/// This implements the `futures` crate's [`Stream`](#impl-Stream) to receive
+/// stream state changes as well as stanzas received via the stream.
+///
+/// To send stanzas, the [`send_stanza`][`Client::send_stanza`] method can be
+/// used.
 pub struct Client {
     stream: StanzaStream,
     bound_jid: Option<Jid>,
@@ -43,7 +46,19 @@ impl Client {
         self.bound_jid.as_ref()
     }
 
-    /// Send stanza
+    /// Send a stanza.
+    ///
+    /// This will automatically allocate an ID if the stanza has no ID set.
+    /// The returned `StanzaToken` is awaited up to the [`StanzaStage::Sent`]
+    /// stage, which means that this coroutine only returns once the stanza
+    /// has actually been written to the XMPP transport.
+    ///
+    /// Note that this does not imply that it has been *reeceived* by the
+    /// peer, nor that it has been successfully processed. To confirm that a
+    /// stanza has been received by a peer, the [`StanzaToken::wait_for`]
+    /// method can be called with [`StanzaStage::Acked`], but that stage will
+    /// only ever be reached if the server supports XEP-0198 and it has been
+    /// negotiated successfully (this may change in the future).
     pub async fn send_stanza(&mut self, mut stanza: Stanza) -> Result<StanzaToken, io::Error> {
         stanza.ensure_id();
         let mut token = self.stream.send(Box::new(stanza)).await;
@@ -60,15 +75,20 @@ impl Client {
         }
     }
 
-    /// Get the stream features (`<stream:features/>`) of the underlying stream
+    /// Get the stream features (`<stream:features/>`) of the underlying
+    /// stream.
+    ///
+    /// If the stream has not completed negotiation yet, this will return
+    /// `None`. Note that stream features may change at any point due to a
+    /// transparent reconnect.
     pub fn get_stream_features(&self) -> Option<&StreamFeatures> {
         self.features.as_ref()
     }
 
-    /// End connection by sending `</stream:stream>`
+    /// Close the client cleanly.
     ///
-    /// You may expect the server to respond with the same. This
-    /// client will then drop its connection.
+    /// This performs an orderly stream shutdown, ensuring that all resources
+    /// are correctly cleaned up.
     pub async fn send_end(self) -> Result<(), Error> {
         self.stream.close().await;
         Ok(())
