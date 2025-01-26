@@ -82,6 +82,7 @@ changelog-update:
     - apk add --no-cache python3 git
     - python3 --version
     - git version
+    - git fetch origin main
     - git log --oneline "${CI_MERGE_REQUEST_DIFF_BASE_SHA}.." --
     - python3 .forgejo/workflows/check-changelog.py
   rules:
