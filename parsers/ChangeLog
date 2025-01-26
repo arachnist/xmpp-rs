@@ -46,6 +46,7 @@ XXXX-YY-ZZ RELEASER <admin@example.com>
         cert_management::Item::no_cert_management,
         ssm::StreamManagement::optional and starttls::StartTls::required are
         now proper bools, instead of Option<ZeroSizedType> (!518)
+      - vCard-temp queries have been split into vcard::VCardQuery (!522)
     * New parsers/serialisers:
       - Stream Features (RFC 6120) (!400)
       - Spam Reporting (XEP-0377) (!506)

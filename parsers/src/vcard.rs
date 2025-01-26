@@ -66,9 +66,15 @@ pub struct VCard {
     pub payloads: Vec<Element>,
 }
 
-impl IqGetPayload for VCard {}
 impl IqSetPayload for VCard {}
 impl IqResultPayload for VCard {}
+
+/// A `<vCard/>` request element, for use in iq get.
+#[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
+#[xml(namespace = ns::VCARD, name = "vCard")]
+pub struct VCardQuery;
+
+impl IqGetPayload for VCardQuery {}
 
 #[cfg(test)]
 mod tests {
@@ -82,6 +88,7 @@ mod tests {
         assert_size!(Type, 12);
         assert_size!(Binval, 12);
         assert_size!(VCard, 36);
+        assert_size!(VCardQuery, 0);
     }
 
     #[cfg(target_pointer_width = "64")]
@@ -91,6 +98,7 @@ mod tests {
         assert_size!(Type, 24);
         assert_size!(Binval, 24);
         assert_size!(VCard, 72);
+        assert_size!(VCardQuery, 0);
     }
 
     #[test]
