@@ -82,8 +82,13 @@ changelog-update:
     - apk add --no-cache python3 git
     - python3 --version
     - git version
-    - git fetch origin main
-    - git log --oneline "${CI_MERGE_REQUEST_DIFF_BASE_SHA}.." --
+    - git fetch --depth 16 origin main
+    - |
+      if ! git log --oneline "${CI_MERGE_REQUEST_DIFF_BASE_SHA}.." --; then
+        echo "Failed to find revision ${CI_MERGE_REQUEST_DIFF_BASE_SHA}.." >&2
+        echo "This likely means that you need to rebase your branch." >&2
+        exit 1
+      fi
     - python3 .forgejo/workflows/check-changelog.py
   rules:
     - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
