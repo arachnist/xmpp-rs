@@ -128,7 +128,7 @@ impl Field for AttributeField {
             generator: quote! {
                 #generator.map(|#bound_name| ::xso::Item::Attribute(
                     #xml_namespace,
-                    ::std::borrow::Cow::Borrowed(#xml_name),
+                    ::xso::exports::alloc::borrow::Cow::Borrowed(#xml_name),
                     #bound_name,
                 ));
             },

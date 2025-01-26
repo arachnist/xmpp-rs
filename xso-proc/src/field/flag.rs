@@ -125,7 +125,7 @@ impl Field for FlagField {
                         2 => ::core::result::Result::Ok(::core::option::Option::Some(
                             ::xso::Item::ElementHeadStart(
                                 ::xso::exports::rxml::Namespace::from(#xml_namespace),
-                                ::std::borrow::Cow::Borrowed(#xml_name),
+                                ::xso::exports::alloc::borrow::Cow::Borrowed(#xml_name),
                             )
                         )),
                         _ => unreachable!(),

@@ -31,6 +31,7 @@ Version NEXT:
         the base64 crate (if the `base64` feature is enabled).
       - New `codec` field on `attribute` meta, to support decoding and
         encoding using any `TextCodec`.
+      - Support for `no_std` usage (the alloc crate is required, though).
 
 Version 0.1.2:
 2024-07-26 Jonas Schäfer <jonas@zombofant.net>
