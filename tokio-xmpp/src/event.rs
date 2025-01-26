@@ -16,7 +16,7 @@ use xso::{AsXml, FromXml};
 use crate::xmlstream::XmppStreamElement;
 use crate::Error;
 
-fn make_id() -> String {
+pub(crate) fn make_id() -> String {
     let id: u64 = thread_rng().gen();
     format!("{}", id)
 }

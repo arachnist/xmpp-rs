@@ -4,13 +4,14 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use core::ops::ControlFlow;
 use core::{pin::Pin, task::Context};
 use futures::{ready, task::Poll, Stream};
 
 use crate::{
     client::Client,
     stanzastream::{Event as StanzaStreamEvent, StreamEvent},
-    Event,
+    Event, Stanza,
 };
 
 /// Incoming XMPP events
@@ -34,7 +35,13 @@ impl Stream for Client {
         loop {
             return Poll::Ready(match ready!(Pin::new(&mut self.stream).poll_next(cx)) {
                 None => None,
-                Some(StanzaStreamEvent::Stanza(st)) => Some(Event::Stanza(st)),
+                Some(StanzaStreamEvent::Stanza(st)) => match st {
+                    Stanza::Iq(iq) => match self.iq_response_tracker.handle_iq(iq) {
+                        ControlFlow::Break(()) => continue,
+                        ControlFlow::Continue(iq) => Some(Event::Stanza(Stanza::Iq(iq))),
+                    },
+                    other => Some(Event::Stanza(other)),
+                },
                 Some(StanzaStreamEvent::Stream(StreamEvent::Reset {
                     bound_jid,
                     features,

@@ -184,6 +184,10 @@ impl StanzaToken {
             .ok()
     }
 
+    pub(crate) fn into_stream(self) -> tokio_stream::wrappers::WatchStream<StanzaState> {
+        tokio_stream::wrappers::WatchStream::new(self.inner)
+    }
+
     /// Read the current transmission state.
     pub fn state(&self) -> StanzaState {
         self.inner.borrow().clone()

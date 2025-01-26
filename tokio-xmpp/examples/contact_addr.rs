@@ -2,10 +2,9 @@ use futures::stream::StreamExt;
 use std::env::args;
 use std::process::exit;
 use std::str::FromStr;
-use tokio_xmpp::{Client, Stanza};
+use tokio_xmpp::{Client, IqRequest, IqResponse};
 use xmpp_parsers::{
     disco::{DiscoInfoQuery, DiscoInfoResult},
-    iq::{Iq, IqType},
     jid::{BareJid, Jid},
     ns,
     server_info::ServerInfo,
@@ -22,43 +21,57 @@ async fn main() {
     }
     let jid = BareJid::from_str(&args[1]).expect(&format!("Invalid JID: {}", &args[1]));
     let password = args[2].clone();
-    let target = &args[3];
+    let target = Jid::from_str(&args[3]).expect(&format!("Invalid JID: {}", &args[3]));
 
     // Client instance
     let mut client = Client::new(jid, password);
 
-    // Main loop, processes events
-    while let Some(event) = client.next().await {
-        if event.is_online() {
-            println!("Online!");
+    let token = client
+        .send_iq(
+            Some(target),
+            IqRequest::Get(DiscoInfoQuery { node: None }.into()),
+        )
+        .await;
+    tokio::pin!(token);
 
-            let target_jid: Jid = target.clone().parse().unwrap();
-            let iq = make_disco_iq(target_jid);
-            println!("Sending disco#info request to {}", target.clone());
-            println!(">> {:?}", iq);
-            client.send_stanza(iq.into()).await.unwrap();
-        } else if let Some(Stanza::Iq(iq)) = event.into_stanza() {
-            if let IqType::Result(Some(payload)) = iq.payload {
-                if payload.is("query", ns::DISCO_INFO) {
-                    if let Ok(disco_info) = DiscoInfoResult::try_from(payload) {
-                        for ext in disco_info.extensions {
-                            if let Ok(server_info) = ServerInfo::try_from(ext) {
-                                print_server_info(server_info);
+    // Main loop, processes events
+    loop {
+        tokio::select! {
+            response = &mut token => match response {
+                Ok(IqResponse::Result(Some(payload))) => {
+                    if payload.is("query", ns::DISCO_INFO) {
+                        if let Ok(disco_info) = DiscoInfoResult::try_from(payload) {
+                            for ext in disco_info.extensions {
+                                if let Ok(server_info) = ServerInfo::try_from(ext) {
+                                    print_server_info(server_info);
+                                }
                             }
                         }
                     }
+                    break;
                 }
-                break;
-            }
+                Ok(IqResponse::Result(None)) => {
+                    panic!("disco#info response misses payload!");
+                }
+                Ok(IqResponse::Error(err)) => {
+                    panic!("disco#info response is an error: {:?}", err);
+                }
+                Err(err) => {
+                    panic!("disco#info request failed to send: {}", err);
+                }
+            },
+            event = client.next() => {
+                let Some(event) = event else {
+                    println!("Client terminated");
+                    break;
+                };
+                if event.is_online() {
+                    println!("Online!");
+                }
+            },
         }
     }
     client.send_end().await.expect("Stream shutdown unclean");
-}
-
-fn make_disco_iq(target: Jid) -> Iq {
-    Iq::from_get("disco", DiscoInfoQuery { node: None })
-        .with_id(String::from("contact"))
-        .with_to(target)
 }
 
 fn convert_field(field: Vec<String>) -> String {

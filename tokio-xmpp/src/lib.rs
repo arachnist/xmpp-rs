@@ -64,7 +64,7 @@ pub mod xmlstream;
 #[doc(inline)]
 /// Generic tokio_xmpp Error
 pub use crate::error::Error;
-pub use client::Client;
+pub use client::{Client, IqFailure, IqRequest, IqResponse, IqResponseToken};
 #[cfg(feature = "insecure-tcp")]
 pub use component::Component;
 pub use event::{Event, Stanza};

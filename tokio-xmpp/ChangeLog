@@ -25,6 +25,9 @@ XXXX-YY-ZZ RELEASER <admin@example.com>
       - `Component` is now gated behind `insecure-tcp` feature flag
       - `XMPPStream` and `XmppCodec` were removed in favour of the newly
         implemented `tokio_xmpp::xmlstream module.
+    * Added:
+      - Support for sending IQ requests while tracking their responses in a
+        Future.
     * Changes:
       - On Linux, once the TLS session is established, we can delegate the
         actual encryption and decryption to the kernel, which in turn can

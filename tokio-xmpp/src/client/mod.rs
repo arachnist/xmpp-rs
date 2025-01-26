@@ -23,8 +23,11 @@ use crate::connect::StartTlsServerConnector;
 #[cfg(feature = "insecure-tcp")]
 use crate::connect::TcpServerConnector;
 
+mod iq;
 pub(crate) mod login;
 mod stream;
+
+pub use iq::{IqFailure, IqRequest, IqResponse, IqResponseToken};
 
 /// XMPP client connection and state
 ///
@@ -37,6 +40,7 @@ pub struct Client {
     stream: StanzaStream,
     bound_jid: Option<Jid>,
     features: Option<StreamFeatures>,
+    iq_response_tracker: iq::IqResponseTracker,
 }
 
 impl Client {
@@ -59,6 +63,9 @@ impl Client {
     /// method can be called with [`StanzaStage::Acked`], but that stage will
     /// only ever be reached if the server supports XEP-0198 and it has been
     /// negotiated successfully (this may change in the future).
+    ///
+    /// For sending Iq request stanzas, it is recommended to use
+    /// [`send_iq`][`Self::send_iq`], which allows awaiting the response.
     pub async fn send_stanza(&mut self, mut stanza: Stanza) -> Result<StanzaToken, io::Error> {
         stanza.ensure_id();
         let mut token = self.stream.send(Box::new(stanza)).await;
@@ -73,6 +80,33 @@ impl Client {
             Some(StanzaState::Failed { error }) => Err(error.into_io_error()),
             Some(StanzaState::Sent { .. }) | Some(StanzaState::Acked { .. }) => Ok(token),
         }
+    }
+
+    /// Send an IQ request and return a token to retrieve the response.
+    ///
+    /// This coroutine method will complete once the Iq has been sent to the
+    /// server. The returned `IqResponseToken` can be used to await the
+    /// response. See also the documentation of [`IqResponseToken`] for more
+    /// information on the behaviour of these tokens.
+    ///
+    /// **Important**: Even though IQ responses are delivered through the
+    /// returned token (and never through the `Stream`), the
+    /// [`Stream`][`futures::Stream`]
+    /// implementation of the [`Client`] **must be polled** to make progress
+    /// on the stream and to process incoming stanzas and thus to deliver them
+    /// to the returned token.
+    ///
+    /// **Note**: If an IQ response arrives after the `token` has been
+    /// dropped (e.g. due to a timeout), it will be delivered through the
+    /// `Stream` like any other stanza.
+    pub async fn send_iq(&mut self, to: Option<Jid>, req: IqRequest) -> IqResponseToken {
+        let (iq, mut token) = self.iq_response_tracker.allocate_iq_handle(
+            // from is always None for a client
+            None, to, req,
+        );
+        let stanza_token = self.stream.send(Box::new(iq.into())).await;
+        token.set_stanza_token(stanza_token);
+        token
     }
 
     /// Get the stream features (`<stream:features/>`) of the underlying
@@ -153,6 +187,7 @@ impl Client {
             stream: StanzaStream::new_c2s(connector, jid.into(), password.into(), timeouts, 16),
             bound_jid: None,
             features: None,
+            iq_response_tracker: iq::IqResponseTracker::new(),
         }
     }
 }
