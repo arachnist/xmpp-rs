@@ -147,6 +147,26 @@ impl IqResultPayload for SlotResult {}
 mod tests {
     use super::*;
 
+    #[cfg(target_pointer_width = "32")]
+    #[test]
+    fn test_size() {
+        assert_size!(SlotRequest, 32);
+        assert_size!(Header, 16);
+        assert_size!(Put, 24);
+        assert_size!(Get, 12);
+        assert_size!(SlotResult, 36);
+    }
+
+    #[cfg(target_pointer_width = "64")]
+    #[test]
+    fn test_size() {
+        assert_size!(SlotRequest, 56);
+        assert_size!(Header, 32);
+        assert_size!(Put, 48);
+        assert_size!(Get, 24);
+        assert_size!(SlotResult, 72);
+    }
+
     #[test]
     fn test_slot_request() {
         let elem: Element = "<request xmlns='urn:xmpp:http:upload:0'
