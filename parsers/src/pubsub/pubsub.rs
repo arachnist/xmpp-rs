@@ -5,9 +5,8 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 use xso::{
-    error::{Error, FromElementError, FromEventsError},
-    exports::rxml,
-    minidom_compat, AsXml, FromXml,
+    error::{Error, FromElementError},
+    AsXml, FromXml,
 };
 
 use crate::data_forms::DataForm;
@@ -204,68 +203,12 @@ pub struct Retract {
 }
 
 /// Indicate that the subscription can be configured.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(FromXml, AsXml, Debug, Clone, PartialEq)]
+#[xml(namespace = ns::PUBSUB, name = "subscribe-options")]
 pub struct SubscribeOptions {
     /// If `true`, the configuration is actually required.
+    #[xml(flag)]
     required: bool,
-}
-
-impl TryFrom<Element> for SubscribeOptions {
-    type Error = FromElementError;
-
-    fn try_from(elem: Element) -> Result<Self, FromElementError> {
-        check_self!(elem, "subscribe-options", PUBSUB);
-        check_no_attributes!(elem, "subscribe-options");
-        let mut required = false;
-        for child in elem.children() {
-            if child.is("required", ns::PUBSUB) {
-                if required {
-                    return Err(Error::Other(
-                        "More than one required element in subscribe-options.",
-                    )
-                    .into());
-                }
-                required = true;
-            } else {
-                return Err(Error::Other("Unknown child in subscribe-options element.").into());
-            }
-        }
-        Ok(SubscribeOptions { required })
-    }
-}
-
-impl FromXml for SubscribeOptions {
-    type Builder = minidom_compat::FromEventsViaElement<SubscribeOptions>;
-
-    fn from_events(
-        qname: rxml::QName,
-        attrs: rxml::AttrMap,
-    ) -> Result<Self::Builder, FromEventsError> {
-        if qname.0 != crate::ns::PUBSUB || qname.1 != "subscribe-options" {
-            return Err(FromEventsError::Mismatch { name: qname, attrs });
-        }
-        Self::Builder::new(qname, attrs)
-    }
-}
-
-impl From<SubscribeOptions> for Element {
-    fn from(subscribe_options: SubscribeOptions) -> Element {
-        Element::builder("subscribe-options", ns::PUBSUB)
-            .append_all(if subscribe_options.required {
-                Some(Element::builder("required", ns::PUBSUB))
-            } else {
-                None
-            })
-            .build()
-    }
-}
-
-impl AsXml for SubscribeOptions {
-    type ItemIter<'x> = minidom_compat::AsItemsViaElement<'x>;
-
-    fn as_xml_iter(&self) -> Result<Self::ItemIter<'_>, Error> {
-        minidom_compat::AsItemsViaElement::new(self.clone())
-    }
 }
 
 /// A request to subscribe a JID to a node.
