@@ -10,11 +10,7 @@ use reqwest::{
 use std::path::PathBuf;
 use tokio::fs::File;
 use tokio_util::codec::{BytesCodec, FramedRead};
-use tokio_xmpp::{
-    jid::Jid,
-    minidom::Element,
-    parsers::http_upload::{Header as HttpUploadHeader, SlotResult},
-};
+use tokio_xmpp::{jid::Jid, minidom::Element, parsers::http_upload::SlotResult};
 
 use crate::{Agent, Event};
 
@@ -39,12 +35,8 @@ pub async fn handle_upload_result(
 
         let mut headers = ReqwestHeaderMap::new();
         for header in slot.put.headers {
-            let (attr, val) = match header {
-                HttpUploadHeader::Authorization(val) => ("Authorization", val),
-                HttpUploadHeader::Cookie(val) => ("Cookie", val),
-                HttpUploadHeader::Expires(val) => ("Expires", val),
-            };
-            headers.insert(attr, val.parse().unwrap());
+            let attr = header.name.as_str();
+            headers.insert(attr, header.value.parse().unwrap());
         }
 
         let web = ReqwestClient::new();

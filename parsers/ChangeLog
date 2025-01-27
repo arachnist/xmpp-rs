@@ -48,6 +48,9 @@ XXXX-YY-ZZ RELEASER <admin@example.com>
         ssm::StreamManagement::optional and starttls::StartTls::required are
         now proper bools, instead of Option<ZeroSizedType> (!518)
       - vCard-temp queries have been split into vcard::VCardQuery (!522)
+      - http_upload’s Header type has been split into HeaderName, an enum
+        containing only the name of the header, and the Header struct with
+        both a name and a value(!530)
     * New parsers/serialisers:
       - Stream Features (RFC 6120) (!400)
       - Spam Reporting (XEP-0377) (!506)

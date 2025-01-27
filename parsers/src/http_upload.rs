@@ -4,15 +4,11 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use xso::{
-    error::{Error, FromElementError, FromEventsError},
-    exports::rxml,
-    minidom_compat, AsXml, FromXml,
-};
+use xso::{error::Error, AsXml, AsXmlText, FromXml, FromXmlText};
 
 use crate::iq::{IqGetPayload, IqResultPayload};
 use crate::ns;
-use minidom::Element;
+use alloc::borrow::Cow;
 
 /// Requesting a slot
 #[derive(FromXml, AsXml, Debug, Clone, PartialEq)]
@@ -33,32 +29,37 @@ pub struct SlotRequest {
 
 impl IqGetPayload for SlotRequest {}
 
-/// Slot header
+/// All three possible header names.
 #[derive(Debug, Clone, PartialEq)]
-pub enum Header {
+pub enum HeaderName {
     /// Authorization header
-    Authorization(String),
+    Authorization,
 
     /// Cookie header
-    Cookie(String),
+    Cookie,
 
     /// Expires header
-    Expires(String),
+    Expires,
 }
 
-impl TryFrom<Element> for Header {
-    type Error = FromElementError;
-    fn try_from(elem: Element) -> Result<Header, FromElementError> {
-        check_self!(elem, "header", HTTP_UPLOAD);
-        check_no_children!(elem, "header");
-        check_no_unknown_attributes!(elem, "header", ["name"]);
-        let name: String = get_attr!(elem, "name", Required);
-        let text = elem.text();
+impl HeaderName {
+    /// Returns the string version of this enum value.
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            HeaderName::Authorization => "Authorization",
+            HeaderName::Cookie => "Cookie",
+            HeaderName::Expires => "Expires",
+        }
+    }
+}
 
-        Ok(match name.to_lowercase().as_str() {
-            "authorization" => Header::Authorization(text),
-            "cookie" => Header::Cookie(text),
-            "expires" => Header::Expires(text),
+impl FromXmlText for HeaderName {
+    fn from_xml_text(mut s: String) -> Result<Self, Error> {
+        s.make_ascii_lowercase();
+        Ok(match s.as_str() {
+            "authorization" => HeaderName::Authorization,
+            "cookie" => HeaderName::Cookie,
+            "expires" => HeaderName::Expires,
             _ => {
                 return Err(Error::Other(
                     "Header name must be either 'Authorization', 'Cookie', or 'Expires'.",
@@ -69,41 +70,23 @@ impl TryFrom<Element> for Header {
     }
 }
 
-impl FromXml for Header {
-    type Builder = minidom_compat::FromEventsViaElement<Header>;
-
-    fn from_events(
-        qname: rxml::QName,
-        attrs: rxml::AttrMap,
-    ) -> Result<Self::Builder, FromEventsError> {
-        if qname.0 != ns::HTTP_UPLOAD || qname.1 != "header" {
-            return Err(FromEventsError::Mismatch { name: qname, attrs });
-        }
-        Self::Builder::new(qname, attrs)
+impl AsXmlText for HeaderName {
+    fn as_xml_text(&self) -> Result<Cow<'_, str>, Error> {
+        Ok(Cow::Borrowed(self.as_str()))
     }
 }
 
-impl From<Header> for Element {
-    fn from(elem: Header) -> Element {
-        let (attr, val) = match elem {
-            Header::Authorization(val) => ("Authorization", val),
-            Header::Cookie(val) => ("Cookie", val),
-            Header::Expires(val) => ("Expires", val),
-        };
+/// Slot header
+#[derive(FromXml, AsXml, Debug, Clone, PartialEq)]
+#[xml(namespace = ns::HTTP_UPLOAD, name = "header")]
+pub struct Header {
+    /// Name of the header
+    #[xml(attribute)]
+    pub name: HeaderName,
 
-        Element::builder("header", ns::HTTP_UPLOAD)
-            .attr("name", attr)
-            .append(val)
-            .build()
-    }
-}
-
-impl AsXml for Header {
-    type ItemIter<'x> = minidom_compat::AsItemsViaElement<'x>;
-
-    fn as_xml_iter(&self) -> Result<Self::ItemIter<'_>, Error> {
-        minidom_compat::AsItemsViaElement::new(self.clone())
-    }
+    /// Value of the header
+    #[xml(text)]
+    pub value: String,
 }
 
 /// Put URL
@@ -146,11 +129,13 @@ impl IqResultPayload for SlotResult {}
 #[cfg(test)]
 mod tests {
     use super::*;
+    use minidom::Element;
 
     #[cfg(target_pointer_width = "32")]
     #[test]
     fn test_size() {
         assert_size!(SlotRequest, 32);
+        assert_size!(HeaderName, 1);
         assert_size!(Header, 16);
         assert_size!(Put, 24);
         assert_size!(Get, 12);
@@ -161,6 +146,7 @@ mod tests {
     #[test]
     fn test_size() {
         assert_size!(SlotRequest, 56);
+        assert_size!(HeaderName, 1);
         assert_size!(Header, 32);
         assert_size!(Put, 48);
         assert_size!(Get, 24);
@@ -196,11 +182,17 @@ mod tests {
         assert_eq!(slot.put.url, String::from("https://upload.montague.tld/4a771ac1-f0b2-4a4a-9700-f2a26fa2bb67/tr%C3%A8s%20cool.jpg"));
         assert_eq!(
             slot.put.headers[0],
-            Header::Authorization(String::from("Basic Base64String=="))
+            Header {
+                name: HeaderName::Authorization,
+                value: String::from("Basic Base64String==")
+            }
         );
         assert_eq!(
             slot.put.headers[1],
-            Header::Cookie(String::from("foo=bar; user=romeo"))
+            Header {
+                name: HeaderName::Cookie,
+                value: String::from("foo=bar; user=romeo")
+            }
         );
         assert_eq!(slot.get.url, String::from("https://download.montague.tld/4a771ac1-f0b2-4a4a-9700-f2a26fa2bb67/tr%C3%A8s%20cool.jpg"));
     }
