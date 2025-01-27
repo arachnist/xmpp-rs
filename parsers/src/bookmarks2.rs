@@ -62,7 +62,7 @@ impl Conference {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::pubsub::{pubsub::Item as PubSubItem, PubSubEvent};
+    use crate::pubsub::{self, pubsub::Item as PubSubItem};
 
     #[cfg(target_pointer_width = "32")]
     #[test]
@@ -132,10 +132,16 @@ mod tests {
         assert_eq!(conference.clone().password.unwrap(), "secret");
 
         let elem: Element = "<event xmlns='http://jabber.org/protocol/pubsub#event'><items node='urn:xmpp:bookmarks:1'><item xmlns='http://jabber.org/protocol/pubsub#event' id='test-muc@muc.localhost'><conference xmlns='urn:xmpp:bookmarks:1' autojoin='true' name='Test MUC'><nick>Coucou</nick><password>secret</password></conference></item></items></event>".parse().unwrap();
-        let mut items = match PubSubEvent::try_from(elem) {
-            Ok(PubSubEvent::PublishedItems { node, items }) => {
+        let event = pubsub::Event::try_from(elem).unwrap();
+        let mut items = match event.payload {
+            pubsub::event::Payload::Items {
+                node,
+                published,
+                retracted,
+            } => {
                 assert_eq!(&node.0, ns::BOOKMARKS2);
-                items
+                assert_eq!(retracted.len(), 0);
+                published
             }
             _ => panic!(),
         };

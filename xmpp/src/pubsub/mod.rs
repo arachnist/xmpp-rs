@@ -10,7 +10,7 @@ use crate::{
     muc::room::{JoinRoomSettings, LeaveRoomSettings},
     parsers::{
         bookmarks2, ns,
-        pubsub::{event::PubSubEvent, pubsub::PubSub},
+        pubsub::{self, pubsub::PubSub},
     },
     Agent, Event, RoomNick,
 };
@@ -30,61 +30,64 @@ pub(crate) async fn handle_event(
     #[allow(unused_mut)]
     let mut events = Vec::new();
 
-    let event = PubSubEvent::try_from(elem);
+    let event = pubsub::Event::try_from(elem);
     trace!("PubSub event: {:#?}", event);
     match event {
-        Ok(PubSubEvent::PublishedItems { node, items }) => {
+        Ok(pubsub::Event {
+            payload:
+                pubsub::event::Payload::Items {
+                    node,
+                    published,
+                    retracted,
+                },
+        }) => {
             match node.0 {
                 #[cfg(feature = "avatars")]
                 ref node if node == ns::AVATAR_METADATA => {
+                    // TODO: Also handle retracted!
                     let new_events =
-                        avatar::handle_metadata_pubsub_event(&from, agent, items).await;
+                        avatar::handle_metadata_pubsub_event(&from, agent, published).await;
                     events.extend(new_events);
                 }
                 ref node if node == ns::BOOKMARKS2 => {
                     // TODO: Check that our bare JID is the sender.
-                    assert_eq!(items.len(), 1);
-                    let item = items.clone().pop().unwrap();
-                    let jid = BareJid::from_str(&item.id.clone().unwrap().0).unwrap();
-                    let payload = item.payload.clone().unwrap();
-                    match bookmarks2::Conference::try_from(payload) {
-                        Ok(conference) => {
-                            if conference.autojoin {
-                                if !agent.rooms_joined.contains_key(&jid) {
-                                    agent
-                                        .join_room(JoinRoomSettings {
-                                            room: jid,
-                                            nick: conference.nick.map(RoomNick::new),
-                                            password: conference.password,
-                                            status: None,
-                                        })
-                                        .await;
+                    if let [item] = &published[..] {
+                        let jid = BareJid::from_str(&item.id.clone().unwrap().0).unwrap();
+                        let payload = item.payload.clone().unwrap();
+                        match bookmarks2::Conference::try_from(payload) {
+                            Ok(conference) => {
+                                if conference.autojoin {
+                                    if !agent.rooms_joined.contains_key(&jid) {
+                                        agent
+                                            .join_room(JoinRoomSettings {
+                                                room: jid,
+                                                nick: conference.nick.map(RoomNick::new),
+                                                password: conference.password,
+                                                status: None,
+                                            })
+                                            .await;
+                                    }
+                                } else {
+                                    // So maybe another client of ours left the room... let's leave it too
+                                    agent.leave_room(LeaveRoomSettings::new(jid)).await;
                                 }
-                            } else {
-                                // So maybe another client of ours left the room... let's leave it too
-                                agent.leave_room(LeaveRoomSettings::new(jid)).await;
                             }
+                            Err(err) => println!("not bookmark: {}", err),
                         }
-                        Err(err) => println!("not bookmark: {}", err),
+                    } else if let [item] = &retracted[..] {
+                        let jid = BareJid::from_str(&item.0).unwrap();
+
+                        agent.leave_room(LeaveRoomSettings::new(jid)).await;
+                    } else {
+                        error!("No published or retracted item in pubsub event!");
                     }
                 }
                 ref node => unimplemented!("node {}", node),
             }
         }
-        Ok(PubSubEvent::RetractedItems { node, items }) => {
-            match node.0 {
-                ref node if node == ns::BOOKMARKS2 => {
-                    // TODO: Check that our bare JID is the sender.
-                    assert_eq!(items.len(), 1);
-                    let item = items.clone().pop().unwrap();
-                    let jid = BareJid::from_str(&item.0).unwrap();
-
-                    agent.leave_room(LeaveRoomSettings::new(jid)).await;
-                }
-                ref node => unimplemented!("node {}", node),
-            }
-        }
-        Ok(PubSubEvent::Purge { node }) => match node.0 {
+        Ok(pubsub::Event {
+            payload: pubsub::event::Payload::Purge { node },
+        }) => match node.0 {
             ref node if node == ns::BOOKMARKS2 => {
                 warn!("The bookmarks2 PEP node was deleted!");
             }

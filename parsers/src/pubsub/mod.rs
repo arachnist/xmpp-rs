@@ -14,7 +14,7 @@ pub mod owner;
 #[allow(clippy::module_inception)]
 pub mod pubsub;
 
-pub use self::event::PubSubEvent;
+pub use self::event::Event;
 pub use self::owner::PubSubOwner;
 pub use self::pubsub::PubSub;
 

@@ -582,7 +582,7 @@ mod tests {
     #[test]
     fn test_extract_payload() {
         use super::super::attention::Attention;
-        use super::super::pubsub::event::PubSubEvent;
+        use super::super::pubsub;
 
         #[cfg(not(feature = "component"))]
         let elem: Element = "<message xmlns='jabber:client' to='coucou@example.org' type='chat'><attention xmlns='urn:xmpp:attention:0'/></message>".parse().unwrap();
@@ -590,7 +590,7 @@ mod tests {
         let elem: Element = "<message xmlns='jabber:component:accept' to='coucou@example.org' type='chat'><attention xmlns='urn:xmpp:attention:0'/></message>".parse().unwrap();
         let mut message = Message::try_from(elem).unwrap();
         assert_eq!(message.payloads.len(), 1);
-        match message.extract_payload::<PubSubEvent>() {
+        match message.extract_payload::<pubsub::Event>() {
             Ok(None) => (),
             other => panic!("unexpected result: {:?}", other),
         };

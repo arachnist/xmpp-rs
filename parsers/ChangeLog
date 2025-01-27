@@ -51,6 +51,9 @@ XXXX-YY-ZZ RELEASER <admin@example.com>
       - http_upload’s Header type has been split into HeaderName, an enum
         containing only the name of the header, and the Header struct with
         both a name and a value(!530)
+      - pubsub::Event is now the wrapper for the pubsub::event::Payload enum,
+        and the PublishedItems and RetractedItems have been merged into the
+        Items sub-struct.  These replace the previous PubSubEvent enum (!531)
     * New parsers/serialisers:
       - Stream Features (RFC 6120) (!400)
       - Spam Reporting (XEP-0377) (!506)

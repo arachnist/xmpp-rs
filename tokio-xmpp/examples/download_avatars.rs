@@ -15,7 +15,7 @@ use xmpp_parsers::{
     ns,
     presence::{Presence, Type as PresenceType},
     pubsub::{
-        event::PubSubEvent,
+        self,
         pubsub::{Items, PubSub},
         NodeName,
     },
@@ -126,10 +126,15 @@ async fn main() {
                     }
                     for child in message.payloads {
                         if child.is("event", ns::PUBSUB_EVENT) {
-                            let event = PubSubEvent::try_from(child).unwrap();
-                            if let PubSubEvent::PublishedItems { node, items } = event {
+                            let event = pubsub::Event::try_from(child).unwrap();
+                            if let pubsub::event::Payload::Items {
+                                node,
+                                published,
+                                retracted: _,
+                            } = event.payload
+                            {
                                 if node.0 == ns::AVATAR_METADATA {
-                                    for item in items.into_iter() {
+                                    for item in published.into_iter() {
                                         let payload = item.payload.clone().unwrap();
                                         if payload.is("metadata", ns::AVATAR_METADATA) {
                                             // TODO: do something with these metadata.
