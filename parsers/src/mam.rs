@@ -4,10 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use xso::{
-    error::{Error, FromElementError},
-    AsXml, FromXml,
-};
+use xso::{AsXml, FromXml};
 
 use crate::data_forms::DataForm;
 use crate::date::DateTime;
@@ -17,8 +14,6 @@ use crate::message::MessagePayload;
 use crate::ns;
 use crate::pubsub::NodeName;
 use crate::rsm::{SetQuery, SetResult};
-use minidom::Element;
-use minidom::Node;
 
 generate_id!(
     /// An identifier matching a result message to the query requesting it.
@@ -26,96 +21,34 @@ generate_id!(
 );
 
 /// Starts a query to the archive.
-#[derive(Debug)]
+#[derive(FromXml, AsXml, Debug)]
+#[xml(namespace = ns::MAM, name = "query")]
 pub struct Query {
     /// An optional identifier for matching forwarded messages to this
     /// query.
+    #[xml(attribute(default))]
     pub queryid: Option<QueryId>,
+
     /// Must be set to Some when querying a PubSub node’s archive.
+    #[xml(attribute(default))]
     pub node: Option<NodeName>,
+
     /// Used for filtering the results.
+    #[xml(child(default))]
     pub form: Option<DataForm>,
+
     /// Used for paging through results.
+    #[xml(child(default))]
     pub set: Option<SetQuery>,
+
     /// Used for reversing the order of the results.
+    #[xml(flag(name = "flip-page"))]
     pub flip_page: bool,
 }
 
 impl IqGetPayload for Query {}
 impl IqSetPayload for Query {}
 impl IqResultPayload for Query {}
-
-impl TryFrom<Element> for Query {
-    type Error = FromElementError;
-    fn try_from(elem: Element) -> Result<Query, FromElementError> {
-        check_self!(elem, "query", MAM);
-        check_no_unknown_attributes!(elem, "query", ["queryid", "node"]);
-
-        let mut form = None;
-        let mut set = None;
-        let mut flip_page = false;
-        for child in elem.children() {
-            if child.is("x", ns::DATA_FORMS) {
-                if form.is_some() {
-                    return Err(
-                        Error::Other("Element query must not have more than one x child.").into(),
-                    );
-                }
-                form = Some(DataForm::try_from(child.clone())?);
-                continue;
-            }
-            if child.is("set", ns::RSM) {
-                if set.is_some() {
-                    return Err(Error::Other(
-                        "Element query must not have more than one set child.",
-                    )
-                    .into());
-                }
-                set = Some(SetQuery::try_from(child.clone())?);
-                continue;
-            }
-            if child.is("flip-page", ns::MAM) {
-                if flip_page {
-                    return Err(Error::Other(
-                        "Element query must not have more than one flip-page child.",
-                    )
-                    .into());
-                }
-                flip_page = true;
-                continue;
-            }
-            return Err(Error::Other("Unknown child in query element.").into());
-        }
-        Ok(Query {
-            queryid: match elem.attr("queryid") {
-                Some(value) => Some(value.parse()?),
-                None => None,
-            },
-            node: match elem.attr("node") {
-                Some(value) => Some(value.parse()?),
-                None => None,
-            },
-            form,
-            set,
-            flip_page,
-        })
-    }
-}
-
-impl From<Query> for Element {
-    fn from(elem: Query) -> Element {
-        let mut builder = Element::builder("query", ns::MAM);
-        builder = builder.attr("queryid", elem.queryid);
-        builder = builder.attr("node", elem.node);
-        builder = builder.append_all(elem.form.map(|elem| Node::Element(Element::from(elem))));
-        builder = builder.append_all(elem.set.map(|elem| Node::Element(Element::from(elem))));
-        if elem.flip_page {
-            let flip_page = Element::builder("flip-page", ns::MAM).build();
-            builder = builder.append(Node::Element(flip_page));
-        }
-        builder.build()
-    }
-}
 
 /// The wrapper around forwarded stanzas.
 #[derive(FromXml, AsXml, PartialEq, Debug, Clone)]
@@ -209,6 +142,8 @@ impl IqResultPayload for MetadataResponse {}
 #[cfg(test)]
 mod tests {
     use super::*;
+    use minidom::Element;
+    use xso::error::{Error, FromElementError};
 
     #[cfg(target_pointer_width = "32")]
     #[test]
@@ -374,7 +309,7 @@ mod tests {
             FromElementError::Invalid(Error::Other(string)) => string,
             _ => panic!(),
         };
-        assert_eq!(message, "Unknown child in query element.");
+        assert_eq!(message, "Unknown child in Query element.");
     }
 
     #[test]
