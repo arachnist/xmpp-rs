@@ -34,6 +34,11 @@ Version NEXT:
       - New `codec` field on `attribute` meta, to support decoding and
         encoding using any `TextCodec`.
       - Support for `no_std` usage (the alloc crate is required, though).
+    * Changes
+      - Generated AsXml iterator and FromXml builder types are now
+        doc(hidden), to not clutter hand-written documentation with auto
+        generated garbage (something certain big tech companies could take
+        an example of, honestly).
 
 Version 0.1.2:
 2024-07-26 Jonas Schäfer <jonas@zombofant.net>

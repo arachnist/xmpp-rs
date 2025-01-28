@@ -520,6 +520,7 @@ impl FromEventsStateMachine {
             }
 
             #[doc = #docstr]
+            #[doc(hidden)]
             #vis struct #builder_ty_ident(::core::option::Option<#state_ty_ident>);
 
             impl ::xso::FromEventsBuilder for #builder_ty_ident {
@@ -698,6 +699,7 @@ impl AsItemsStateMachine {
             }
 
             #[doc = #docstr]
+            #[doc(hidden)]
             #vis struct #item_iter_ty(::core::option::Option<#state_ty_ident<#item_iter_ty_lifetime>>);
 
             impl<#item_iter_ty_lifetime> ::core::iter::Iterator for #item_iter_ty {
