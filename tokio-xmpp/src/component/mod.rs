@@ -16,6 +16,8 @@ use crate::{
 use crate::connect::DnsConfig;
 #[cfg(feature = "insecure-tcp")]
 use crate::connect::TcpServerConnector;
+#[cfg(feature = "websocket")]
+use crate::connect::WebSocketServerConnector;
 
 mod login;
 mod stream;
@@ -69,6 +71,26 @@ impl Component<TcpServerConnector> {
             jid,
             password,
             TcpServerConnector::from(dns_config),
+            timeouts,
+        )
+        .await
+    }
+}
+
+#[cfg(feature = "websocket")]
+impl Component<WebSocketServerConnector> {
+    /// Start a new XMPP component over WebSocket
+    #[cfg(feature = "websocket")]
+    pub async fn new_websocket(
+        jid: &str,
+        password: &str,
+        dns_config: DnsConfig,
+        timeouts: Timeouts,
+    ) -> Result<Self, Error> {
+        Component::new_with_connector(
+            jid,
+            password,
+            WebSocketServerConnector::from(dns_config),
             timeouts,
         )
         .await

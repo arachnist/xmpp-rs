@@ -36,6 +36,12 @@ tokio-native-tls = { version = "0.3", optional = true }
 tokio-rustls = { version = "0.26", optional = true }
 ktls = { version = "6", optional = true }
 
+# websocket
+# tokio-websockets = { version = "0.11.1", optional = true, features = [ "client", "native-tls", "openssl", "rand" ] }
+tokio-tungstenite = { version = "0.26", optional = true, features = [ "stream" ] }
+hyper-util = { version = "0.1.10", optional = true, features = [ "tokio" ] }
+hyper = { version = "*", optional = true }
+
 [dev-dependencies]
 env_logger = { version = "0.11", default-features = false, features = ["auto-color", "humantime"] }
 # this is needed for echo-component example
@@ -43,7 +49,7 @@ tokio = { version = "1", features = ["signal", "test-util"] }
 tokio-xmpp = { path = ".", features = ["insecure-tcp"]}
 
 [features]
-default = ["starttls-rust", "rustls-native-certs"]
+default = ["rustls-native-certs", "websocket"]
 starttls = ["dns"]
 tls-rust = ["tokio-rustls"]
 tls-rust-ktls = ["tls-rust", "ktls"]
@@ -58,7 +64,10 @@ syntax-highlighting = ["syntect"]
 serde = [ "xmpp-parsers/serde" ]
 # Required by starttls, and used by insecure-tcp by default
 dns = [ "hickory-resolver", "idna" ]
-component = ["xmpp-parsers/component", "insecure-tcp"]
+component = [ "xmpp-parsers/component", "insecure-tcp", "websocket" ]
+# websocket
+# websocket = [ "tokio-websockets", "hyper-util", "hyper", "tls-native" ]
+websocket = [ "tokio-tungstenite" ]
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(xmpprs_doc_build)'] }

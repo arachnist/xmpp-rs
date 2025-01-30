@@ -17,6 +17,12 @@ pub mod tcp;
 #[cfg(feature = "insecure-tcp")]
 pub use tcp::TcpServerConnector;
 
+#[cfg(feature = "websocket")]
+pub mod websocket;
+#[cfg(feature = "websocket")]
+pub use websocket::WebSocketServerConnector;
+
+
 mod dns;
 pub use dns::DnsConfig;
 

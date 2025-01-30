@@ -22,6 +22,8 @@ use crate::connect::DnsConfig;
 use crate::connect::StartTlsServerConnector;
 #[cfg(feature = "insecure-tcp")]
 use crate::connect::TcpServerConnector;
+#[cfg(feature = "websocket")]
+use crate::connect::WebSocketServerConnector;
 
 mod iq;
 pub(crate) mod login;
