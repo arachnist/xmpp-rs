@@ -22,7 +22,6 @@ pub mod websocket;
 #[cfg(feature = "websocket")]
 pub use websocket::WebSocketServerConnector;
 
-
 mod dns;
 pub use dns::DnsConfig;
 
