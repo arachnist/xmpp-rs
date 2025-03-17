@@ -38,7 +38,7 @@ ktls = { version = "6", optional = true }
 
 # websocket
 # tokio-websockets = { version = "0.11.1", optional = true, features = [ "client", "native-tls", "openssl", "rand" ] }
-tokio-tungstenite = { version = "0.26", optional = true, features = [ "stream", "tokio-rustls" ] }
+tokio-tungstenite = { version = "0.26", optional = true, features = [ "stream", "rustls-tls-native-roots" ] }
 hyper-util = { version = "0.1.10", optional = true, features = [ "tokio" ] }
 hyper = { version = "*", optional = true }
 http = "1.3.1"
