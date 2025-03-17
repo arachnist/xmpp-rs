@@ -38,7 +38,7 @@ ktls = { version = "6", optional = true }
 
 # websocket
 # tokio-websockets = { version = "0.11.1", optional = true, features = [ "client", "native-tls", "openssl", "rand" ] }
-tokio-tungstenite = { version = "0.26", optional = true, features = [ "stream" ] }
+tokio-tungstenite = { version = "0.26", optional = true, features = [ "stream", "tokio-rustls" ] }
 hyper-util = { version = "0.1.10", optional = true, features = [ "tokio" ] }
 hyper = { version = "*", optional = true }
 http = "1.3.1"
@@ -68,7 +68,7 @@ dns = [ "hickory-resolver", "idna" ]
 component = [ "xmpp-parsers/component", "insecure-tcp", "websocket" ]
 # websocket
 # websocket = [ "tokio-websockets", "hyper-util", "hyper", "tls-native" ]
-websocket = [ "tokio-tungstenite" ]
+websocket = [ "tokio-tungstenite", "tls-rust" ]
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(xmpprs_doc_build)'] }
